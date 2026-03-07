@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EvoSim — Ian Handy</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<nav>
+  <a href="../" class="nav-logo">IH</a>
+  <ul class="nav-links">
+    <li><a href="../">Portfolio</a></li>
+    <li><a href="../#coding">Code</a></li>
+    <li><a href="../#about">About</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="evo-hero">
+  <div class="evo-hero-grid-bg"></div>
+  <div class="evo-hero-content">
+    <h1 class="evo-title">Evo<span>Sim</span></h1>
+    <p class="evo-subtitle">
+      A natural selection simulator built on real biological data —
+      keep your species alive as long as possible, or explore how
+      real populations actually evolved.
+    </p>
+    <div class="evo-mode-tabs">
+      <button class="mode-tab active" onclick="setMode('simulate')">▶ Simulate</button>
+      <button class="mode-tab" onclick="setMode('realdata')">◈ Real Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="evo-app">
+
+  <!-- SIDEBAR -->
+  <aside class="evo-sidebar">
+    <div>
+      <div class="sidebar-section-title">Species</div>
+      <div class="species-grid">
+        <button class="species-btn active" onclick="selectSpecies('fortis')">
+          <span class="species-name">G. fortis</span>
+          Darwin's Finch
+        </button>
+        <button class="species-btn" onclick="selectSpecies('aculeatus')">
+          <span class="species-name">G. aculeatus</span>
+          Stickleback
+        </button>
+        <button class="species-btn" onclick="selectSpecies('melanogaster')">
+          <span class="species-name">D. melanogaster</span>
+          Fruit Fly
+        </button>
+        <button class="species-btn" onclick="selectSpecies('reticulata')">
+          <span class="species-name">P. reticulata</span>
+          Guppy
+        </button>
+        <button class="species-btn" onclick="selectSpecies('major')">
+          <span class="species-name">P. major</span>
+          Great Tit
+        </button>
+      </div>
+    </div>
+
+    <!-- Simulate controls -->
+    <div id="sim-controls">
+      <div class="sidebar-section-title">Environment</div>
+      <div class="param-block">
+        <div class="param-row">
+          <div class="param-label">Selection Pressure <span id="val-s">0.20</span></div>
+          <input type="range" class="param-slider" id="sl-s" min="0" max="0.5" step="0.01" value="0.20" oninput="updateParam('s', this.value)">
+        </div>
+        <div class="param-row">
+          <div class="param-label">Population Size <span id="val-N">500</span></div>
+          <input type="range" class="param-slider" id="sl-N" min="50" max="2000" step="50" value="500" oninput="updateParam('N', this.value)">
+        </div>
+        <div class="param-row">
+          <div class="param-label">Mutation Rate <span id="val-mu">0.01</span></div>
+          <input type="range" class="param-slider" id="sl-mu" min="0.001" max="0.05" step="0.001" value="0.01" oninput="updateParam('mu', this.value)">
+        </div>
+        <div class="param-row">
+          <div class="param-label">Bottleneck Risk <span id="val-bt">Low</span></div>
+          <input type="range" class="param-slider" id="sl-bt" min="0" max="1" step="1" value="0" oninput="updateParam('bt', this.value)">
+        </div>
+      </div>
+
+      <div class="sidebar-section-title" style="margin-top:.5rem">Controls</div>
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        <button class="game-btn game-btn-run" id="btn-run" onclick="toggleRun()">▶ RUN SIMULATION</button>
+        <button class="game-btn game-btn-reset" onclick="resetSim()">↺ RESET</button>
+      </div>
+
+      <div class="sidebar-section-title" style="margin-top:.5rem">Status</div>
+      <div class="score-panel">
+        <div class="score-row">Generation <span class="score-val" id="sc-gen">0</span></div>
+        <div class="score-row">Population <span class="score-val" id="sc-pop">—</span></div>
+        <div class="score-row">Allele Freq (p) <span class="score-val" id="sc-p">—</span></div>
+        <div class="score-row">Δp this gen <span class="score-val" id="sc-dp">—</span></div>
+        <div class="score-row">Drift Var σ² <span class="score-val" id="sc-drift">—</span></div>
+      </div>
+    </div>
+
+    <!-- Real data controls -->
+    <div id="rd-controls" style="display:none">
+      <div class="sidebar-section-title">Dataset</div>
+      <div class="param-block">
+        <div class="control-group">
+          <label>View</label>
+          <select onchange="updateRealDataView(this.value)">
+            <option value="trait">Trait Distribution</option>
+            <option value="fitness">Fitness Landscape</option>
+            <option value="drift">Drift Simulation</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="evo-main">
+
+    <!-- SIMULATE MODE -->
+    <div class="simulate-panel" id="simulate-panel">
+
+      <!-- Trait distribution chart -->
+      <div class="chart-panel">
+        <div class="chart-panel-header">
+          <span class="chart-panel-title">Trait Distribution</span>
+          <span class="chart-panel-sub" id="trait-label">Beak Depth — G. fortis</span>
+        </div>
+        <div class="chart-body">
+          <canvas class="chart-canvas" id="chart-trait" height="180"></canvas>
+        </div>
+      </div>
+
+      <!-- Population + allele freq charts side by side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+        <div class="chart-panel">
+          <div class="chart-panel-header">
+            <span class="chart-panel-title">Population Size</span>
+            <span class="chart-panel-sub">Extinction Risk</span>
+          </div>
+          <div class="chart-body">
+            <canvas class="chart-canvas" id="chart-pop" height="160"></canvas>
+          </div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-panel-header">
+            <span class="chart-panel-title">Selection Pressure</span>
+            <span class="chart-panel-sub">Δp per generation</span>
+          </div>
+          <div class="chart-body">
+            <canvas class="chart-canvas" id="chart-sel" height="160"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Allele frequency over time -->
+      <div class="chart-panel">
+        <div class="chart-panel-header">
+          <span class="chart-panel-title">Allele Frequency (p) Over Time</span>
+          <span class="chart-panel-sub" id="real-ref-label">Reference: G. fortis beak depth h²=0.65</span>
+        </div>
+        <div class="chart-body">
+          <canvas class="chart-canvas" id="chart-allele" height="160"></canvas>
+        </div>
+      </div>
+
+      <!-- Event log -->
+      <div class="chart-panel">
+        <div class="chart-panel-header">
+          <span class="chart-panel-title">Event Log</span>
+          <span class="chart-panel-sub">simulation events</span>
+        </div>
+        <div class="event-log" id="event-log">
+          <div class="log-entry"><span class="log-gen">GEN 0</span><span>Simulation ready. Press RUN to begin.</span></div>
+        </div>
+      </div>
+
+    </div><!-- /simulate-panel -->
+
+    <!-- REAL DATA MODE -->
+    <div class="realdata-panel" id="realdata-panel">
+
+      <div class="species-info-card" id="species-info-card">
+        <h3>Geospiza fortis — <em>Darwin's Medium Ground Finch</em></h3>
+        <div class="info-stat"><div class="info-stat-val">0.65</div><div class="info-stat-label">Heritability (h²)</div></div>
+        <div class="info-stat"><div class="info-stat-val">±0.5mm</div><div class="info-stat-label">Beak depth variance</div></div>
+        <div class="info-stat"><div class="info-stat-val">~1200</div><div class="info-stat-label">Pop. Galápagos study</div></div>
+        <div class="info-stat"><div class="info-stat-val">1977</div><div class="info-stat-label">Grant drought study</div></div>
+      </div>
+
+      <div class="chart-panel">
+        <div class="chart-panel-header">
+          <span class="chart-panel-title">Real Trait Distribution</span>
+          <span class="chart-panel-sub" id="rd-trait-label">Beak Depth — G. fortis (empirical)</span>
+        </div>
+        <div class="chart-body">
+          <canvas class="chart-canvas" id="rd-chart-trait" height="200"></canvas>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+        <div class="chart-panel">
+          <div class="chart-panel-header">
+            <span class="chart-panel-title">Fitness Landscape</span>
+            <span class="chart-panel-sub">trait vs. survival</span>
+          </div>
+          <div class="chart-body">
+            <canvas class="chart-canvas" id="rd-chart-fitness" height="180"></canvas>
+          </div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-panel-header">
+            <span class="chart-panel-title">Drift Simulation</span>
+            <span class="chart-panel-sub">50 replicate populations</span>
+          </div>
+          <div class="chart-body">
+            <canvas class="chart-canvas" id="rd-chart-drift" height="180"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /realdata-panel -->
+
+  </main>
+</div><!-- /evo-app -->
+
+<!-- EXTINCTION OVERLAY -->
+<div class="extinction-overlay" id="extinction-overlay">
+  <div class="extinction-title">Extinction</div>
+  <div class="extinction-score">
+    <strong id="final-score">0</strong>
+    generations survived
+  </div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;letter-spacing:.15em;color:var(--fog);max-width:36ch;line-height:1.8;text-align:center" id="extinction-msg">
+    Population collapsed under selection pressure.
+  </div>
+  <div style="display:flex;gap:1rem;margin-top:1rem">
+    <button class="btn btn-primary" onclick="resetSim(); document.getElementById('extinction-overlay').classList.remove('active')">Try Again</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('extinction-overlay').classList.remove('active')">View Results</button>
+  </div>
+</div>
+
+<footer>
+  <p>© 2025 Ian Handy — <a href="../">ianhandy.com</a></p>
+  <p>Built with vanilla JS + D3 · <a href="https://github.com/" target="_blank">Source on GitHub</a></p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+// ══════════════════════════════════════════════
+//  SPECIES DATA (from evolution-simulation-research.md)
+// ══════════════════════════════════════════════
+const SPECIES = {
+  fortis: {
+    name: 'G. fortis', common: "Darwin's Finch",
+    trait: 'Beak Depth', unit: 'mm',
+    h2: 0.65, meanTrait: 9.5, sdTrait: 0.8,
+    genTime: 1, typicalN: 1200,
+    info: { h2: '0.65', variance: '±0.5mm', pop: '~1200', year: '1977' },
+    infoTitle: 'Geospiza fortis', infoSubtitle: "Darwin's Medium Ground Finch",
+    refLabel: 'G. fortis beak depth h²=0.65',
+  },
+  aculeatus: {
+    name: 'G. aculeatus', common: 'Threespine Stickleback',
+    trait: 'Lateral Plate Count', unit: 'plates',
+    h2: 0.85, meanTrait: 32, sdTrait: 5,
+    genTime: 1, typicalN: 800,
+    info: { h2: '0.85', variance: '±5 plates', pop: '~800', year: 'freshwater' },
+    infoTitle: 'Gasterosteus aculeatus', infoSubtitle: 'Threespine Stickleback',
+    refLabel: 'G. aculeatus lateral plate count h²=0.85',
+  },
+  melanogaster: {
+    name: 'D. melanogaster', common: 'Fruit Fly',
+    trait: 'Wing Venation Index', unit: 'idx',
+    h2: 0.40, meanTrait: 1.0, sdTrait: 0.15,
+    genTime: 0.05, typicalN: 5000,
+    info: { h2: '0.40', variance: '±0.15', pop: '~5000', year: 'lab strain' },
+    infoTitle: 'Drosophila melanogaster', infoSubtitle: 'Fruit Fly',
+    refLabel: 'D. melanogaster wing venation h²=0.40',
+  },
+  reticulata: {
+    name: 'P. reticulata', common: 'Trinidadian Guppy',
+    trait: 'Color Brightness', unit: '%',
+    h2: 0.52, meanTrait: 60, sdTrait: 12,
+    genTime: 0.5, typicalN: 600,
+    info: { h2: '0.52', variance: '±12%', pop: '~600', year: 'Trinidad' },
+    infoTitle: 'Poecilia reticulata', infoSubtitle: 'Trinidadian Guppy',
+    refLabel: 'P. reticulata color brightness h²=0.52',
+  },
+  major: {
+    name: 'P. major', common: 'Great Tit',
+    trait: 'Tarsus Length', unit: 'mm',
+    h2: 0.70, meanTrait: 20.5, sdTrait: 0.6,
+    genTime: 1, typicalN: 400,
+    info: { h2: '0.70', variance: '±0.6mm', pop: '~400', year: 'Wytham' },
+    infoTitle: 'Parus major', infoSubtitle: 'Great Tit',
+    refLabel: 'P. major tarsus length h²=0.70',
+  }
+};
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let currentSpecies = 'fortis';
+let currentMode = 'simulate';
+let params = { s: 0.20, N: 500, mu: 0.01, bt: 0 };
+let running = false;
+let simTimer = null;
+
+let state = {
+  gen: 0,
+  p: 0.3,       // allele frequency
+  popSize: 500,
+  traitMean: 0,
+  traitSd: 0,
+};
+
+// History arrays
+let histP = [], histPop = [], histDp = [], histTrait = [];
+
+// ══════════════════════════════════════════════
+//  CANVAS HELPERS
+// ══════════════════════════════════════════════
+function getCtx(id) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return null;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width || canvas.offsetWidth || 500;
+  const h = parseInt(canvas.getAttribute('height')) || 160;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx._w = w; ctx._h = h;
+  return ctx;
+}
+
+const C = {
+  bark: '#1a1008', soil: '#2c1a0e', umber: '#3d2410',
+  ember: '#c4581f', gold: '#d4942a', straw: '#e8c96a',
+  parchment: '#f2e8d0', fog: '#c8b89a', green: '#6a8a4a'
+};
+
+function clearChart(ctx) {
+  ctx.fillStyle = C.bark;
+  ctx.fillRect(0, 0, ctx._w, ctx._h);
+}
+
+function drawAxes(ctx, pad) {
+  ctx.strokeStyle = C.umber;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad, pad);
+  ctx.lineTo(pad, ctx._h - pad);
+  ctx.lineTo(ctx._w - pad, ctx._h - pad);
+  ctx.stroke();
+}
+
+function axisLabel(ctx, text, x, y, color) {
+  ctx.fillStyle = color || C.fog;
+  ctx.font = `10px "IBM Plex Mono", monospace`;
+  ctx.fillText(text, x, y);
+}
+
+// ══════════════════════════════════════════════
+//  SIMULATION MATH
+// ══════════════════════════════════════════════
+function stepSim() {
+  const sp = SPECIES[currentSpecies];
+  const { s, N, mu } = params;
+  let { p, popSize } = state;
+
+  // Selection: Δp = sp(1-p) / (1 + sp)
+  const dp_sel = (s * p * (1 - p)) / (1 + s * p);
+
+  // Mutation
+  const dp_mu = mu * (1 - p) - mu * p;
+
+  // Genetic drift — sample from binomial
+  const drift_sd = Math.sqrt(p * (1 - p) / (2 * popSize));
+  const drift = (Math.random() - 0.5) * 2 * drift_sd * 2.5;
+
+  let newP = p + dp_sel + dp_mu + drift;
+  newP = Math.max(0.001, Math.min(0.999, newP));
+
+  // Population dynamics
+  // Bottleneck event
+  let bottleneck = false;
+  if (params.bt === '1' || params.bt === 1) {
+    if (Math.random() < 0.04) { // 4% chance per gen
+      popSize = Math.max(10, Math.floor(popSize * (0.1 + Math.random() * 0.3)));
+      bottleneck = true;
+    }
+  }
+
+  // Natural pop change based on allele freq (fitness proxy)
+  const fitness = 1 + s * newP;
+  const growth = 0.05 * fitness;
+  const carrying = N;
+  popSize = Math.round(popSize * (1 + growth * (1 - popSize / carrying)));
+  popSize = Math.max(1, Math.min(N * 1.5, popSize));
+
+  // Drift variance σ² = p(1-p)/2N
+  const driftVar = (newP * (1 - newP)) / (2 * popSize);
+
+  // Trait mean follows allele freq (simplified polygenic model)
+  const traitMean = sp.meanTrait + (newP - 0.3) * sp.sdTrait * 3 * sp.h2;
+  const traitSd = sp.sdTrait * (1 - sp.h2 * 0.3);
+
+  state = {
+    gen: state.gen + 1,
+    p: newP,
+    popSize,
+    traitMean,
+    traitSd,
+    driftVar,
+    dp: dp_sel,
+    bottleneck
+  };
+
+  // Record history (keep last 120 gens)
+  histP.push(newP);
+  histPop.push(popSize);
+  histDp.push(dp_sel);
+  histTrait.push({ mean: traitMean, sd: traitSd });
+  if (histP.length > 120) { histP.shift(); histPop.shift(); histDp.shift(); histTrait.shift(); }
+
+  return { bottleneck, extinct: popSize < 5 };
+}
+
+// ══════════════════════════════════════════════
+//  DRAWING
+// ══════════════════════════════════════════════
+function drawTraitDist() {
+  const ctx = getCtx('chart-trait');
+  if (!ctx) return;
+  const pad = 36;
+  clearChart(ctx);
+  drawAxes(ctx, pad);
+
+  const sp = SPECIES[currentSpecies];
+  const mean = state.traitMean || sp.meanTrait;
+  const sd = state.traitSd || sp.sdTrait;
+
+  // Gaussian bell curve
+  const W = ctx._w - pad * 2;
+  const H = ctx._h - pad * 2;
+  const xMin = mean - sd * 3.5, xMax = mean + sd * 3.5;
+
+  // Fill area
+  ctx.beginPath();
+  let first = true;
+  for (let i = 0; i <= W; i++) {
+    const x = xMin + (i / W) * (xMax - xMin);
+    const y = Math.exp(-0.5 * ((x - mean) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI));
+    const px = pad + i;
+    const py = pad + H - y * H * sd * Math.sqrt(2 * Math.PI) * 0.9;
+    if (first) { ctx.moveTo(px, py); first = false; }
+    else ctx.lineTo(px, py);
+  }
+  ctx.lineTo(pad + W, pad + H);
+  ctx.lineTo(pad, pad + H);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad, 0, pad + H);
+  grad.addColorStop(0, C.ember + 'cc');
+  grad.addColorStop(1, C.ember + '22');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath(); first = true;
+  for (let i = 0; i <= W; i++) {
+    const x = xMin + (i / W) * (xMax - xMin);
+    const y = Math.exp(-0.5 * ((x - mean) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI));
+    const px = pad + i;
+    const py = pad + H - y * H * sd * Math.sqrt(2 * Math.PI) * 0.9;
+    if (first) { ctx.moveTo(px, py); first = false; }
+    else ctx.lineTo(px, py);
+  }
+  ctx.strokeStyle = C.gold; ctx.lineWidth = 2; ctx.stroke();
+
+  // Labels
+  axisLabel(ctx, mean.toFixed(2) + ' ' + sp.unit, pad + W / 2 - 20, pad + H + 16);
+  axisLabel(ctx, 'σ=' + sd.toFixed(2), pad + W - 50, pad + 14, C.ember);
+}
+
+function drawLineChart(canvasId, data, color, yLabel, refLine) {
+  const ctx = getCtx(canvasId);
+  if (!ctx || data.length < 2) return;
+  const pad = 36;
+  clearChart(ctx);
+  drawAxes(ctx, pad);
+
+  const W = ctx._w - pad * 2;
+  const H = ctx._h - pad * 2;
+  const yMin = Math.min(...data) * 0.9;
+  const yMax = Math.max(...data) * 1.1 || 1;
+
+  // Reference line
+  if (refLine !== undefined) {
+    const ry = pad + H - ((refLine - yMin) / (yMax - yMin)) * H;
+    ctx.strokeStyle = C.straw + '44';
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad, ry); ctx.lineTo(pad + W, ry); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Fill
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = pad + (i / (data.length - 1)) * W;
+    const y = pad + H - ((v - yMin) / (yMax - yMin)) * H;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  const lastX = pad + W;
+  const lastY = pad + H;
+  ctx.lineTo(lastX, lastY); ctx.lineTo(pad, lastY); ctx.closePath();
+  const g = ctx.createLinearGradient(0, pad, 0, pad + H);
+  g.addColorStop(0, color + '66'); g.addColorStop(1, color + '11');
+  ctx.fillStyle = g; ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = pad + (i / (data.length - 1)) * W;
+    const y = pad + H - ((v - yMin) / (yMax - yMin)) * H;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+
+  // Axis labels
+  axisLabel(ctx, yMax.toFixed(2), 2, pad + 12);
+  axisLabel(ctx, yMin.toFixed(2), 2, pad + H);
+  axisLabel(ctx, yLabel, pad + 4, pad + H + 16, C.fog);
+  axisLabel(ctx, 'gen ' + Math.max(0, state.gen - data.length) + '–' + state.gen, pad + W - 60, pad + H + 16, C.fog);
+}
+
+function updateAllCharts() {
+  drawTraitDist();
+  drawLineChart('chart-pop', histPop, C.green, 'population', SPECIES[currentSpecies].typicalN);
+  drawLineChart('chart-sel', histDp, C.ember, 'Δp selection');
+  drawLineChart('chart-allele', histP, C.gold, 'allele freq (p)', 0.5);
+}
+
+// ══════════════════════════════════════════════
+//  SCOREBOARD
+// ══════════════════════════════════════════════
+function updateScore() {
+  const danger = state.popSize < params.N * 0.1;
+  document.getElementById('sc-gen').textContent = state.gen;
+  document.getElementById('sc-pop').textContent = state.popSize;
+  document.getElementById('sc-pop').className = 'score-val' + (danger ? ' danger' : '');
+  document.getElementById('sc-p').textContent = (state.p || 0).toFixed(4);
+  document.getElementById('sc-dp').textContent = (state.dp || 0).toFixed(5);
+  document.getElementById('sc-drift').textContent = (state.driftVar || 0).toFixed(6);
+}
+
+// ══════════════════════════════════════════════
+//  EVENT LOG
+// ══════════════════════════════════════════════
+function logEvent(msg, type) {
+  const log = document.getElementById('event-log');
+  const div = document.createElement('div');
+  div.className = 'log-entry' + (type ? ' log-' + type : '');
+  div.innerHTML = `<span class="log-gen">GEN ${state.gen}</span><span>${msg}</span>`;
+  log.insertBefore(div, log.firstChild);
+  while (log.children.length > 40) log.removeChild(log.lastChild);
+}
+
+// ══════════════════════════════════════════════
+//  GAME LOOP
+// ══════════════════════════════════════════════
+function tick() {
+  const result = stepSim();
+  updateScore();
+  updateAllCharts();
+
+  if (result.bottleneck) logEvent('⚠ Population bottleneck! Pop crashed to ' + state.popSize, 'warn');
+  if (state.p > 0.95) logEvent('Allele nearing fixation (p=' + state.p.toFixed(3) + ')', 'warn');
+  if (state.p < 0.05) logEvent('Allele nearly lost (p=' + state.p.toFixed(3) + ')', 'danger');
+  if (state.popSize < params.N * 0.2) logEvent('⚠ Population critically low: ' + state.popSize, 'danger');
+  if (state.gen % 20 === 0) logEvent('Generation ' + state.gen + ' — pop: ' + state.popSize + ', p: ' + state.p.toFixed(3), '');
+
+  if (result.extinct) {
+    stopRun();
+    document.getElementById('final-score').textContent = state.gen;
+    document.getElementById('extinction-msg').textContent =
+      state.popSize < 5 ? 'Population collapsed to zero. Selection pressure was too strong.' :
+      'Allele lost from population. No viable offspring remain.';
+    document.getElementById('extinction-overlay').classList.add('active');
+    logEvent('💀 EXTINCTION — ' + state.gen + ' generations survived', 'danger');
+  }
+}
+
+function toggleRun() {
+  if (running) stopRun(); else startRun();
+}
+function startRun() {
+  running = true;
+  document.getElementById('btn-run').textContent = '⏸ PAUSE';
+  document.getElementById('btn-run').className = 'game-btn game-btn-pause';
+  const sp = SPECIES[currentSpecies];
+  const interval = Math.max(80, Math.round(300 * sp.genTime));
+  simTimer = setInterval(tick, interval);
+  if (state.gen === 0) logEvent('Simulation started — ' + sp.name + ' · ' + sp.trait, 'good');
+}
+function stopRun() {
+  running = false;
+  clearInterval(simTimer);
+  document.getElementById('btn-run').textContent = '▶ RUN SIMULATION';
+  document.getElementById('btn-run').className = 'game-btn game-btn-run';
+}
+function resetSim() {
+  stopRun();
+  const sp = SPECIES[currentSpecies];
+  state = { gen: 0, p: 0.3, popSize: params.N, traitMean: sp.meanTrait, traitSd: sp.sdTrait };
+  histP = []; histPop = []; histDp = []; histTrait = [];
+  updateScore();
+  updateAllCharts();
+  document.getElementById('event-log').innerHTML =
+    '<div class="log-entry"><span class="log-gen">GEN 0</span><span>Reset. Press RUN to begin.</span></div>';
+}
+
+// ══════════════════════════════════════════════
+//  PARAM / SPECIES UPDATES
+// ══════════════════════════════════════════════
+function updateParam(key, val) {
+  params[key] = key === 'bt' ? parseInt(val) : parseFloat(val);
+  const labels = { s: 'val-s', N: 'val-N', mu: 'val-mu' };
+  if (labels[key]) document.getElementById(labels[key]).textContent =
+    key === 'N' ? Math.round(val) : parseFloat(val).toFixed(key === 'mu' ? 3 : 2);
+  if (key === 'bt') document.getElementById('val-bt').textContent = val === '1' || val === 1 ? 'High' : 'Low';
+}
+
+function selectSpecies(key) {
+  currentSpecies = key;
+  document.querySelectorAll('.species-btn').forEach((b, i) => {
+    b.classList.toggle('active', Object.keys(SPECIES)[i] === key);
+  });
+  const sp = SPECIES[key];
+  document.getElementById('trait-label').textContent = sp.trait + ' — ' + sp.name;
+  document.getElementById('real-ref-label').textContent = 'Reference: ' + sp.refLabel;
+  document.getElementById('rd-trait-label').textContent = sp.trait + ' — ' + sp.name + ' (empirical)';
+  params.N = sp.typicalN;
+  document.getElementById('sl-N').value = sp.typicalN;
+  document.getElementById('val-N').textContent = sp.typicalN;
+  resetSim();
+  if (currentMode === 'realdata') drawRealData();
+}
+
+// ══════════════════════════════════════════════
+//  MODE SWITCH
+// ══════════════════════════════════════════════
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach((t, i) => {
+    t.classList.toggle('active', ['simulate','realdata'][i] === mode);
+  });
+  document.getElementById('simulate-panel').classList.toggle('hidden', mode !== 'simulate');
+  document.getElementById('realdata-panel').style.display = mode === 'realdata' ? 'block' : 'none';
+  document.getElementById('sim-controls').style.display = mode === 'simulate' ? 'block' : 'none';
+  document.getElementById('rd-controls').style.display = mode === 'realdata' ? 'block' : 'none';
+  if (mode === 'realdata') { stopRun(); drawRealData(); }
+}
+
+// ══════════════════════════════════════════════
+//  REAL DATA CHARTS
+// ══════════════════════════════════════════════
+function drawRealData() {
+  const sp = SPECIES[currentSpecies];
+
+  // Update species info card
+  const card = document.getElementById('species-info-card');
+  const stats = sp.info;
+  card.innerHTML = `
+    <h3>${sp.infoTitle} — <em>${sp.infoSubtitle}</em></h3>
+    <div class="info-stat"><div class="info-stat-val">${stats.h2}</div><div class="info-stat-label">Heritability (h²)</div></div>
+    <div class="info-stat"><div class="info-stat-val">${stats.variance}</div><div class="info-stat-label">${sp.trait} variance</div></div>
+    <div class="info-stat"><div class="info-stat-val">${stats.pop}</div><div class="info-stat-label">Study population</div></div>
+    <div class="info-stat"><div class="info-stat-val">${stats.year}</div><div class="info-stat-label">Key study</div></div>`;
+
+  drawRealTraitDist(sp);
+  drawFitnessLandscape(sp);
+  drawDriftReplicas(sp);
+}
+
+function drawRealTraitDist(sp) {
+  const ctx = getCtx('rd-chart-trait');
+  if (!ctx) return;
+  const pad = 36;
+  clearChart(ctx);
+  drawAxes(ctx, pad);
+
+  const W = ctx._w - pad * 2, H = ctx._h - pad * 2;
+  const mean = sp.meanTrait, sd = sp.sdTrait;
+  const xMin = mean - sd * 3.5, xMax = mean + sd * 3.5;
+
+  // Empirical histogram (simulated from real params)
+  const bins = 20;
+  const binW_val = (xMax - xMin) / bins;
+  const counts = new Array(bins).fill(0);
+  const rng = () => mean + sd * (Array.from({length:6}, () => Math.random()).reduce((a,b) => a+b) - 3) / Math.sqrt(3);
+  for (let i = 0; i < 500; i++) {
+    const v = rng();
+    const b = Math.floor((v - xMin) / binW_val);
+    if (b >= 0 && b < bins) counts[b]++;
+  }
+  const maxCount = Math.max(...counts);
+
+  counts.forEach((c, i) => {
+    const x = pad + (i / bins) * W;
+    const bw = W / bins - 1;
+    const h = (c / maxCount) * H * 0.9;
+    ctx.fillStyle = C.gold + 'aa';
+    ctx.strokeStyle = C.gold;
+    ctx.lineWidth = 1;
+    ctx.fillRect(x, pad + H - h, bw, h);
+    ctx.strokeRect(x, pad + H - h, bw, h);
+  });
+
+  // Overlay normal curve
+  ctx.beginPath();
+  let first = true;
+  for (let i = 0; i <= W; i++) {
+    const x = xMin + (i / W) * (xMax - xMin);
+    const y = Math.exp(-0.5 * ((x - mean) / sd) ** 2);
+    const px = pad + i, py = pad + H - y * H * 0.9;
+    first ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    first = false;
+  }
+  ctx.strokeStyle = C.ember; ctx.lineWidth = 2; ctx.stroke();
+
+  axisLabel(ctx, mean.toFixed(1) + ' ' + sp.unit + ' (μ)', pad + W / 2 - 25, pad + H + 16);
+  axisLabel(ctx, 'h²=' + sp.h2, pad + W - 40, pad + 14, C.ember);
+}
+
+function drawFitnessLandscape(sp) {
+  const ctx = getCtx('rd-chart-fitness');
+  if (!ctx) return;
+  const pad = 36;
+  clearChart(ctx);
+  drawAxes(ctx, pad);
+
+  const W = ctx._w - pad * 2, H = ctx._h - pad * 2;
+  const mean = sp.meanTrait, sd = sp.sdTrait;
+  const xMin = mean - sd * 3, xMax = mean + sd * 3;
+
+  // Fitness function: stabilizing selection bell centered slightly above mean
+  const optTrait = mean + sd * 0.3;
+  ctx.beginPath();
+  let first = true;
+  for (let i = 0; i <= W; i++) {
+    const x = xMin + (i / W) * (xMax - xMin);
+    const fitness = Math.exp(-0.5 * ((x - optTrait) / (sd * 1.2)) ** 2);
+    const px = pad + i, py = pad + H - fitness * H * 0.9;
+    first ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    first = false;
+  }
+  const g = ctx.createLinearGradient(0, pad, 0, pad + H);
+  g.addColorStop(0, C.green + '88'); g.addColorStop(1, C.green + '11');
+  ctx.strokeStyle = C.green; ctx.lineWidth = 2.5; ctx.stroke();
+
+  // Optimal trait marker
+  const optX = pad + ((optTrait - xMin) / (xMax - xMin)) * W;
+  ctx.strokeStyle = C.straw + '88'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(optX, pad); ctx.lineTo(optX, pad + H); ctx.stroke();
+  ctx.setLineDash([]);
+  axisLabel(ctx, 'optimal', optX - 20, pad + 12, C.straw);
+  axisLabel(ctx, 'fitness', 2, pad + 12, C.fog);
+  axisLabel(ctx, sp.trait, pad + W / 2 - 20, pad + H + 16);
+}
+
+function drawDriftReplicas(sp) {
+  const ctx = getCtx('rd-chart-drift');
+  if (!ctx) return;
+  const pad = 36;
+  clearChart(ctx);
+  drawAxes(ctx, pad);
+
+  const W = ctx._w - pad * 2, H = ctx._h - pad * 2;
+  const gens = 60;
+  const N = sp.typicalN;
+
+  // Run 30 replicate drift simulations
+  const replicas = 30;
+  for (let r = 0; r < replicas; r++) {
+    let p = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(pad, pad + H - p * H);
+    for (let g = 1; g <= gens; g++) {
+      const driftSd = Math.sqrt(p * (1 - p) / (2 * N));
+      p += (Math.random() - 0.5) * driftSd * 4;
+      p = Math.max(0.01, Math.min(0.99, p));
+      const x = pad + (g / gens) * W;
+      const y = pad + H - p * H;
+      ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = C.ember + '33'; ctx.lineWidth = 1; ctx.stroke();
+  }
+
+  // Expected drift variance line (σ²=p(1-p)/2N * gen)
+  ctx.beginPath();
+  ctx.moveTo(pad, pad + H * 0.5);
+  ctx.lineTo(pad + W, pad + H * 0.5);
+  ctx.strokeStyle = C.fog + '44'; ctx.lineWidth = 1; ctx.setLineDash([4,4]); ctx.stroke();
+  ctx.setLineDash([]);
+
+  axisLabel(ctx, 'p=1', 2, pad + 8, C.fog);
+  axisLabel(ctx, 'p=0.5', 2, pad + H / 2 + 4, C.fog);
+  axisLabel(ctx, 'p=0', 2, pad + H, C.fog);
+  axisLabel(ctx, 'σ²=p(1-p)/2N', pad + 4, pad + 14, C.ember);
+  axisLabel(ctx, '50 replicate pops · N=' + N, pad + W / 2 - 60, pad + H + 16);
+}
+
+function updateRealDataView() { drawRealData(); }
+
+// ══════════════════════════════════════════════
+//  SCROLL ANIMATIONS
+// ══════════════════════════════════════════════
+if ('IntersectionObserver' in window) {
+  const obs = new IntersectionObserver(
+    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+    { threshold: 0.08 }
+  );
+  document.querySelectorAll('.fade-up').forEach(el => { el.classList.add('will-animate'); obs.observe(el); });
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+window.addEventListener('load', () => {
+  resetSim();
+  setTimeout(updateAllCharts, 100);
+});
+window.addEventListener('resize', () => { updateAllCharts(); if (currentMode === 'realdata') drawRealData(); });
+</script>
+</body>
+</html>
