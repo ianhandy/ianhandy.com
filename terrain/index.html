@@ -125,6 +125,12 @@
     border: 1px solid #3A2000;
     border-radius: 4px;
     box-shadow: 0 0 30px rgba(229,89,28,0.15), 0 0 60px rgba(221,193,101,0.08);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  canvas:active {
+    cursor: grabbing;
   }
 
   .view-modes {
@@ -250,6 +256,7 @@
   <button id="btn-3d" class="active" onclick="setView('3d')">3D Isometric</button>
   <button id="btn-top" onclick="setView('top')">Top Down</button>
   <button id="btn-height" onclick="setView('height')">Heightmap</button>
+  <button class="secondary" onclick="resetCamera()">Reset View</button>
 </div>
 
 <div class="canvas-wrap">
@@ -384,6 +391,16 @@ let currentView = '3d';
 let heightmap = null;
 let mapSize = 256;
 
+// === Camera State ===
+let cameraAngle = 0;
+let cameraZoom = 1.0;
+let cameraPanX = 0;
+let cameraPanY = 0;
+let isDragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragMode = null;
+
 // === Generate Heightmap ===
 function generateHeightmap() {
   const seed = parseInt(document.getElementById('seedInput').value) || 0;
@@ -504,61 +521,89 @@ function render3D(ctx, w, h) {
   ctx.fillStyle = '#241200';
   ctx.fillRect(0, 0, w, h);
 
-  // Isometric projection parameters
-  const step = 3; // Sample every Nth pixel for performance
-  const tileW = w / (mapSize / step) * 0.85;
+  const step = 3;
+  const baseTileW = w / (mapSize / step) * 0.85;
+  const tileW = baseTileW * cameraZoom;
   const tileH = tileW * 0.5;
-  const heightScale = elevScale * 0.8;
+  const heightScale = elevScale * 0.8 * cameraZoom;
 
-  const offsetX = w / 2;
-  const offsetY = 80;
+  const offsetX = w / 2 + cameraPanX;
+  const offsetY = 80 * cameraZoom + cameraPanY;
 
-  // Draw back-to-front for proper occlusion
+  const cosA = Math.cos(cameraAngle);
+  const sinA = Math.sin(cameraAngle);
+  const cx = mapSize / 2;
+  const cy = mapSize / 2;
+
+  // Collect tiles with rotated positions for depth sorting
+  const tiles = [];
   for (let y = 0; y < mapSize; y += step) {
     for (let x = 0; x < mapSize; x += step) {
-      const h = heightmap[y * mapSize + x];
-      const color = getTerrainColor(h, waterLevel);
+      const dx = x - cx;
+      const dy = y - cy;
+      const rx = dx * cosA - dy * sinA;
+      const ry = dx * sinA + dy * cosA;
 
-      // Isometric transform
-      const ix = (x - y) / step * (tileW * 0.5);
-      const iy = (x + y) / step * (tileH * 0.5);
-      const iz = h * heightScale;
+      const ix = rx / step * (tileW * 0.5);
+      const iy = ry / step * (tileH * 0.5);
 
-      const sx = offsetX + ix;
-      const sy = offsetY + iy - iz;
+      tiles.push({ x, y, sx: offsetX + ix, sy: offsetY + iy, depth: rx + ry });
+    }
+  }
 
-      // Calculate shading from neighboring heights
-      let shade = 1.0;
-      if (x > 0 && y > 0) {
-        const hLeft = heightmap[y * mapSize + (x - step)] || h;
-        const hUp = heightmap[(y - step) * mapSize + x] || h;
-        const dx = h - hLeft;
-        const dy = h - hUp;
-        shade = 0.6 + 0.4 * Math.max(0, Math.min(1, 0.5 + dx * 3 + dy * 2));
-      }
+  // Sort back-to-front for correct occlusion at any rotation
+  tiles.sort((a, b) => a.depth - b.depth);
 
-      // Draw column
-      const pillarH = Math.max(2, iz * 0.15 + 2);
+  for (const tile of tiles) {
+    const { x, y, sx } = tile;
+    const ht = heightmap[y * mapSize + x];
+    const color = getTerrainColor(ht, waterLevel);
+    const iz = ht * heightScale;
+    const sy = tile.sy - iz;
 
-      // Side face (darker)
-      ctx.fillStyle = `rgb(${Math.round(color[0] * shade * 0.5)},${Math.round(color[1] * shade * 0.5)},${Math.round(color[2] * shade * 0.5)})`;
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(sx + tileW * 0.5, sy + tileH * 0.5);
-      ctx.lineTo(sx + tileW * 0.5, sy + tileH * 0.5 + pillarH);
-      ctx.lineTo(sx, sy + pillarH);
-      ctx.fill();
+    let shade = 1.0;
+    if (x > 0 && y > 0) {
+      const hLeft = heightmap[y * mapSize + (x - step)] || ht;
+      const hUp = heightmap[(y - step) * mapSize + x] || ht;
+      const ddx = ht - hLeft;
+      const ddy = ht - hUp;
+      shade = 0.6 + 0.4 * Math.max(0, Math.min(1, 0.5 + ddx * 3 + ddy * 2));
+    }
 
-      ctx.fillStyle = `rgb(${Math.round(color[0] * shade * 0.35)},${Math.round(color[1] * shade * 0.35)},${Math.round(color[2] * shade * 0.35)})`;
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(sx - tileW * 0.5, sy + tileH * 0.5);
-      ctx.lineTo(sx - tileW * 0.5, sy + tileH * 0.5 + pillarH);
-      ctx.lineTo(sx, sy + pillarH);
-      ctx.fill();
+    const pillarH = Math.max(2, iz * 0.15 + 2);
 
-      // Top face
-      ctx.fillStyle = `rgb(${Math.round(color[0] * shade)},${Math.round(color[1] * shade)},${Math.round(color[2] * shade)})`;
+    // Right side face
+    ctx.fillStyle = `rgb(${Math.round(color[0] * shade * 0.5)},${Math.round(color[1] * shade * 0.5)},${Math.round(color[2] * shade * 0.5)})`;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + tileW * 0.5, sy + tileH * 0.5);
+    ctx.lineTo(sx + tileW * 0.5, sy + tileH * 0.5 + pillarH);
+    ctx.lineTo(sx, sy + pillarH);
+    ctx.fill();
+
+    // Left side face
+    ctx.fillStyle = `rgb(${Math.round(color[0] * shade * 0.35)},${Math.round(color[1] * shade * 0.35)},${Math.round(color[2] * shade * 0.35)})`;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx - tileW * 0.5, sy + tileH * 0.5);
+    ctx.lineTo(sx - tileW * 0.5, sy + tileH * 0.5 + pillarH);
+    ctx.lineTo(sx, sy + pillarH);
+    ctx.fill();
+
+    // Top face
+    ctx.fillStyle = `rgb(${Math.round(color[0] * shade)},${Math.round(color[1] * shade)},${Math.round(color[2] * shade)})`;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - tileH * 0.5);
+    ctx.lineTo(sx + tileW * 0.5, sy);
+    ctx.lineTo(sx, sy + tileH * 0.5);
+    ctx.lineTo(sx - tileW * 0.5, sy);
+    ctx.closePath();
+    ctx.fill();
+
+    // Glow on peaks
+    if (ht > 0.85) {
+      const glowAlpha = (ht - 0.85) / 0.15 * 0.3;
+      ctx.fillStyle = `rgba(255, 233, 163, ${glowAlpha})`;
       ctx.beginPath();
       ctx.moveTo(sx, sy - tileH * 0.5);
       ctx.lineTo(sx + tileW * 0.5, sy);
@@ -566,33 +611,20 @@ function render3D(ctx, w, h) {
       ctx.lineTo(sx - tileW * 0.5, sy);
       ctx.closePath();
       ctx.fill();
+    }
 
-      // Glow on peaks
-      if (h > 0.85) {
-        const glowAlpha = (h - 0.85) / 0.15 * 0.3;
-        ctx.fillStyle = `rgba(255, 233, 163, ${glowAlpha})`;
-        ctx.beginPath();
-        ctx.moveTo(sx, sy - tileH * 0.5);
-        ctx.lineTo(sx + tileW * 0.5, sy);
-        ctx.lineTo(sx, sy + tileH * 0.5);
-        ctx.lineTo(sx - tileW * 0.5, sy);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      // Water shimmer
-      const wl = waterLevel / 100;
-      if (h < wl) {
-        const shimmerAlpha = 0.15 + Math.sin(x * 0.3 + y * 0.2) * 0.05;
-        ctx.fillStyle = `rgba(20, 40, 60, ${shimmerAlpha})`;
-        ctx.beginPath();
-        ctx.moveTo(sx, sy - tileH * 0.5);
-        ctx.lineTo(sx + tileW * 0.5, sy);
-        ctx.lineTo(sx, sy + tileH * 0.5);
-        ctx.lineTo(sx - tileW * 0.5, sy);
-        ctx.closePath();
-        ctx.fill();
-      }
+    // Water shimmer
+    const wl = waterLevel / 100;
+    if (ht < wl) {
+      const shimmerAlpha = 0.15 + Math.sin(x * 0.3 + y * 0.2) * 0.05;
+      ctx.fillStyle = `rgba(20, 40, 60, ${shimmerAlpha})`;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - tileH * 0.5);
+      ctx.lineTo(sx + tileW * 0.5, sy);
+      ctx.lineTo(sx, sy + tileH * 0.5);
+      ctx.lineTo(sx - tileW * 0.5, sy);
+      ctx.closePath();
+      ctx.fill();
     }
   }
 
@@ -621,7 +653,8 @@ function render() {
 
   // Update info
   const seed = document.getElementById('seedInput').value;
-  document.getElementById('info').textContent = `Seed: ${seed} | ${mapSize}×${mapSize} | ${currentView.toUpperCase()} view`;
+  const hint = currentView === '3d' ? ' | Drag: rotate · Shift-drag: pan · Scroll: zoom' : '';
+  document.getElementById('info').textContent = `Seed: ${seed} | ${mapSize}×${mapSize} | ${currentView.toUpperCase()} view${hint}`;
 }
 
 // === Generate ===
@@ -730,6 +763,123 @@ function loadFromURL() {
   if (params.has('water')) document.getElementById('waterLevel').value = params.get('water');
   if (params.has('view')) currentView = params.get('view');
 }
+
+// === Camera Controls ===
+function resetCamera() {
+  cameraAngle = 0;
+  cameraZoom = 1.0;
+  cameraPanX = 0;
+  cameraPanY = 0;
+  render();
+}
+
+// Mouse controls
+const canvasEl = document.getElementById('canvas');
+
+canvasEl.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  dragMode = e.shiftKey ? 'pan' : 'rotate';
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - dragStartX;
+  const dy = e.clientY - dragStartY;
+
+  if (dragMode === 'rotate') {
+    cameraAngle += dx * 0.005;
+  } else {
+    cameraPanX += dx;
+    cameraPanY += dy;
+  }
+
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  if (currentView === '3d') render();
+});
+
+window.addEventListener('mouseup', () => {
+  isDragging = false;
+  dragMode = null;
+});
+
+canvasEl.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  if (currentView !== '3d') return;
+  const factor = e.deltaY > 0 ? 0.9 : 1.1;
+  cameraZoom = Math.max(0.3, Math.min(5, cameraZoom * factor));
+  render();
+}, { passive: false });
+
+// Touch controls
+let lastTouchDist = 0;
+let lastTouchCenter = null;
+let touchMode = null;
+
+canvasEl.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    isDragging = true;
+    dragStartX = e.touches[0].clientX;
+    dragStartY = e.touches[0].clientY;
+    touchMode = 'rotate';
+  } else if (e.touches.length === 2) {
+    touchMode = 'pinch';
+    const tdx = e.touches[1].clientX - e.touches[0].clientX;
+    const tdy = e.touches[1].clientY - e.touches[0].clientY;
+    lastTouchDist = Math.sqrt(tdx * tdx + tdy * tdy);
+    lastTouchCenter = {
+      x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+      y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+    };
+  }
+}, { passive: false });
+
+canvasEl.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (currentView !== '3d') return;
+
+  if (touchMode === 'rotate' && e.touches.length === 1) {
+    const dx = e.touches[0].clientX - dragStartX;
+    cameraAngle += dx * 0.005;
+    dragStartX = e.touches[0].clientX;
+    dragStartY = e.touches[0].clientY;
+    render();
+  } else if (touchMode === 'pinch' && e.touches.length === 2) {
+    const tdx = e.touches[1].clientX - e.touches[0].clientX;
+    const tdy = e.touches[1].clientY - e.touches[0].clientY;
+    const dist = Math.sqrt(tdx * tdx + tdy * tdy);
+    const center = {
+      x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+      y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+    };
+
+    // Pinch zoom
+    const zoomDelta = dist / lastTouchDist;
+    cameraZoom = Math.max(0.3, Math.min(5, cameraZoom * zoomDelta));
+
+    // Two-finger pan
+    cameraPanX += center.x - lastTouchCenter.x;
+    cameraPanY += center.y - lastTouchCenter.y;
+
+    lastTouchDist = dist;
+    lastTouchCenter = center;
+    render();
+  }
+}, { passive: false });
+
+canvasEl.addEventListener('touchend', (e) => {
+  if (e.touches.length === 0) {
+    isDragging = false;
+    touchMode = null;
+  } else if (e.touches.length === 1) {
+    touchMode = 'rotate';
+    dragStartX = e.touches[0].clientX;
+    dragStartY = e.touches[0].clientY;
+  }
+});
 
 // === Init ===
 document.querySelectorAll('input[type="range"]').forEach(slider => {
