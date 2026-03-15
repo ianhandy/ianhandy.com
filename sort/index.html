@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sorting Algorithm Visualizer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #241200;
+  color: #DDC165;
+  font-family: 'Courier New', monospace;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+header {
+  text-align: center;
+  padding: 20px 20px 10px;
+}
+
+header h1 {
+  font-size: 1.8em;
+  color: #FFE9A3;
+  text-shadow: 0 0 20px rgba(221,193,101,0.4);
+  letter-spacing: 2px;
+}
+
+header p {
+  color: #9a7a3a;
+  font-size: 0.85em;
+  margin-top: 4px;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  flex-wrap: wrap;
+}
+
+.controls label {
+  font-size: 0.8em;
+  color: #9a7a3a;
+}
+
+.controls select, .controls input[type="range"] {
+  background: #1A0D00;
+  border: 1px solid #4a3520;
+  color: #DDC165;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.8em;
+}
+
+.controls select:focus, .controls input:focus {
+  outline: none;
+  border-color: #DDC165;
+  box-shadow: 0 0 8px rgba(221,193,101,0.3);
+}
+
+.controls input[type="range"] {
+  -webkit-appearance: none;
+  width: 120px;
+  height: 6px;
+  border-radius: 3px;
+  background: #4a3520;
+  border: none;
+  padding: 0;
+}
+
+.controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #DDC165;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(221,193,101,0.5);
+}
+
+button {
+  background: linear-gradient(135deg, #E5591C, #c44a15);
+  color: #FFE9A3;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+button:hover {
+  background: linear-gradient(135deg, #ff6a2a, #E5591C);
+  box-shadow: 0 0 15px rgba(229,89,28,0.4);
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+button.secondary {
+  background: linear-gradient(135deg, #4a3520, #3a2510);
+  color: #9a7a3a;
+}
+
+button.secondary:hover {
+  background: linear-gradient(135deg, #5a4530, #4a3520);
+  box-shadow: 0 0 10px rgba(154,122,58,0.3);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 12px 20px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1000px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .grid { grid-template-columns: 1fr; }
+  header h1 { font-size: 1.3em; }
+}
+
+.algo-panel {
+  background: #1A0D00;
+  border: 1px solid #3a2510;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.algo-panel.active {
+  border-color: #E5591C;
+  box-shadow: 0 0 12px rgba(229,89,28,0.2);
+}
+
+.algo-panel.done {
+  border-color: #4a8c3f;
+  box-shadow: 0 0 12px rgba(74,140,63,0.2);
+}
+
+.algo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(36,18,0,0.5);
+  border-bottom: 1px solid #3a2510;
+}
+
+.algo-header h3 {
+  font-size: 0.9em;
+  color: #FFE9A3;
+}
+
+.algo-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 0.7em;
+  color: #9a7a3a;
+}
+
+.algo-stats .comparisons::before { content: 'cmp: '; color: #6a5a3a; }
+.algo-stats .swaps::before { content: 'swp: '; color: #6a5a3a; }
+.algo-stats .time::before { content: ''; color: #6a5a3a; }
+
+.algo-canvas {
+  display: block;
+  width: 100%;
+  height: 160px;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 4px 20px 12px;
+  font-size: 0.75em;
+}
+
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #9a7a3a;
+}
+
+.legend .swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.speed-val {
+  font-size: 0.75em;
+  color: #DDC165;
+  min-width: 30px;
+  text-align: center;
+}
+
+footer {
+  text-align: center;
+  padding: 10px 20px 20px;
+  color: #4a3520;
+  font-size: 0.7em;
+}
+
+footer a {
+  color: #9a7a3a;
+  text-decoration: none;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sorting Algorithm Visualizer</h1>
+  <p>Watch six algorithms race to sort the same data</p>
+</header>
+
+<div class="controls">
+  <div>
+    <label>Size</label><br>
+    <input type="range" id="sizeSlider" min="20" max="200" value="80">
+    <span class="speed-val" id="sizeVal">80</span>
+  </div>
+  <div>
+    <label>Speed</label><br>
+    <input type="range" id="speedSlider" min="1" max="100" value="50">
+    <span class="speed-val" id="speedVal">50</span>
+  </div>
+  <div>
+    <label>Sound</label><br>
+    <input type="range" id="volumeSlider" min="0" max="100" value="30">
+    <span class="speed-val" id="volVal">30%</span>
+  </div>
+  <div>
+    <label>Pattern</label><br>
+    <select id="patternSelect">
+      <option value="random">Random</option>
+      <option value="nearly">Nearly Sorted</option>
+      <option value="reversed">Reversed</option>
+      <option value="fewUnique">Few Unique</option>
+      <option value="sawtooth">Sawtooth</option>
+    </select>
+  </div>
+  <button id="startBtn" onclick="startSort()">Start Race</button>
+  <button id="resetBtn" class="secondary" onclick="resetAll()">New Data</button>
+</div>
+
+<div class="legend">
+  <span><span class="swatch" style="background:#DDC165"></span> Default</span>
+  <span><span class="swatch" style="background:#E5591C"></span> Comparing</span>
+  <span><span class="swatch" style="background:#ff3333"></span> Swapping</span>
+  <span><span class="swatch" style="background:#4a8c3f"></span> Sorted</span>
+  <span><span class="swatch" style="background:#8b5cf6"></span> Pivot</span>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  <a href="https://ianhandy.com">ianhandy.com</a>
+</footer>
+
+<script>
+// ── Audio ──
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playTone(freq, duration) {
+  const vol = parseInt(document.getElementById('volumeSlider').value) / 100;
+  if (vol === 0) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  gain.gain.value = vol * 0.08;
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+function freqFromValue(val, max) {
+  return 200 + (val / max) * 800;
+}
+
+// ── State ──
+const ALGOS = [
+  { name: 'Bubble Sort', key: 'bubble', complexity: 'O(n²)' },
+  { name: 'Selection Sort', key: 'selection', complexity: 'O(n²)' },
+  { name: 'Insertion Sort', key: 'insertion', complexity: 'O(n²)' },
+  { name: 'Merge Sort', key: 'merge', complexity: 'O(n log n)' },
+  { name: 'Quick Sort', key: 'quick', complexity: 'O(n log n)' },
+  { name: 'Heap Sort', key: 'heap', complexity: 'O(n log n)' },
+];
+
+let panels = [];
+let masterData = [];
+let running = false;
+let finishOrder = 0;
+
+// ── Init ──
+function createPanels() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  panels = ALGOS.map((algo) => {
+    const div = document.createElement('div');
+    div.className = 'algo-panel';
+    div.innerHTML = `
+      <div class="algo-header">
+        <h3>${algo.name} <span style="color:#6a5a3a;font-size:0.8em">${algo.complexity}</span></h3>
+        <div class="algo-stats">
+          <span class="comparisons">0</span>
+          <span class="swaps">0</span>
+          <span class="time"></span>
+        </div>
+      </div>
+      <canvas class="algo-canvas"></canvas>
+    `;
+    grid.appendChild(div);
+    const canvas = div.querySelector('canvas');
+    return {
+      key: algo.key,
+      name: algo.name,
+      el: div,
+      canvas,
+      ctx: canvas.getContext('2d'),
+      data: [],
+      comparisons: 0,
+      swaps: 0,
+      comparing: [],
+      swapping: [],
+      sorted: new Set(),
+      pivot: -1,
+      done: false,
+      startTime: 0,
+      endTime: 0,
+      statsEl: div.querySelector('.algo-stats'),
+    };
+  });
+  resizeCanvases();
+}
+
+function resizeCanvases() {
+  panels.forEach(p => {
+    const rect = p.canvas.parentElement.getBoundingClientRect();
+    p.canvas.width = rect.width;
+    p.canvas.height = 160;
+  });
+}
+
+window.addEventListener('resize', () => {
+  resizeCanvases();
+  panels.forEach(p => drawBars(p));
+});
+
+function generateData() {
+  const n = parseInt(document.getElementById('sizeSlider').value);
+  const pattern = document.getElementById('patternSelect').value;
+  let arr = [];
+
+  switch (pattern) {
+    case 'random':
+      for (let i = 1; i <= n; i++) arr.push(i);
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      break;
+    case 'nearly':
+      for (let i = 1; i <= n; i++) arr.push(i);
+      for (let k = 0; k < Math.floor(n * 0.05); k++) {
+        const i = Math.floor(Math.random() * n);
+        const j = Math.floor(Math.random() * n);
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      break;
+    case 'reversed':
+      for (let i = n; i >= 1; i--) arr.push(i);
+      break;
+    case 'fewUnique':
+      const vals = [Math.floor(n * 0.2), Math.floor(n * 0.4), Math.floor(n * 0.6), Math.floor(n * 0.8), n];
+      for (let i = 0; i < n; i++) arr.push(vals[Math.floor(Math.random() * vals.length)]);
+      break;
+    case 'sawtooth':
+      const teeth = 4;
+      const segLen = Math.floor(n / teeth);
+      for (let t = 0; t < teeth; t++) {
+        for (let i = 0; i < segLen; i++) {
+          arr.push(Math.floor((i / segLen) * n) + 1);
+        }
+      }
+      while (arr.length < n) arr.push(n);
+      break;
+  }
+  masterData = arr;
+}
+
+function resetAll() {
+  running = false;
+  finishOrder = 0;
+  generateData();
+  panels.forEach(p => {
+    p.data = [...masterData];
+    p.comparisons = 0;
+    p.swaps = 0;
+    p.comparing = [];
+    p.swapping = [];
+    p.sorted = new Set();
+    p.pivot = -1;
+    p.done = false;
+    p.startTime = 0;
+    p.endTime = 0;
+    p.el.className = 'algo-panel';
+    updateStats(p);
+    drawBars(p);
+  });
+  document.getElementById('startBtn').disabled = false;
+}
+
+// ── Drawing ──
+function drawBars(p) {
+  const { canvas, ctx, data } = p;
+  const w = canvas.width;
+  const h = canvas.height;
+  const n = data.length;
+  const barW = w / n;
+  const maxVal = Math.max(...data);
+
+  ctx.fillStyle = '#1A0D00';
+  ctx.fillRect(0, 0, w, h);
+
+  for (let i = 0; i < n; i++) {
+    const barH = (data[i] / maxVal) * (h - 8);
+    const x = i * barW;
+    const y = h - barH;
+
+    let color = '#DDC165';
+
+    if (p.sorted.has(i)) {
+      color = '#4a8c3f';
+    }
+    if (i === p.pivot) {
+      color = '#8b5cf6';
+    }
+    if (p.comparing.includes(i)) {
+      color = '#E5591C';
+    }
+    if (p.swapping.includes(i)) {
+      color = '#ff3333';
+    }
+
+    // Glow for active elements
+    if (p.comparing.includes(i) || p.swapping.includes(i)) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 8;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.fillStyle = color;
+    if (barW > 3) {
+      ctx.fillRect(x + 0.5, y, barW - 1, barH);
+    } else {
+      ctx.fillRect(x, y, barW, barH);
+    }
+  }
+  ctx.shadowBlur = 0;
+}
+
+function updateStats(p) {
+  const stats = p.statsEl;
+  stats.querySelector('.comparisons').textContent = p.comparisons.toLocaleString();
+  stats.querySelector('.swaps').textContent = p.swaps.toLocaleString();
+  if (p.done && p.endTime) {
+    stats.querySelector('.time').textContent = ((p.endTime - p.startTime) / 1000).toFixed(2) + 's';
+  } else if (p.startTime && !p.done) {
+    stats.querySelector('.time').textContent = ((performance.now() - p.startTime) / 1000).toFixed(1) + 's';
+  }
+}
+
+// ── Sorting Generators ──
+function getDelay() {
+  const speed = parseInt(document.getElementById('speedSlider').value);
+  // Map 1-100 to 200ms-0ms (exponential for better feel)
+  return Math.max(0, 200 * Math.pow(0.96, speed));
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+async function compare(p, i, j) {
+  if (!running) throw 'stopped';
+  p.comparisons++;
+  p.comparing = [i, j];
+  const maxVal = Math.max(...p.data);
+  playTone(freqFromValue(p.data[i], maxVal), 0.05);
+  drawBars(p);
+  updateStats(p);
+  await sleep(getDelay());
+  p.comparing = [];
+  return p.data[i] - p.data[j];
+}
+
+async function swap(p, i, j) {
+  if (!running) throw 'stopped';
+  p.swaps++;
+  p.swapping = [i, j];
+  [p.data[i], p.data[j]] = [p.data[j], p.data[i]];
+  const maxVal = Math.max(...p.data);
+  playTone(freqFromValue(p.data[i], maxVal), 0.08);
+  drawBars(p);
+  updateStats(p);
+  await sleep(getDelay());
+  p.swapping = [];
+}
+
+async function setVal(p, i, val) {
+  if (!running) throw 'stopped';
+  p.swaps++;
+  p.data[i] = val;
+  p.swapping = [i];
+  const maxVal = Math.max(...p.data);
+  playTone(freqFromValue(val, maxVal), 0.05);
+  drawBars(p);
+  updateStats(p);
+  await sleep(getDelay());
+  p.swapping = [];
+}
+
+// ── Algorithms ──
+async function bubbleSort(p) {
+  const n = p.data.length;
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = 0; j < n - i - 1; j++) {
+      if ((await compare(p, j, j + 1)) > 0) {
+        await swap(p, j, j + 1);
+      }
+    }
+    p.sorted.add(n - i - 1);
+  }
+  p.sorted.add(0);
+}
+
+async function selectionSort(p) {
+  const n = p.data.length;
+  for (let i = 0; i < n - 1; i++) {
+    let minIdx = i;
+    for (let j = i + 1; j < n; j++) {
+      if ((await compare(p, j, minIdx)) < 0) {
+        minIdx = j;
+      }
+    }
+    if (minIdx !== i) {
+      await swap(p, i, minIdx);
+    }
+    p.sorted.add(i);
+  }
+  p.sorted.add(n - 1);
+}
+
+async function insertionSort(p) {
+  const n = p.data.length;
+  p.sorted.add(0);
+  for (let i = 1; i < n; i++) {
+    const key = p.data[i];
+    let j = i - 1;
+    p.comparing = [i];
+    drawBars(p);
+    await sleep(getDelay());
+    while (j >= 0 && (await compare(p, j, i)) > 0) {
+      // shift
+      await setVal(p, j + 1, p.data[j]);
+      j--;
+      // update reference position for compare
+      p.data[j + 1] = key;
+    }
+    await setVal(p, j + 1, key);
+    for (let k = 0; k <= i; k++) p.sorted.add(k);
+  }
+}
+
+async function mergeSort(p) {
+  async function merge(lo, mid, hi) {
+    const left = p.data.slice(lo, mid + 1);
+    const right = p.data.slice(mid + 1, hi + 1);
+    let i = 0, j = 0, k = lo;
+
+    while (i < left.length && j < right.length) {
+      p.comparing = [lo + i, mid + 1 + j];
+      p.comparisons++;
+      drawBars(p);
+      await sleep(getDelay());
+
+      if (left[i] <= right[j]) {
+        await setVal(p, k, left[i]);
+        i++;
+      } else {
+        await setVal(p, k, right[j]);
+        j++;
+      }
+      k++;
+    }
+    while (i < left.length) {
+      await setVal(p, k, left[i]);
+      i++; k++;
+    }
+    while (j < right.length) {
+      await setVal(p, k, right[j]);
+      j++; k++;
+    }
+    p.comparing = [];
+  }
+
+  async function sort(lo, hi) {
+    if (lo >= hi) return;
+    const mid = Math.floor((lo + hi) / 2);
+    await sort(lo, mid);
+    await sort(mid + 1, hi);
+    await merge(lo, mid, hi);
+    // Mark range as sorted if this is the final merge
+    if (lo === 0 && hi === p.data.length - 1) {
+      for (let i = lo; i <= hi; i++) p.sorted.add(i);
+    }
+  }
+
+  await sort(0, p.data.length - 1);
+  for (let i = 0; i < p.data.length; i++) p.sorted.add(i);
+}
+
+async function quickSort(p) {
+  async function partition(lo, hi) {
+    const pivotVal = p.data[hi];
+    p.pivot = hi;
+    let i = lo - 1;
+
+    for (let j = lo; j < hi; j++) {
+      if ((await compare(p, j, hi)) < 0) {
+        i++;
+        if (i !== j) await swap(p, i, j);
+      }
+    }
+    if (i + 1 !== hi) await swap(p, i + 1, hi);
+    p.pivot = -1;
+    p.sorted.add(i + 1);
+    return i + 1;
+  }
+
+  async function sort(lo, hi) {
+    if (lo >= hi) {
+      if (lo === hi) p.sorted.add(lo);
+      return;
+    }
+    const pi = await partition(lo, hi);
+    await sort(lo, pi - 1);
+    await sort(pi + 1, hi);
+  }
+
+  await sort(0, p.data.length - 1);
+}
+
+async function heapSort(p) {
+  const n = p.data.length;
+
+  async function heapify(size, i) {
+    let largest = i;
+    const left = 2 * i + 1;
+    const right = 2 * i + 2;
+
+    if (left < size && (await compare(p, left, largest)) > 0) {
+      largest = left;
+    }
+    if (right < size && (await compare(p, right, largest)) > 0) {
+      largest = right;
+    }
+    if (largest !== i) {
+      await swap(p, i, largest);
+      await heapify(size, largest);
+    }
+  }
+
+  // Build max heap
+  for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+    await heapify(n, i);
+  }
+
+  // Extract elements
+  for (let i = n - 1; i > 0; i--) {
+    await swap(p, 0, i);
+    p.sorted.add(i);
+    await heapify(i, 0);
+  }
+  p.sorted.add(0);
+}
+
+const sortFns = {
+  bubble: bubbleSort,
+  selection: selectionSort,
+  insertion: insertionSort,
+  merge: mergeSort,
+  quick: quickSort,
+  heap: heapSort,
+};
+
+// ── Race ──
+async function runSort(p) {
+  p.startTime = performance.now();
+  p.el.classList.add('active');
+
+  try {
+    await sortFns[p.key](p);
+  } catch (e) {
+    if (e === 'stopped') return;
+    throw e;
+  }
+
+  p.endTime = performance.now();
+  p.done = true;
+  finishOrder++;
+
+  // Mark all sorted
+  for (let i = 0; i < p.data.length; i++) p.sorted.add(i);
+  p.comparing = [];
+  p.swapping = [];
+  p.pivot = -1;
+
+  p.el.classList.remove('active');
+  p.el.classList.add('done');
+  drawBars(p);
+  updateStats(p);
+
+  // Victory sweep sound
+  const n = p.data.length;
+  for (let i = 0; i < n; i += Math.max(1, Math.floor(n / 30))) {
+    playTone(freqFromValue(p.data[i], n), 0.03);
+    await sleep(8);
+  }
+}
+
+async function startSort() {
+  if (running) return;
+  running = true;
+  finishOrder = 0;
+  document.getElementById('startBtn').disabled = true;
+
+  // Resume audio context if suspended
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  // Run all algorithms simultaneously
+  const promises = panels.map(p => runSort(p));
+  await Promise.allSettled(promises);
+
+  running = false;
+  document.getElementById('startBtn').disabled = false;
+}
+
+// ── Slider updates ──
+document.getElementById('sizeSlider').addEventListener('input', (e) => {
+  document.getElementById('sizeVal').textContent = e.target.value;
+  if (!running) resetAll();
+});
+
+document.getElementById('speedSlider').addEventListener('input', (e) => {
+  document.getElementById('speedVal').textContent = e.target.value;
+});
+
+document.getElementById('volumeSlider').addEventListener('input', (e) => {
+  document.getElementById('volVal').textContent = e.target.value + '%';
+});
+
+document.getElementById('patternSelect').addEventListener('change', () => {
+  if (!running) resetAll();
+});
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!running) startSort();
+  }
+  if (e.code === 'KeyR') {
+    if (!running) resetAll();
+  }
+});
+
+// ── Boot ──
+createPanels();
+generateData();
+panels.forEach(p => {
+  p.data = [...masterData];
+  drawBars(p);
+});
+</script>
+</body>
+</html>
