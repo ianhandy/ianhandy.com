@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Graph Playground</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #241200;
+    color: #DDC165;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  canvas {
+    display: block;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    cursor: grab;
+  }
+  canvas:active { cursor: grabbing; }
+
+  /* Control panel */
+  #controls {
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 10;
+    background: rgba(26, 13, 0, 0.92);
+    border: 1px solid rgba(221, 193, 101, 0.3);
+    border-radius: 8px;
+    padding: 16px;
+    width: 260px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 0 20px rgba(229, 89, 28, 0.1);
+  }
+
+  #controls h1 {
+    font-size: 14px;
+    color: #FFE9A3;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(221, 193, 101, 0.4);
+  }
+
+  .control-group {
+    margin-bottom: 10px;
+  }
+
+  .control-group label {
+    display: block;
+    font-size: 10px;
+    color: rgba(221, 193, 101, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .control-group select,
+  .control-group input[type="range"] {
+    width: 100%;
+    background: rgba(36, 18, 0, 0.8);
+    border: 1px solid rgba(221, 193, 101, 0.2);
+    color: #DDC165;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    outline: none;
+  }
+
+  .control-group select:focus {
+    border-color: #E5591C;
+  }
+
+  .control-group input[type="range"] {
+    -webkit-appearance: none;
+    height: 4px;
+    border: none;
+    background: rgba(221, 193, 101, 0.15);
+    border-radius: 2px;
+    padding: 0;
+  }
+
+  .control-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #E5591C;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(229, 89, 28, 0.6);
+  }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .range-row input { flex: 1; }
+
+  .range-val {
+    font-size: 11px;
+    color: #E5591C;
+    min-width: 28px;
+    text-align: right;
+  }
+
+  button {
+    width: 100%;
+    padding: 8px;
+    background: linear-gradient(135deg, #E5591C, #c44a16);
+    border: none;
+    border-radius: 4px;
+    color: #FFE9A3;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: all 0.2s;
+  }
+
+  button:hover {
+    background: linear-gradient(135deg, #ff6a2a, #E5591C);
+    box-shadow: 0 0 12px rgba(229, 89, 28, 0.4);
+  }
+
+  button.secondary {
+    background: rgba(221, 193, 101, 0.1);
+    border: 1px solid rgba(221, 193, 101, 0.3);
+  }
+
+  button.secondary:hover {
+    background: rgba(221, 193, 101, 0.2);
+    box-shadow: 0 0 8px rgba(221, 193, 101, 0.2);
+  }
+
+  #stats {
+    position: fixed;
+    bottom: 16px; left: 16px;
+    z-index: 10;
+    font-size: 10px;
+    color: rgba(221, 193, 101, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  #info {
+    position: fixed;
+    bottom: 16px; right: 16px;
+    z-index: 10;
+    font-size: 10px;
+    color: rgba(221, 193, 101, 0.3);
+    text-align: right;
+    letter-spacing: 1px;
+  }
+
+  /* Tooltip for hovered node */
+  #tooltip {
+    position: fixed;
+    z-index: 20;
+    background: rgba(26, 13, 0, 0.95);
+    border: 1px solid rgba(229, 89, 28, 0.5);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: #FFE9A3;
+    pointer-events: none;
+    display: none;
+    white-space: nowrap;
+  }
+
+  /* Toggle button for mobile */
+  #toggle-controls {
+    display: none;
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 11;
+    width: 36px; height: 36px;
+    background: rgba(26, 13, 0, 0.9);
+    border: 1px solid rgba(221, 193, 101, 0.3);
+    border-radius: 6px;
+    color: #DDC165;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 36px;
+    text-align: center;
+  }
+
+  @media (max-width: 600px) {
+    #toggle-controls { display: block; }
+    #controls { display: none; top: 60px; }
+    #controls.visible { display: block; }
+  }
+</style>
+</head>
+<body>
+
+<button id="toggle-controls">&#9776;</button>
+
+<div id="controls">
+  <h1>Network Graph</h1>
+
+  <div class="control-group">
+    <label>Graph Type</label>
+    <select id="graph-type">
+      <option value="random">Random (Erdos-Renyi)</option>
+      <option value="small-world">Small World (Watts-Strogatz)</option>
+      <option value="scale-free">Scale Free (Barabasi-Albert)</option>
+      <option value="tree">Random Tree</option>
+      <option value="grid">Grid Lattice</option>
+      <option value="cluster">Clustered</option>
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label>Nodes</label>
+    <div class="range-row">
+      <input type="range" id="node-count" min="10" max="200" value="60">
+      <span class="range-val" id="node-count-val">60</span>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Edge Density</label>
+    <div class="range-row">
+      <input type="range" id="edge-density" min="1" max="100" value="30">
+      <span class="range-val" id="edge-density-val">30%</span>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Repulsion Force</label>
+    <div class="range-row">
+      <input type="range" id="repulsion" min="100" max="5000" value="1500">
+      <span class="range-val" id="repulsion-val">1500</span>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Spring Strength</label>
+    <div class="range-row">
+      <input type="range" id="spring" min="1" max="100" value="20">
+      <span class="range-val" id="spring-val">0.20</span>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Gravity</label>
+    <div class="range-row">
+      <input type="range" id="gravity" min="0" max="100" value="10">
+      <span class="range-val" id="gravity-val">0.10</span>
+    </div>
+  </div>
+
+  <button id="generate-btn">Generate</button>
+  <button id="pin-btn" class="secondary">Pin All Nodes</button>
+  <button id="unpin-btn" class="secondary">Release All</button>
+</div>
+
+<div id="tooltip"></div>
+
+<canvas id="canvas"></canvas>
+
+<div id="stats">
+  <span id="stat-nodes">0</span> nodes &middot;
+  <span id="stat-edges">0</span> edges &middot;
+  <span id="stat-fps">0</span> fps
+</div>
+
+<div id="info">
+  drag nodes &middot; scroll to zoom &middot; shift+drag to pan
+</div>
+
+<script>
+// ── Canvas Setup ──
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Colors ──
+const BG = '#241200';
+const GOLD = '#DDC165';
+const GOLD_LIGHT = '#FFE9A3';
+const ORANGE = '#E5591C';
+const DARK = '#1A0D00';
+
+// ── State ──
+let nodes = [];
+let edges = [];
+let camera = { x: 0, y: 0, zoom: 1 };
+let dragging = null;
+let panning = false;
+let panStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let simRunning = true;
+
+// ── Physics params ──
+function getParams() {
+  return {
+    repulsion: +document.getElementById('repulsion').value,
+    spring: +document.getElementById('spring').value / 100,
+    gravity: +document.getElementById('gravity').value / 100,
+    damping: 0.92,
+    restLength: 80,
+  };
+}
+
+// ── Graph Generators ──
+function generateGraph() {
+  const type = document.getElementById('graph-type').value;
+  const n = +document.getElementById('node-count').value;
+  const density = +document.getElementById('edge-density').value / 100;
+
+  nodes = [];
+  edges = [];
+
+  // Create nodes centered around screen center
+  const cx = W / 2;
+  const cy = H / 2;
+  const spread = Math.min(W, H) * 0.3;
+
+  for (let i = 0; i < n; i++) {
+    const angle = (i / n) * Math.PI * 2;
+    const r = spread * (0.3 + Math.random() * 0.7);
+    nodes.push({
+      id: i,
+      x: cx + Math.cos(angle) * r + (Math.random() - 0.5) * 60,
+      y: cy + Math.sin(angle) * r + (Math.random() - 0.5) * 60,
+      vx: 0, vy: 0,
+      pinned: false,
+      degree: 0,
+      label: `Node ${i}`,
+    });
+  }
+
+  switch (type) {
+    case 'random': genRandom(n, density); break;
+    case 'small-world': genSmallWorld(n, density); break;
+    case 'scale-free': genScaleFree(n); break;
+    case 'tree': genTree(n); break;
+    case 'grid': genGrid(n); break;
+    case 'cluster': genCluster(n, density); break;
+  }
+
+  // Compute degrees
+  for (const e of edges) {
+    nodes[e.source].degree++;
+    nodes[e.target].degree++;
+  }
+
+  // Reset camera
+  camera = { x: 0, y: 0, zoom: 1 };
+
+  updateStats();
+}
+
+function addEdge(a, b) {
+  if (a === b) return;
+  if (edges.some(e => (e.source === a && e.target === b) || (e.source === b && e.target === a))) return;
+  edges.push({ source: a, target: b });
+}
+
+function genRandom(n, density) {
+  const maxEdges = n * (n - 1) / 2;
+  const targetEdges = Math.floor(maxEdges * density * 0.3);
+  for (let i = 0; i < targetEdges; i++) {
+    const a = Math.floor(Math.random() * n);
+    const b = Math.floor(Math.random() * n);
+    addEdge(a, b);
+  }
+}
+
+function genSmallWorld(n, density) {
+  const k = Math.max(2, Math.floor(density * 8));
+  // Ring lattice
+  for (let i = 0; i < n; i++) {
+    for (let j = 1; j <= k / 2; j++) {
+      addEdge(i, (i + j) % n);
+    }
+  }
+  // Rewire with probability
+  const beta = 0.3;
+  for (let i = 0; i < edges.length; i++) {
+    if (Math.random() < beta) {
+      const newTarget = Math.floor(Math.random() * n);
+      if (newTarget !== edges[i].source) {
+        edges[i].target = newTarget;
+      }
+    }
+  }
+}
+
+function genScaleFree(n) {
+  // Barabasi-Albert: start with a small clique, preferential attachment
+  const m = 2; // edges per new node
+  // Start with m+1 nodes fully connected
+  for (let i = 0; i <= m; i++) {
+    for (let j = i + 1; j <= m; j++) {
+      addEdge(i, j);
+    }
+  }
+  for (let i = m + 1; i < n; i++) {
+    // Preferential attachment
+    const totalDeg = edges.length * 2;
+    const targets = new Set();
+    let attempts = 0;
+    while (targets.size < m && attempts < 100) {
+      let r = Math.random() * totalDeg;
+      for (let j = 0; j < i; j++) {
+        r -= (nodes[j].degree || 1);
+        if (r <= 0) { targets.add(j); break; }
+      }
+      attempts++;
+    }
+    for (const t of targets) {
+      addEdge(i, t);
+      nodes[i].degree++;
+      nodes[t].degree++;
+    }
+  }
+  // Reset degrees (will be recomputed)
+  for (const nd of nodes) nd.degree = 0;
+}
+
+function genTree(n) {
+  for (let i = 1; i < n; i++) {
+    const parent = Math.floor(Math.random() * i);
+    addEdge(i, parent);
+  }
+}
+
+function genGrid(n) {
+  const cols = Math.ceil(Math.sqrt(n));
+  const cx = W / 2;
+  const cy = H / 2;
+  const spacing = 60;
+  for (let i = 0; i < n; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    nodes[i].x = cx + (col - cols / 2) * spacing + (Math.random() - 0.5) * 10;
+    nodes[i].y = cy + (row - cols / 2) * spacing + (Math.random() - 0.5) * 10;
+    if (col < cols - 1 && i + 1 < n) addEdge(i, i + 1);
+    if (i + cols < n) addEdge(i, i + cols);
+  }
+}
+
+function genCluster(n, density) {
+  const numClusters = Math.max(2, Math.floor(n / 15));
+  const cx = W / 2;
+  const cy = H / 2;
+  const clusterSpread = Math.min(W, H) * 0.25;
+
+  // Assign clusters
+  const clusterCenters = [];
+  for (let c = 0; c < numClusters; c++) {
+    const angle = (c / numClusters) * Math.PI * 2;
+    clusterCenters.push({
+      x: cx + Math.cos(angle) * clusterSpread,
+      y: cy + Math.sin(angle) * clusterSpread,
+    });
+  }
+
+  for (let i = 0; i < n; i++) {
+    const c = i % numClusters;
+    nodes[i].cluster = c;
+    nodes[i].x = clusterCenters[c].x + (Math.random() - 0.5) * 100;
+    nodes[i].y = clusterCenters[c].y + (Math.random() - 0.5) * 100;
+  }
+
+  // Dense intra-cluster edges
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (nodes[i].cluster === nodes[j].cluster) {
+        if (Math.random() < density * 1.5) addEdge(i, j);
+      } else {
+        if (Math.random() < density * 0.05) addEdge(i, j);
+      }
+    }
+  }
+}
+
+// ── Physics Simulation (Verlet) ──
+function simulate() {
+  if (!simRunning) return;
+  const p = getParams();
+  const n = nodes.length;
+
+  // Repulsion (Coulomb's law)
+  for (let i = 0; i < n; i++) {
+    if (nodes[i].pinned) continue;
+    let fx = 0, fy = 0;
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      let dx = nodes[i].x - nodes[j].x;
+      let dy = nodes[i].y - nodes[j].y;
+      let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      let force = p.repulsion / (dist * dist);
+      fx += (dx / dist) * force;
+      fy += (dy / dist) * force;
+    }
+    nodes[i].vx += fx;
+    nodes[i].vy += fy;
+  }
+
+  // Spring forces (Hooke's law)
+  for (const e of edges) {
+    const a = nodes[e.source];
+    const b = nodes[e.target];
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    let force = p.spring * (dist - p.restLength);
+    let fx = (dx / dist) * force;
+    let fy = (dy / dist) * force;
+    if (!a.pinned) { a.vx += fx; a.vy += fy; }
+    if (!b.pinned) { b.vx -= fx; b.vy -= fy; }
+  }
+
+  // Center gravity
+  const cx = W / 2 - camera.x;
+  const cy = H / 2 - camera.y;
+  for (let i = 0; i < n; i++) {
+    if (nodes[i].pinned) continue;
+    nodes[i].vx += (cx - nodes[i].x) * p.gravity;
+    nodes[i].vy += (cy - nodes[i].y) * p.gravity;
+  }
+
+  // Apply velocity + damping
+  for (let i = 0; i < n; i++) {
+    if (nodes[i].pinned) continue;
+    nodes[i].vx *= p.damping;
+    nodes[i].vy *= p.damping;
+    nodes[i].x += nodes[i].vx;
+    nodes[i].y += nodes[i].vy;
+  }
+}
+
+// ── Rendering ──
+function screenToWorld(sx, sy) {
+  return {
+    x: (sx - W / 2) / camera.zoom + W / 2 - camera.x,
+    y: (sy - H / 2) / camera.zoom + H / 2 - camera.y,
+  };
+}
+
+function worldToScreen(wx, wy) {
+  return {
+    x: (wx - W / 2 + camera.x) * camera.zoom + W / 2,
+    y: (wy - H / 2 + camera.y) * camera.zoom + H / 2,
+  };
+}
+
+function nodeRadius(node) {
+  return Math.max(3, Math.min(12, 3 + node.degree * 0.8));
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle radial gradient center glow
+  const grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H) * 0.5);
+  grad.addColorStop(0, 'rgba(229, 89, 28, 0.03)');
+  grad.addColorStop(1, 'rgba(36, 18, 0, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  // Camera transform
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(camera.zoom, camera.zoom);
+  ctx.translate(-W / 2 + camera.x, -H / 2 + camera.y);
+
+  // Draw edges
+  for (const e of edges) {
+    const a = nodes[e.source];
+    const b = nodes[e.target];
+    const isHovered = hoveredNode && (e.source === hoveredNode.id || e.target === hoveredNode.id);
+
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+
+    if (isHovered) {
+      ctx.strokeStyle = 'rgba(229, 89, 28, 0.8)';
+      ctx.lineWidth = 2 / camera.zoom;
+      ctx.shadowColor = ORANGE;
+      ctx.shadowBlur = 8;
+    } else {
+      ctx.strokeStyle = 'rgba(229, 89, 28, 0.15)';
+      ctx.lineWidth = 1 / camera.zoom;
+      ctx.shadowBlur = 0;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Draw nodes
+  for (const node of nodes) {
+    const r = nodeRadius(node);
+    const isHovered = hoveredNode && hoveredNode.id === node.id;
+    const isConnected = hoveredNode && edges.some(
+      e => (e.source === hoveredNode.id && e.target === node.id) ||
+           (e.target === hoveredNode.id && e.source === node.id)
+    );
+
+    // Glow
+    if (isHovered || isConnected) {
+      ctx.shadowColor = isHovered ? GOLD_LIGHT : ORANGE;
+      ctx.shadowBlur = isHovered ? 20 : 12;
+    }
+
+    // Outer ring
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r + 1.5 / camera.zoom, 0, Math.PI * 2);
+    ctx.fillStyle = isHovered ? GOLD_LIGHT : (isConnected ? ORANGE : 'rgba(229, 89, 28, 0.4)');
+    ctx.fill();
+
+    // Inner fill
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+    if (node.pinned) {
+      ctx.fillStyle = '#FF8C42';
+    } else if (isHovered) {
+      ctx.fillStyle = GOLD_LIGHT;
+    } else if (isConnected) {
+      ctx.fillStyle = GOLD;
+    } else {
+      ctx.fillStyle = GOLD;
+    }
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Pin indicator
+    if (node.pinned) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r * 0.35, 0, Math.PI * 2);
+      ctx.fillStyle = DARK;
+      ctx.fill();
+    }
+  }
+
+  // Draw labels for hovered + neighbors
+  if (hoveredNode) {
+    ctx.font = `${11 / camera.zoom}px 'Courier New', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+
+    const labelNodes = [hoveredNode, ...nodes.filter(n =>
+      edges.some(e =>
+        (e.source === hoveredNode.id && e.target === n.id) ||
+        (e.target === hoveredNode.id && e.source === n.id)
+      )
+    )];
+
+    for (const n of labelNodes) {
+      const r = nodeRadius(n);
+      ctx.fillStyle = n === hoveredNode ? GOLD_LIGHT : 'rgba(221, 193, 101, 0.7)';
+      ctx.fillText(n.label, n.x, n.y - r - 4 / camera.zoom);
+    }
+  }
+
+  ctx.restore();
+}
+
+// ── FPS Counter ──
+let frameCount = 0;
+let lastFpsTime = performance.now();
+let fps = 0;
+
+// ── Main Loop ──
+function loop() {
+  simulate();
+  draw();
+
+  frameCount++;
+  const now = performance.now();
+  if (now - lastFpsTime > 1000) {
+    fps = frameCount;
+    frameCount = 0;
+    lastFpsTime = now;
+    document.getElementById('stat-fps').textContent = fps;
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// ── Interaction ──
+function getNodeAt(sx, sy) {
+  const world = screenToWorld(sx, sy);
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    const r = nodeRadius(n) + 4;
+    const dx = world.x - n.x;
+    const dy = world.y - n.y;
+    if (dx * dx + dy * dy < r * r) return n;
+  }
+  return null;
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  const node = getNodeAt(e.clientX, e.clientY);
+  if (node && !e.shiftKey) {
+    dragging = node;
+    dragging._wasPinned = node.pinned;
+    dragging.pinned = true;
+  } else {
+    panning = true;
+    panStart = { x: e.clientX, y: e.clientY };
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (dragging) {
+    const world = screenToWorld(e.clientX, e.clientY);
+    dragging.x = world.x;
+    dragging.y = world.y;
+    dragging.vx = 0;
+    dragging.vy = 0;
+  } else if (panning) {
+    camera.x += (e.clientX - panStart.x) / camera.zoom;
+    camera.y += (e.clientY - panStart.y) / camera.zoom;
+    panStart = { x: e.clientX, y: e.clientY };
+  } else {
+    const node = getNodeAt(e.clientX, e.clientY);
+    hoveredNode = node;
+    const tooltip = document.getElementById('tooltip');
+    if (node) {
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX + 12) + 'px';
+      tooltip.style.top = (e.clientY - 8) + 'px';
+      tooltip.textContent = `${node.label} — ${node.degree} connections${node.pinned ? ' [pinned]' : ''}`;
+    } else {
+      tooltip.style.display = 'none';
+    }
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  if (dragging && !dragging._wasPinned) {
+    // Keep pinned after drag (click to unpin)
+    dragging.pinned = true;
+  }
+  dragging = null;
+  panning = false;
+});
+
+canvas.addEventListener('dblclick', (e) => {
+  const node = getNodeAt(e.clientX, e.clientY);
+  if (node) {
+    node.pinned = !node.pinned;
+  }
+});
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const factor = e.deltaY > 0 ? 0.92 : 1.08;
+  camera.zoom = Math.max(0.1, Math.min(10, camera.zoom * factor));
+}, { passive: false });
+
+// ── Touch support ──
+let touchStartDist = 0;
+let touchStartZoom = 1;
+
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    const node = getNodeAt(t.clientX, t.clientY);
+    if (node) {
+      dragging = node;
+      dragging._wasPinned = node.pinned;
+      dragging.pinned = true;
+    } else {
+      panning = true;
+      panStart = { x: t.clientX, y: t.clientY };
+    }
+  } else if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    touchStartDist = Math.sqrt(dx * dx + dy * dy);
+    touchStartZoom = camera.zoom;
+  }
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    if (dragging) {
+      const world = screenToWorld(t.clientX, t.clientY);
+      dragging.x = world.x;
+      dragging.y = world.y;
+      dragging.vx = 0;
+      dragging.vy = 0;
+    } else if (panning) {
+      camera.x += (t.clientX - panStart.x) / camera.zoom;
+      camera.y += (t.clientY - panStart.y) / camera.zoom;
+      panStart = { x: t.clientX, y: t.clientY };
+    }
+  } else if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    camera.zoom = Math.max(0.1, Math.min(10, touchStartZoom * (dist / touchStartDist)));
+  }
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  if (dragging && !dragging._wasPinned) {
+    dragging.pinned = true;
+  }
+  dragging = null;
+  panning = false;
+});
+
+// ── Controls ──
+function updateStats() {
+  document.getElementById('stat-nodes').textContent = nodes.length;
+  document.getElementById('stat-edges').textContent = edges.length;
+}
+
+// Slider value displays
+const sliders = [
+  ['node-count', 'node-count-val', v => v],
+  ['edge-density', 'edge-density-val', v => v + '%'],
+  ['repulsion', 'repulsion-val', v => v],
+  ['spring', 'spring-val', v => (v / 100).toFixed(2)],
+  ['gravity', 'gravity-val', v => (v / 100).toFixed(2)],
+];
+
+for (const [id, valId, fmt] of sliders) {
+  const el = document.getElementById(id);
+  const valEl = document.getElementById(valId);
+  el.addEventListener('input', () => { valEl.textContent = fmt(+el.value); });
+}
+
+document.getElementById('generate-btn').addEventListener('click', generateGraph);
+
+document.getElementById('pin-btn').addEventListener('click', () => {
+  for (const n of nodes) n.pinned = true;
+});
+
+document.getElementById('unpin-btn').addEventListener('click', () => {
+  for (const n of nodes) n.pinned = false;
+});
+
+document.getElementById('toggle-controls').addEventListener('click', () => {
+  document.getElementById('controls').classList.toggle('visible');
+});
+
+// ── Init ──
+generateGraph();
+loop();
+</script>
+</body>
+</html>
