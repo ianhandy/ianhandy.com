@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lorenz Attractor Explorer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #241200;
+    color: #DDC165;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  #canvas {
+    display: block;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    cursor: grab;
+  }
+  #canvas:active { cursor: grabbing; }
+
+  #loading {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #241200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.8s ease;
+  }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+
+  #loading h1 {
+    font-size: 2rem;
+    color: #DDC165;
+    text-shadow: 0 0 20px rgba(221,193,101,0.5);
+    margin-bottom: 1rem;
+  }
+
+  #loading .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(221,193,101,0.2);
+    border-top-color: #DDC165;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #loading .status {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: rgba(221,193,101,0.6);
+  }
+
+  #controls {
+    position: fixed;
+    top: 20px; left: 20px;
+    background: rgba(26,13,0,0.85);
+    border: 1px solid rgba(221,193,101,0.2);
+    border-radius: 8px;
+    padding: 16px;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    min-width: 240px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    transition: transform 0.3s ease;
+  }
+
+  #controls.collapsed {
+    transform: translateX(calc(-100% + 40px));
+  }
+
+  #controls h2 {
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #DDC165;
+    margin-bottom: 12px;
+    text-shadow: 0 0 10px rgba(221,193,101,0.3);
+  }
+
+  .param-group {
+    margin-bottom: 10px;
+  }
+
+  .param-group label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: rgba(221,193,101,0.7);
+    margin-bottom: 4px;
+  }
+
+  .param-group label span.val {
+    color: #E5591C;
+    font-weight: bold;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(221,193,101,0.15);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #E5591C;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(229,89,28,0.6);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  button {
+    flex: 1;
+    padding: 6px 10px;
+    background: rgba(229,89,28,0.15);
+    border: 1px solid rgba(229,89,28,0.4);
+    color: #DDC165;
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  button:hover {
+    background: rgba(229,89,28,0.3);
+    border-color: #E5591C;
+    box-shadow: 0 0 12px rgba(229,89,28,0.3);
+  }
+
+  #info {
+    position: fixed;
+    bottom: 20px; left: 20px;
+    font-size: 0.7rem;
+    color: rgba(221,193,101,0.4);
+    z-index: 100;
+  }
+
+  #title-overlay {
+    position: fixed;
+    top: 20px; right: 20px;
+    text-align: right;
+    z-index: 100;
+  }
+  #title-overlay h1 {
+    font-size: 1.1rem;
+    color: #DDC165;
+    text-shadow: 0 0 15px rgba(221,193,101,0.4);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  #title-overlay p {
+    font-size: 0.65rem;
+    color: rgba(221,193,101,0.4);
+    margin-top: 4px;
+  }
+
+  .preset-row {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .preset-btn {
+    flex: none;
+    padding: 3px 8px;
+    font-size: 0.6rem;
+  }
+
+  #trail-control {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(221,193,101,0.1);
+  }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .checkbox-row input[type="checkbox"] {
+    accent-color: #E5591C;
+  }
+  .checkbox-row label {
+    font-size: 0.7rem;
+    color: rgba(221,193,101,0.7);
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <h1>Lorenz Attractor</h1>
+  <div class="spinner"></div>
+  <div class="status" id="load-status">Loading Pyodide...</div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<div id="controls">
+  <h2>Parameters</h2>
+
+  <div class="param-group">
+    <label>σ (sigma) <span class="val" id="sigma-val">10.0</span></label>
+    <input type="range" id="sigma" min="0" max="30" step="0.1" value="10">
+  </div>
+
+  <div class="param-group">
+    <label>ρ (rho) <span class="val" id="rho-val">28.0</span></label>
+    <input type="range" id="rho" min="0" max="60" step="0.1" value="28">
+  </div>
+
+  <div class="param-group">
+    <label>β (beta) <span class="val" id="beta-val">2.667</span></label>
+    <input type="range" id="beta" min="0" max="10" step="0.01" value="2.667">
+  </div>
+
+  <div class="param-group">
+    <label>Speed <span class="val" id="speed-val">1.0</span></label>
+    <input type="range" id="speed" min="0.1" max="5" step="0.1" value="1">
+  </div>
+
+  <div class="param-group">
+    <label>Trail Length <span class="val" id="trail-val">2000</span></label>
+    <input type="range" id="trail" min="200" max="8000" step="100" value="2000">
+  </div>
+
+  <div class="preset-row">
+    <button class="preset-btn" onclick="setPreset('classic')">Classic</button>
+    <button class="preset-btn" onclick="setPreset('chaos')">Chaos</button>
+    <button class="preset-btn" onclick="setPreset('gentle')">Gentle</button>
+    <button class="preset-btn" onclick="setPreset('tight')">Tight</button>
+  </div>
+
+  <div id="trail-control">
+    <div class="checkbox-row">
+      <input type="checkbox" id="glow-toggle" checked>
+      <label for="glow-toggle">Glow effect</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="fade-toggle" checked>
+      <label for="fade-toggle">Trail fade</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="multi-toggle">
+      <label for="multi-toggle">Multi-particle</label>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button onclick="resetAttractor()">Reset</button>
+    <button onclick="randomize()">Randomize</button>
+  </div>
+</div>
+
+<div id="title-overlay">
+  <h1>Lorenz Attractor</h1>
+  <p>Drag to rotate · Scroll to zoom</p>
+</div>
+
+<div id="info">
+  <span id="fps">0 FPS</span> · <span id="points">0 pts</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.4/full/pyodide.js"></script>
+<script>
+// ── State ──
+const state = {
+  sigma: 10, rho: 28, beta: 2.667,
+  speed: 1, trailLen: 2000,
+  glow: true, fade: true, multi: false,
+  // Camera
+  rotX: 0.4, rotY: -0.7, zoom: 8,
+  // Drag
+  dragging: false, lastMX: 0, lastMY: 0,
+  // Data
+  points: [],       // [{x,y,z}]
+  extraTrails: [],   // for multi mode
+  pyodide: null,
+  running: true,
+  needsRecompute: true,
+  // Current position for live stepping
+  cx: 1, cy: 1, cz: 1,
+  // Extra particles
+  extras: []
+};
+
+// ── Canvas setup ──
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = window.innerWidth * devicePixelRatio;
+  canvas.height = window.innerHeight * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Camera projection ──
+function project(x, y, z) {
+  const cosY = Math.cos(state.rotY), sinY = Math.sin(state.rotY);
+  const cosX = Math.cos(state.rotX), sinX = Math.sin(state.rotX);
+
+  // Rotate around Y
+  let rx = x * cosY - z * sinY;
+  let rz = x * sinY + z * cosY;
+  // Rotate around X
+  let ry = y * cosX - rz * sinX;
+  rz = y * sinX + rz * cosX;
+
+  const scale = state.zoom;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  return {
+    sx: w / 2 + rx * scale,
+    sy: h / 2 - ry * scale,
+    depth: rz
+  };
+}
+
+// ── Lorenz step (JS fallback + Pyodide batch) ──
+function lorenzStep(x, y, z, dt) {
+  const dx = state.sigma * (y - x);
+  const dy = x * (state.rho - z) - y;
+  const dz = x * y - state.beta * z;
+  return {
+    x: x + dx * dt,
+    y: y + dy * dt,
+    z: z + dz * dt
+  };
+}
+
+// RK4 integration for better accuracy
+function lorenzRK4(x, y, z, dt) {
+  const s = state.sigma, r = state.rho, b = state.beta;
+
+  const f = (x, y, z) => [s * (y - x), x * (r - z) - y, x * y - b * z];
+
+  const k1 = f(x, y, z);
+  const k2 = f(x + k1[0]*dt/2, y + k1[1]*dt/2, z + k1[2]*dt/2);
+  const k3 = f(x + k2[0]*dt/2, y + k2[1]*dt/2, z + k2[2]*dt/2);
+  const k4 = f(x + k3[0]*dt, y + k3[1]*dt, z + k3[2]*dt);
+
+  return {
+    x: x + (k1[0] + 2*k2[0] + 2*k3[0] + k4[0]) * dt / 6,
+    y: y + (k1[1] + 2*k2[1] + 2*k3[1] + k4[1]) * dt / 6,
+    z: z + (k1[2] + 2*k2[2] + 2*k3[2] + k4[2]) * dt / 6
+  };
+}
+
+// ── Presets ──
+const presets = {
+  classic: { sigma: 10, rho: 28, beta: 2.667 },
+  chaos:   { sigma: 14, rho: 46, beta: 4 },
+  gentle:  { sigma: 6, rho: 18, beta: 1.5 },
+  tight:   { sigma: 10, rho: 15, beta: 2.667 }
+};
+
+function setPreset(name) {
+  const p = presets[name];
+  state.sigma = p.sigma; state.rho = p.rho; state.beta = p.beta;
+  document.getElementById('sigma').value = p.sigma;
+  document.getElementById('rho').value = p.rho;
+  document.getElementById('beta').value = p.beta;
+  document.getElementById('sigma-val').textContent = p.sigma.toFixed(1);
+  document.getElementById('rho-val').textContent = p.rho.toFixed(1);
+  document.getElementById('beta-val').textContent = p.beta.toFixed(3);
+  resetAttractor();
+}
+
+function resetAttractor() {
+  state.points = [];
+  state.cx = 1 + Math.random() * 0.01;
+  state.cy = 1 + Math.random() * 0.01;
+  state.cz = 1 + Math.random() * 0.01;
+  state.extras = [];
+  state.extraTrails = [];
+  if (state.multi) initExtras();
+}
+
+function randomize() {
+  const s = 5 + Math.random() * 25;
+  const r = 5 + Math.random() * 55;
+  const b = 0.5 + Math.random() * 8;
+  state.sigma = s; state.rho = r; state.beta = b;
+  document.getElementById('sigma').value = s;
+  document.getElementById('rho').value = r;
+  document.getElementById('beta').value = b;
+  document.getElementById('sigma-val').textContent = s.toFixed(1);
+  document.getElementById('rho-val').textContent = r.toFixed(1);
+  document.getElementById('beta-val').textContent = b.toFixed(3);
+  resetAttractor();
+}
+
+function initExtras() {
+  state.extras = [];
+  state.extraTrails = [];
+  for (let i = 0; i < 3; i++) {
+    state.extras.push({
+      x: state.cx + (Math.random() - 0.5) * 0.5,
+      y: state.cy + (Math.random() - 0.5) * 0.5,
+      z: state.cz + (Math.random() - 0.5) * 0.5
+    });
+    state.extraTrails.push([]);
+  }
+}
+
+// ── Input handling ──
+const sliders = ['sigma', 'rho', 'beta', 'speed', 'trail'];
+sliders.forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    const v = parseFloat(el.value);
+    const valEl = document.getElementById(id + '-val');
+    if (id === 'sigma') { state.sigma = v; valEl.textContent = v.toFixed(1); }
+    else if (id === 'rho') { state.rho = v; valEl.textContent = v.toFixed(1); }
+    else if (id === 'beta') { state.beta = v; valEl.textContent = v.toFixed(3); }
+    else if (id === 'speed') { state.speed = v; valEl.textContent = v.toFixed(1); }
+    else if (id === 'trail') { state.trailLen = v; valEl.textContent = v; }
+  });
+});
+
+document.getElementById('glow-toggle').addEventListener('change', e => state.glow = e.target.checked);
+document.getElementById('fade-toggle').addEventListener('change', e => state.fade = e.target.checked);
+document.getElementById('multi-toggle').addEventListener('change', e => {
+  state.multi = e.target.checked;
+  if (state.multi) initExtras();
+  else { state.extras = []; state.extraTrails = []; }
+});
+
+// Mouse drag for rotation
+canvas.addEventListener('mousedown', e => {
+  state.dragging = true;
+  state.lastMX = e.clientX;
+  state.lastMY = e.clientY;
+});
+window.addEventListener('mousemove', e => {
+  if (!state.dragging) return;
+  const dx = e.clientX - state.lastMX;
+  const dy = e.clientY - state.lastMY;
+  state.rotY += dx * 0.005;
+  state.rotX += dy * 0.005;
+  state.rotX = Math.max(-Math.PI/2, Math.min(Math.PI/2, state.rotX));
+  state.lastMX = e.clientX;
+  state.lastMY = e.clientY;
+});
+window.addEventListener('mouseup', () => state.dragging = false);
+
+// Touch support
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    state.dragging = true;
+    state.lastMX = e.touches[0].clientX;
+    state.lastMY = e.touches[0].clientY;
+  }
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (!state.dragging || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - state.lastMX;
+  const dy = e.touches[0].clientY - state.lastMY;
+  state.rotY += dx * 0.005;
+  state.rotX += dy * 0.005;
+  state.rotX = Math.max(-Math.PI/2, Math.min(Math.PI/2, state.rotX));
+  state.lastMX = e.touches[0].clientX;
+  state.lastMY = e.touches[0].clientY;
+}, { passive: true });
+canvas.addEventListener('touchend', () => state.dragging = false);
+
+// Scroll to zoom
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  state.zoom *= e.deltaY > 0 ? 0.95 : 1.05;
+  state.zoom = Math.max(1, Math.min(30, state.zoom));
+}, { passive: false });
+
+// ── Color helpers ──
+function trailColor(t, alpha) {
+  // t: 0..1 (tail to head)
+  // Gradient: deep brown → burnt orange → gold → white-gold
+  const r = Math.floor(36 + t * (221 - 36));
+  const g = Math.floor(18 + t * (193 - 18));
+  const b = Math.floor(0 + t * (101 - 0));
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function extraColor(idx, t, alpha) {
+  const colors = [
+    [229, 89, 28],   // orange
+    [180, 60, 200],  // purple
+    [28, 180, 229],  // cyan
+  ];
+  const c = colors[idx % colors.length];
+  const r = Math.floor(c[0] * 0.3 + c[0] * 0.7 * t);
+  const g = Math.floor(c[1] * 0.3 + c[1] * 0.7 * t);
+  const b = Math.floor(c[2] * 0.3 + c[2] * 0.7 * t);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ── Render ──
+let lastTime = 0;
+let frameCount = 0;
+let fpsTime = 0;
+
+function render(time) {
+  requestAnimationFrame(render);
+
+  const dt = Math.min((time - lastTime) / 1000, 0.05);
+  lastTime = time;
+
+  // FPS counter
+  frameCount++;
+  if (time - fpsTime > 1000) {
+    document.getElementById('fps').textContent = frameCount + ' FPS';
+    frameCount = 0;
+    fpsTime = time;
+  }
+
+  // Auto-rotate when not dragging
+  if (!state.dragging) {
+    state.rotY += 0.001;
+  }
+
+  // Step simulation
+  const stepsPerFrame = Math.round(4 * state.speed);
+  const simDt = 0.005;
+
+  for (let i = 0; i < stepsPerFrame; i++) {
+    const next = lorenzRK4(state.cx, state.cy, state.cz, simDt);
+    state.cx = next.x; state.cy = next.y; state.cz = next.z;
+    state.points.push({ x: next.x, y: next.y, z: next.z });
+
+    // Extra particles
+    for (let j = 0; j < state.extras.length; j++) {
+      const e = state.extras[j];
+      const en = lorenzRK4(e.x, e.y, e.z, simDt);
+      e.x = en.x; e.y = en.y; e.z = en.z;
+      state.extraTrails[j].push({ x: en.x, y: en.y, z: en.z });
+    }
+  }
+
+  // Trim trails
+  while (state.points.length > state.trailLen) state.points.shift();
+  for (let j = 0; j < state.extraTrails.length; j++) {
+    while (state.extraTrails[j].length > state.trailLen) state.extraTrails[j].shift();
+  }
+
+  document.getElementById('points').textContent = state.points.length + ' pts';
+
+  // Clear
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  ctx.fillStyle = '#241200';
+  ctx.fillRect(0, 0, w, h);
+
+  // Draw function for a trail
+  function drawTrail(points, colorFn) {
+    if (points.length < 2) return;
+
+    const len = points.length;
+
+    // Glow layer
+    if (state.glow) {
+      ctx.save();
+      ctx.shadowBlur = 15;
+      ctx.lineWidth = 2;
+
+      // Draw in segments for color gradient
+      const step = Math.max(1, Math.floor(len / 300));
+      for (let i = step; i < len; i += step) {
+        const t = i / len;
+        const alpha = state.fade ? t * 0.6 : 0.6;
+        const p0 = project(points[i - step].x, points[i - step].y, points[i - step].z);
+        const p1 = project(points[i].x, points[i].y, points[i].z);
+
+        const col = colorFn(t, alpha);
+        ctx.strokeStyle = col;
+        ctx.shadowColor = col;
+        ctx.beginPath();
+        ctx.moveTo(p0.sx, p0.sy);
+        ctx.lineTo(p1.sx, p1.sy);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Main trail — draw as continuous segments
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const segSize = Math.max(1, Math.floor(len / 500));
+    for (let i = segSize; i < len; i += segSize) {
+      const t = i / len;
+      const alpha = state.fade ? (0.05 + t * 0.95) : 1;
+      const p0 = project(points[i - segSize].x, points[i - segSize].y, points[i - segSize].z);
+      const p1 = project(points[i].x, points[i].y, points[i].z);
+
+      ctx.strokeStyle = colorFn(t, alpha);
+      ctx.beginPath();
+      ctx.moveTo(p0.sx, p0.sy);
+      ctx.lineTo(p1.sx, p1.sy);
+      ctx.stroke();
+    }
+
+    // Head glow
+    if (len > 0) {
+      const head = points[len - 1];
+      const hp = project(head.x, head.y, head.z);
+      const headColor = colorFn(1, 1);
+
+      ctx.save();
+      const grad = ctx.createRadialGradient(hp.sx, hp.sy, 0, hp.sx, hp.sy, 12);
+      grad.addColorStop(0, headColor);
+      grad.addColorStop(0.5, colorFn(1, 0.4));
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(hp.sx, hp.sy, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bright center dot
+      ctx.fillStyle = '#FFF';
+      ctx.beginPath();
+      ctx.arc(hp.sx, hp.sy, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Draw main trail
+  drawTrail(state.points, trailColor);
+
+  // Draw extra trails
+  for (let j = 0; j < state.extraTrails.length; j++) {
+    drawTrail(state.extraTrails[j], (t, a) => extraColor(j, t, a));
+  }
+
+  // Draw subtle reference axes
+  ctx.globalAlpha = 0.08;
+  ctx.strokeStyle = '#DDC165';
+  ctx.lineWidth = 0.5;
+  const axisLen = 50;
+  const origin = project(0, 0, 0);
+  const xEnd = project(axisLen, 0, 0);
+  const yEnd = project(0, axisLen, 0);
+  const zEnd = project(0, 0, axisLen);
+
+  ctx.beginPath();
+  ctx.moveTo(origin.sx, origin.sy); ctx.lineTo(xEnd.sx, xEnd.sy);
+  ctx.moveTo(origin.sx, origin.sy); ctx.lineTo(yEnd.sx, yEnd.sy);
+  ctx.moveTo(origin.sx, origin.sy); ctx.lineTo(zEnd.sx, zEnd.sy);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+// ── Pyodide init (used for batch computation on param change if needed) ──
+async function initPyodide() {
+  const statusEl = document.getElementById('load-status');
+
+  try {
+    statusEl.textContent = 'Loading Pyodide runtime...';
+    state.pyodide = await loadPyodide();
+
+    statusEl.textContent = 'Loading numpy & scipy...';
+    await state.pyodide.loadPackage(['numpy', 'scipy']);
+
+    statusEl.textContent = 'Initializing solver...';
+
+    // Set up Python integration for batch trajectory computation
+    await state.pyodide.runPythonAsync(`
+import numpy as np
+from scipy.integrate import odeint
+
+def compute_trajectory(sigma, rho, beta, x0, y0, z0, num_points=5000, dt=0.005):
+    """Compute a full Lorenz trajectory using scipy's ODE solver."""
+    def lorenz(state, t):
+        x, y, z = state
+        return [sigma * (y - x), x * (rho - z) - y, x * y - beta * z]
+
+    t = np.linspace(0, num_points * dt, num_points)
+    solution = odeint(lorenz, [x0, y0, z0], t)
+    return solution.tolist()
+    `);
+
+    statusEl.textContent = 'Ready.';
+  } catch (e) {
+    console.warn('Pyodide load failed, using JS fallback:', e);
+    statusEl.textContent = 'Using JS engine (Pyodide unavailable)';
+  }
+
+  // Hide loading screen
+  setTimeout(() => {
+    document.getElementById('loading').classList.add('hidden');
+    // Start rendering
+    requestAnimationFrame(render);
+  }, 500);
+}
+
+// Batch compute via Pyodide (called on preset/randomize for smooth initial trajectory)
+async function batchCompute() {
+  if (!state.pyodide) return;
+
+  try {
+    const result = await state.pyodide.runPythonAsync(`
+compute_trajectory(${state.sigma}, ${state.rho}, ${state.beta}, ${state.cx}, ${state.cy}, ${state.cz}, ${state.trailLen})
+    `);
+    const trajectory = result.toJs();
+    state.points = trajectory.map(p => ({ x: p[0], y: p[1], z: p[2] }));
+
+    // Update current position to end of trajectory
+    const last = state.points[state.points.length - 1];
+    state.cx = last.x;
+    state.cy = last.y;
+    state.cz = last.z;
+  } catch (e) {
+    console.warn('Batch compute failed:', e);
+  }
+}
+
+// ── Start ──
+initPyodide();
+</script>
+</body>
+</html>
