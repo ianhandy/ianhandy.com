@@ -207,6 +207,12 @@
     color: rgba(221,193,101,0.7);
     cursor: pointer;
   }
+  @media (max-width: 480px) {
+    #controls { min-width: min(240px, 85vw); top: 10px; left: 10px; padding: 12px; }
+    #controls h2 { font-size: 0.75rem; }
+    .param-row label { font-size: 0.7rem; }
+    .toggle-btn { min-width: 44px; min-height: 44px; }
+  }
 </style>
 </head>
 <body>

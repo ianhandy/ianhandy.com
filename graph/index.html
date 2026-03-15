@@ -195,10 +195,17 @@
     text-align: center;
   }
 
-  @media (max-width: 600px) {
-    #toggle-controls { display: block; }
-    #controls { display: none; top: 60px; }
+  @media (max-width: 768px) {
+    #controls { width: min(260px, 80vw); }
+    #toggle-controls { display: block; width: 44px; height: 44px; font-size: 20px; line-height: 44px; }
+    #controls { display: none; top: 68px; }
     #controls.visible { display: block; }
+    .control-group select, .control-group input[type="range"] { min-height: 36px; font-size: 13px; }
+  }
+  @media (max-width: 480px) {
+    #controls { width: min(280px, 90vw); padding: 14px; }
+    .control-group label { font-size: 11px; }
+    .control-group select { min-height: 44px; font-size: 14px; padding: 8px; }
   }
 </style>
 </head>
