@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game of Life — FunForrest Edition</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #241200;
+    color: #DDC165;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: rgba(26, 13, 0, 0.9);
+    border-bottom: 1px solid rgba(221, 193, 101, 0.15);
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  h1 {
+    font-size: 18px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #DDC165;
+    text-shadow: 0 0 10px rgba(221, 193, 101, 0.4);
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  button, select {
+    background: rgba(221, 193, 101, 0.1);
+    border: 1px solid rgba(221, 193, 101, 0.3);
+    color: #DDC165;
+    padding: 6px 14px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+  }
+
+  button:hover, select:hover {
+    background: rgba(221, 193, 101, 0.2);
+    border-color: rgba(221, 193, 101, 0.5);
+    text-shadow: 0 0 6px rgba(221, 193, 101, 0.5);
+  }
+
+  button.active {
+    background: rgba(229, 89, 28, 0.3);
+    border-color: #E5591C;
+    color: #FFE9A3;
+  }
+
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 24px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23DDC165'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+
+  .stats {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: rgba(221, 193, 101, 0.6);
+  }
+
+  .stats span { white-space: nowrap; }
+  .stats .val { color: #FFE9A3; }
+
+  #canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  .help-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(18, 9, 0, 0.92);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .help-overlay.show { display: flex; }
+
+  .help-box {
+    background: #1A0D00;
+    border: 1px solid rgba(221, 193, 101, 0.2);
+    border-radius: 6px;
+    padding: 30px 40px;
+    max-width: 500px;
+    line-height: 1.7;
+    font-size: 13px;
+  }
+
+  .help-box h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    color: #FFE9A3;
+    text-shadow: 0 0 8px rgba(221, 193, 101, 0.3);
+  }
+
+  .help-box kbd {
+    background: rgba(221, 193, 101, 0.15);
+    border: 1px solid rgba(221, 193, 101, 0.25);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 11px;
+    color: #FFE9A3;
+  }
+
+  .help-box .close-help {
+    margin-top: 16px;
+    display: block;
+    width: 100%;
+  }
+
+  .speed-label {
+    font-size: 11px;
+    color: rgba(221, 193, 101, 0.5);
+    min-width: 30px;
+    text-align: center;
+  }
+
+  .separator {
+    width: 1px;
+    height: 20px;
+    background: rgba(221, 193, 101, 0.15);
+  }
+
+  @media (max-width: 900px) {
+    header { flex-direction: column; gap: 8px; padding: 8px 12px; }
+    .controls { justify-content: center; }
+    .stats { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Game of Life</h1>
+  <div class="controls">
+    <button id="btn-play" title="Space">Play</button>
+    <button id="btn-step" title="S">Step</button>
+    <button id="btn-clear" title="C">Clear</button>
+    <button id="btn-random" title="R">Random</button>
+    <div class="separator"></div>
+    <select id="sel-pattern" title="Load pattern">
+      <option value="">— patterns —</option>
+      <option value="glider">Glider</option>
+      <option value="lwss">LWSS</option>
+      <option value="pulsar">Pulsar</option>
+      <option value="pentadecathlon">Pentadecathlon</option>
+      <option value="gosper">Gosper Glider Gun</option>
+      <option value="acorn">Acorn</option>
+      <option value="rpentomino">R-pentomino</option>
+      <option value="diehard">Diehard</option>
+      <option value="beacon">Beacon</option>
+      <option value="toad">Toad</option>
+      <option value="blinker">Blinker</option>
+      <option value="block">Block</option>
+    </select>
+    <select id="sel-speed" title="Speed">
+      <option value="1">1x</option>
+      <option value="2">2x</option>
+      <option value="4" selected>4x</option>
+      <option value="8">8x</option>
+      <option value="16">16x</option>
+      <option value="30">30x</option>
+    </select>
+    <div class="separator"></div>
+    <button id="btn-share" title="Copy URL">Share</button>
+    <button id="btn-help" title="?">?</button>
+  </div>
+  <div class="stats">
+    <span>Gen: <span class="val" id="stat-gen">0</span></span>
+    <span>Pop: <span class="val" id="stat-pop">0</span></span>
+    <span>FPS: <span class="val" id="stat-fps">0</span></span>
+  </div>
+</header>
+
+<div id="canvas-wrap">
+  <canvas id="c"></canvas>
+</div>
+
+<div class="help-overlay" id="help-overlay">
+  <div class="help-box">
+    <h2>Controls</h2>
+    <kbd>Click</kbd> / <kbd>Drag</kbd> — toggle cells<br>
+    <kbd>Space</kbd> — play / pause<br>
+    <kbd>S</kbd> — step one generation<br>
+    <kbd>C</kbd> — clear grid<br>
+    <kbd>R</kbd> — random fill<br>
+    <kbd>+</kbd> / <kbd>-</kbd> — zoom in / out<br>
+    <kbd>Arrow keys</kbd> — pan<br>
+    <kbd>Scroll</kbd> — zoom<br>
+    <kbd>?</kbd> — toggle help<br>
+    <br>
+    Gold = alive. Amber trail = recently died.<br>
+    Select patterns from the dropdown to stamp them.<br>
+    <button class="close-help" onclick="document.getElementById('help-overlay').classList.remove('show')">Got it</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// --- Grid ---
+const GRID_W = 400, GRID_H = 300;
+let grid = new Uint8Array(GRID_W * GRID_H);
+let next = new Uint8Array(GRID_W * GRID_H);
+// Trail: stores age since death (0 = alive or never alive, 1..TRAIL_MAX = fading)
+const TRAIL_MAX = 12;
+let trail = new Uint8Array(GRID_W * GRID_H);
+
+let generation = 0;
+let population = 0;
+let running = false;
+let stepsPerFrame = 4;
+
+// --- Canvas ---
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvas-wrap');
+
+let cellSize = 4;
+let offsetX = 0, offsetY = 0;
+
+function resize() {
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  draw();
+}
+window.addEventListener('resize', resize);
+
+// --- Colors ---
+const BG = [36, 18, 0];
+const ALIVE_COLOR = [221, 193, 101];   // #DDC165
+const ALIVE_BRIGHT = [255, 233, 163];  // #FFE9A3
+const ACCENT = [229, 89, 28];          // #E5591C
+
+function trailColor(age) {
+  // age 1 = just died (bright orange), age TRAIL_MAX = nearly invisible
+  const t = age / TRAIL_MAX;
+  const r = ACCENT[0] + (BG[0] - ACCENT[0]) * t;
+  const g = ACCENT[1] + (BG[1] - ACCENT[1]) * t;
+  const b = ACCENT[2] + (BG[2] - ACCENT[2]) * t;
+  const a = 1.0 - t * 0.85;
+  return `rgba(${r|0},${g|0},${b|0},${a.toFixed(2)})`;
+}
+
+// Pre-compute trail colors
+const trailColors = [];
+for (let i = 0; i <= TRAIL_MAX; i++) trailColors.push(trailColor(i));
+
+// --- Drawing ---
+function draw() {
+  const w = canvas.width, h = canvas.height;
+  ctx.fillStyle = '#241200';
+  ctx.fillRect(0, 0, w, h);
+
+  const cs = cellSize;
+  const startCol = Math.max(0, Math.floor(-offsetX / cs));
+  const startRow = Math.max(0, Math.floor(-offsetY / cs));
+  const endCol = Math.min(GRID_W, Math.ceil((w - offsetX) / cs));
+  const endRow = Math.min(GRID_H, Math.ceil((h - offsetY) / cs));
+
+  // Draw trails first
+  for (let r = startRow; r < endRow; r++) {
+    for (let c = startCol; c < endCol; c++) {
+      const idx = r * GRID_W + c;
+      if (!grid[idx] && trail[idx] > 0) {
+        const px = c * cs + offsetX;
+        const py = r * cs + offsetY;
+        ctx.fillStyle = trailColors[trail[idx]];
+        ctx.fillRect(px, py, cs - (cs > 3 ? 1 : 0), cs - (cs > 3 ? 1 : 0));
+      }
+    }
+  }
+
+  // Draw alive cells with glow
+  if (cs >= 3) {
+    // Glow pass
+    ctx.shadowColor = 'rgba(221, 193, 101, 0.6)';
+    ctx.shadowBlur = cs > 6 ? 8 : 4;
+  }
+
+  ctx.fillStyle = '#DDC165';
+  for (let r = startRow; r < endRow; r++) {
+    for (let c = startCol; c < endCol; c++) {
+      const idx = r * GRID_W + c;
+      if (grid[idx]) {
+        const px = c * cs + offsetX;
+        const py = r * cs + offsetY;
+        ctx.fillRect(px, py, cs - (cs > 3 ? 1 : 0), cs - (cs > 3 ? 1 : 0));
+      }
+    }
+  }
+
+  // Bright center for larger cells
+  if (cs >= 6) {
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#FFE9A3';
+    const inner = Math.max(1, cs * 0.4) | 0;
+    const off = ((cs - inner) / 2) | 0;
+    for (let r = startRow; r < endRow; r++) {
+      for (let c = startCol; c < endCol; c++) {
+        const idx = r * GRID_W + c;
+        if (grid[idx]) {
+          const px = c * cs + offsetX + off;
+          const py = r * cs + offsetY + off;
+          ctx.fillRect(px, py, inner, inner);
+        }
+      }
+    }
+  } else {
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+  }
+}
+
+// --- Simulation ---
+function step() {
+  let pop = 0;
+  for (let r = 0; r < GRID_H; r++) {
+    for (let c = 0; c < GRID_W; c++) {
+      const idx = r * GRID_W + c;
+      // Count neighbors with wrapping
+      let n = 0;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = (r + dr + GRID_H) % GRID_H;
+          const nc = (c + dc + GRID_W) % GRID_W;
+          n += grid[nr * GRID_W + nc];
+        }
+      }
+      const alive = grid[idx];
+      if (alive) {
+        next[idx] = (n === 2 || n === 3) ? 1 : 0;
+      } else {
+        next[idx] = (n === 3) ? 1 : 0;
+      }
+
+      // Trail logic
+      if (alive && !next[idx]) {
+        trail[idx] = 1; // just died
+      } else if (!alive && !next[idx] && trail[idx] > 0) {
+        trail[idx] = Math.min(trail[idx] + 1, TRAIL_MAX + 1);
+        if (trail[idx] > TRAIL_MAX) trail[idx] = 0;
+      } else if (next[idx]) {
+        trail[idx] = 0; // alive, no trail
+      }
+
+      pop += next[idx];
+    }
+  }
+  [grid, next] = [next, grid];
+  generation++;
+  population = pop;
+}
+
+// --- Animation loop ---
+let lastTime = 0;
+let frameCount = 0;
+let fpsTime = 0;
+let fps = 0;
+
+function loop(ts) {
+  requestAnimationFrame(loop);
+  frameCount++;
+  if (ts - fpsTime >= 1000) {
+    fps = frameCount;
+    frameCount = 0;
+    fpsTime = ts;
+  }
+  if (running) {
+    for (let i = 0; i < stepsPerFrame; i++) step();
+  }
+  draw();
+  document.getElementById('stat-gen').textContent = generation;
+  document.getElementById('stat-pop').textContent = population;
+  document.getElementById('stat-fps').textContent = fps;
+}
+
+// --- Patterns ---
+const patterns = {
+  glider: [[0,1],[1,2],[2,0],[2,1],[2,2]],
+  lwss: [[0,1],[0,4],[1,0],[2,0],[2,4],[3,0],[3,1],[3,2],[3,3]],
+  pulsar: (function() {
+    const pts = [];
+    const rows = [
+      [2,3,4,8,9,10],    // row 0
+      [0,5,7,12],         // row 2
+      [0,5,7,12],         // row 3
+      [0,5,7,12],         // row 4
+      [2,3,4,8,9,10],     // row 5
+    ];
+    const rIdx = [0,2,3,4,5];
+    for (let i = 0; i < rIdx.length; i++) {
+      for (const c of rows[i]) {
+        pts.push([rIdx[i], c]);
+        pts.push([12 - rIdx[i], c]);
+      }
+    }
+    return [...new Set(pts.map(p => p.join(',')))].map(s => s.split(',').map(Number));
+  })(),
+  pentadecathlon: (function() {
+    const pts = [];
+    const cols = [0,1,2,3,4,5,6,7,8,9];
+    for (const c of cols) {
+      if (c === 1 || c === 8) {
+        pts.push([0, c], [2, c]);
+      } else {
+        pts.push([1, c]);
+      }
+    }
+    return pts;
+  })(),
+  gosper: (function() {
+    const s =
+      '........................O...........' +
+      '......................O.O...........' +
+      '............OO......OO............OO' +
+      '...........O...O....OO............OO' +
+      'OO........O.....O...OO..............' +
+      'OO........O...O.OO....O.O...........' +
+      '..........O.....O.......O...........' +
+      '...........O...O....................' +
+      '............OO......................';
+    const w = 36, pts = [];
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === 'O') pts.push([Math.floor(i / w), i % w]);
+    }
+    return pts;
+  })(),
+  acorn: [[0,1],[1,3],[2,0],[2,1],[2,4],[2,5],[2,6]],
+  rpentomino: [[0,1],[0,2],[1,0],[1,1],[2,1]],
+  diehard: [[0,6],[1,0],[1,1],[2,1],[2,5],[2,6],[2,7]],
+  beacon: [[0,0],[0,1],[1,0],[2,3],[3,2],[3,3]],
+  toad: [[0,1],[0,2],[0,3],[1,0],[1,1],[1,2]],
+  blinker: [[0,0],[0,1],[0,2]],
+  block: [[0,0],[0,1],[1,0],[1,1]],
+};
+
+function placePattern(name) {
+  const pts = patterns[name];
+  if (!pts) return;
+  // Center pattern
+  let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+  for (const [r, c] of pts) {
+    minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+    minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+  }
+  const pr = Math.floor(GRID_H / 2 - (maxR - minR) / 2);
+  const pc = Math.floor(GRID_W / 2 - (maxC - minC) / 2);
+  for (const [r, c] of pts) {
+    const gr = (pr + r - minR + GRID_H) % GRID_H;
+    const gc = (pc + c - minC + GRID_W) % GRID_W;
+    grid[gr * GRID_W + gc] = 1;
+  }
+  countPop();
+}
+
+function countPop() {
+  let p = 0;
+  for (let i = 0; i < grid.length; i++) p += grid[i];
+  population = p;
+}
+
+function clearGrid() {
+  grid.fill(0);
+  next.fill(0);
+  trail.fill(0);
+  generation = 0;
+  population = 0;
+}
+
+function randomize() {
+  clearGrid();
+  for (let i = 0; i < grid.length; i++) {
+    grid[i] = Math.random() < 0.15 ? 1 : 0;
+  }
+  countPop();
+}
+
+// --- URL sharing (RLE-encoded) ---
+function encodeState() {
+  // Simple: store only alive cell positions as comma-joined "r:c" pairs
+  const cells = [];
+  for (let i = 0; i < grid.length; i++) {
+    if (grid[i]) cells.push(Math.floor(i / GRID_W) + ':' + (i % GRID_W));
+  }
+  return btoa(cells.join(','));
+}
+
+function decodeState(b64) {
+  try {
+    const s = atob(b64);
+    if (!s) return false;
+    clearGrid();
+    const pairs = s.split(',');
+    for (const p of pairs) {
+      const [r, c] = p.split(':').map(Number);
+      if (r >= 0 && r < GRID_H && c >= 0 && c < GRID_W) {
+        grid[r * GRID_W + c] = 1;
+      }
+    }
+    countPop();
+    return true;
+  } catch { return false; }
+}
+
+// --- Mouse/touch interaction ---
+let isDrawing = false;
+let drawValue = 1;
+
+function cellAt(px, py) {
+  const rect = canvas.getBoundingClientRect();
+  const x = px - rect.left;
+  const y = py - rect.top;
+  const col = Math.floor((x - offsetX) / cellSize);
+  const row = Math.floor((y - offsetY) / cellSize);
+  if (col < 0 || col >= GRID_W || row < 0 || row >= GRID_H) return null;
+  return { row, col };
+}
+
+function toggleCell(px, py, forceVal) {
+  const c = cellAt(px, py);
+  if (!c) return;
+  const idx = c.row * GRID_W + c.col;
+  if (forceVal !== undefined) {
+    grid[idx] = forceVal;
+  } else {
+    grid[idx] = grid[idx] ? 0 : 1;
+  }
+  trail[idx] = 0;
+  countPop();
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  isDrawing = true;
+  const c = cellAt(e.clientX, e.clientY);
+  if (c) {
+    const idx = c.row * GRID_W + c.col;
+    drawValue = grid[idx] ? 0 : 1;
+    toggleCell(e.clientX, e.clientY, drawValue);
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!isDrawing) return;
+  toggleCell(e.clientX, e.clientY, drawValue);
+});
+
+window.addEventListener('mouseup', () => { isDrawing = false; });
+
+// Touch support
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  isDrawing = true;
+  const c = cellAt(t.clientX, t.clientY);
+  if (c) {
+    const idx = c.row * GRID_W + c.col;
+    drawValue = grid[idx] ? 0 : 1;
+    toggleCell(t.clientX, t.clientY, drawValue);
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!isDrawing) return;
+  const t = e.touches[0];
+  toggleCell(t.clientX, t.clientY, drawValue);
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => { isDrawing = false; });
+
+// Zoom with scroll
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  const oldSize = cellSize;
+  if (e.deltaY < 0) {
+    cellSize = Math.min(40, cellSize + (cellSize < 6 ? 1 : 2));
+  } else {
+    cellSize = Math.max(1, cellSize - (cellSize <= 6 ? 1 : 2));
+  }
+
+  // Zoom toward mouse
+  const scale = cellSize / oldSize;
+  offsetX = mx - (mx - offsetX) * scale;
+  offsetY = my - (my - offsetY) * scale;
+}, { passive: false });
+
+// --- Keyboard ---
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'SELECT') return;
+  const k = e.key.toLowerCase();
+  if (k === ' ') { e.preventDefault(); togglePlay(); }
+  else if (k === 's') { step(); }
+  else if (k === 'c') { clearGrid(); }
+  else if (k === 'r') { randomize(); }
+  else if (k === '?' || k === 'h') { document.getElementById('help-overlay').classList.toggle('show'); }
+  else if (k === '=' || k === '+') { cellSize = Math.min(40, cellSize + 1); }
+  else if (k === '-') { cellSize = Math.max(1, cellSize - 1); }
+  else if (k === 'arrowleft') { offsetX += 40; }
+  else if (k === 'arrowright') { offsetX -= 40; }
+  else if (k === 'arrowup') { offsetY += 40; }
+  else if (k === 'arrowdown') { offsetY -= 40; }
+});
+
+// --- UI wiring ---
+function togglePlay() {
+  running = !running;
+  document.getElementById('btn-play').textContent = running ? 'Pause' : 'Play';
+  document.getElementById('btn-play').classList.toggle('active', running);
+}
+
+document.getElementById('btn-play').addEventListener('click', togglePlay);
+document.getElementById('btn-step').addEventListener('click', () => step());
+document.getElementById('btn-clear').addEventListener('click', clearGrid);
+document.getElementById('btn-random').addEventListener('click', randomize);
+
+document.getElementById('sel-pattern').addEventListener('change', (e) => {
+  if (e.target.value) {
+    placePattern(e.target.value);
+    e.target.value = '';
+  }
+});
+
+document.getElementById('sel-speed').addEventListener('change', (e) => {
+  stepsPerFrame = parseInt(e.target.value);
+});
+
+document.getElementById('btn-share').addEventListener('click', () => {
+  const state = encodeState();
+  const url = location.origin + location.pathname + '#' + state;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('btn-share');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Share', 1500);
+  }).catch(() => {
+    prompt('Copy this URL:', url);
+  });
+});
+
+document.getElementById('btn-help').addEventListener('click', () => {
+  document.getElementById('help-overlay').classList.toggle('show');
+});
+
+// --- Init ---
+function init() {
+  // Check for shared state in hash
+  const hash = location.hash.slice(1);
+  if (hash && decodeState(hash)) {
+    // loaded from URL
+  } else {
+    // Start with a Gosper Glider Gun
+    placePattern('gosper');
+  }
+
+  // Center the grid
+  offsetX = Math.floor((wrap.clientWidth - GRID_W * cellSize) / 2);
+  offsetY = Math.floor((wrap.clientHeight - GRID_H * cellSize) / 2);
+
+  resize();
+  requestAnimationFrame(loop);
+}
+
+init();
+</script>
+</body>
+</html>
