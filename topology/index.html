@@ -205,6 +205,11 @@
 
   <input type="file" id="csv-input" accept=".csv">
   <button class="btn btn-load" onclick="document.getElementById('csv-input').click()">Load CSV (x, y, value)</button>
+
+  <div style="margin-top:14px;display:flex;gap:6px">
+    <button class="btn" id="rotate-toggle" style="flex:1" onclick="toggleAutoRotate()">Auto-Rotate: ON</button>
+    <button class="btn" id="save-png" style="flex:1" onclick="savePNG()">Save PNG</button>
+  </div>
 </div>
 
 <div id="info">Drag to rotate &middot; Scroll to zoom &middot; Shift+drag to pan</div>
@@ -217,6 +222,7 @@ const GRID_RES = 120;
 const SURFACE_SIZE = 20;
 const BG_COLOR = 0x241200;
 const GOLD = 0xDDC165;
+let autoRotate = true;
 const GOLD_LIGHT = 0xFFE9A3;
 const ORANGE = 0xE5591C;
 
@@ -347,7 +353,7 @@ function init() {
   camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
   updateCamera();
 
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -732,7 +738,7 @@ function animate() {
   }
 
   // Slow auto-rotate when idle
-  if (!mouseDown) {
+  if (!mouseDown && autoRotate) {
     sphereAngle.theta += dt * 0.03;
     updateCamera();
   }
@@ -742,6 +748,19 @@ function animate() {
 
 function smoothstep(t) {
   return t * t * (3 - 2 * t);
+}
+
+function toggleAutoRotate() {
+  autoRotate = !autoRotate;
+  document.getElementById('rotate-toggle').textContent = 'Auto-Rotate: ' + (autoRotate ? 'ON' : 'OFF');
+}
+
+function savePNG() {
+  renderer.render(scene, camera);
+  const link = document.createElement('a');
+  link.download = 'topology-graph.png';
+  link.href = renderer.domElement.toDataURL('image/png');
+  link.click();
 }
 
 // ─── GO ───

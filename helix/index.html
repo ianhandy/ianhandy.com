@@ -363,6 +363,13 @@
       <button class="preset-btn" data-camera="free">Free</button>
     </div>
   </div>
+
+  <div class="divider"></div>
+
+  <div class="control-group" style="display:flex;gap:6px">
+    <button class="preset-btn" id="rotate-toggle" style="flex:1;padding:8px">Auto-Rotate: OFF</button>
+    <button class="preset-btn" id="save-png" style="flex:1;padding:8px">Save PNG</button>
+  </div>
 </div>
 
 <div id="tooltip">
@@ -517,7 +524,7 @@
   const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
   camera.position.set(8, 5, 8);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -532,6 +539,8 @@
   controls.zoomSpeed = 0.8;
   controls.minDistance = 2;
   controls.maxDistance = 50;
+  controls.autoRotate = false;
+  controls.autoRotateSpeed = 0.5;
 
   // Bloom
   const composer = new THREE.EffectComposer(renderer);
@@ -1289,6 +1298,21 @@
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ─── Auto-Rotate Toggle ───
+  document.getElementById('rotate-toggle').addEventListener('click', () => {
+    controls.autoRotate = !controls.autoRotate;
+    document.getElementById('rotate-toggle').textContent = 'Auto-Rotate: ' + (controls.autoRotate ? 'ON' : 'OFF');
+  });
+
+  // ─── Save PNG ───
+  document.getElementById('save-png').addEventListener('click', () => {
+    composer.render();
+    const link = document.createElement('a');
+    link.download = 'temporal-helix.png';
+    link.href = renderer.domElement.toDataURL('image/png');
+    link.click();
   });
 
   // ─── Init ───

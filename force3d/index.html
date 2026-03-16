@@ -60,6 +60,10 @@ canvas{display:block}
   <div class="panel">
     <button id="load-btn">Load JSON</button>
   </div>
+  <div class="panel" style="display:flex;gap:6px">
+    <button class="preset-btn active" id="rotate-toggle" style="flex:1;padding:8px">Auto-Rotate: ON</button>
+    <button class="preset-btn" id="save-png" style="flex:1;padding:8px">Save PNG</button>
+  </div>
 </div>
 
 <div id="tooltip"><div class="tt-label"></div><div class="tt-info"></div></div>
@@ -97,7 +101,7 @@ const C = {
 };
 
 // ── Three setup ──
-const renderer = new THREE.WebGLRenderer({antialias: true, alpha: false});
+const renderer = new THREE.WebGLRenderer({antialias: true, alpha: false, preserveDrawingBuffer: true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(C.bg);
@@ -414,6 +418,7 @@ function highlightNode(idx) {
 }
 
 // ── Orbit controls (manual) ──
+let autoRotate = true;
 let isDragging = false, prevMouse = {x:0,y:0};
 let spherical = {theta: 0, phi: Math.PI/2, radius: 200};
 let targetSpherical = {...spherical};
@@ -662,7 +667,7 @@ function animate(time) {
   updateCamera();
 
   // Slow auto-rotation when not dragging
-  if (!isDragging && selectedNode === null) {
+  if (autoRotate && !isDragging && selectedNode === null) {
     targetSpherical.theta += 0.0008;
   }
 
@@ -672,6 +677,23 @@ function animate(time) {
     stats.textContent = `${nodes.length} nodes  ${edges.length} edges`;
   }
 }
+
+// ── Auto-Rotate Toggle ──
+document.getElementById('rotate-toggle').addEventListener('click', () => {
+  autoRotate = !autoRotate;
+  const btn = document.getElementById('rotate-toggle');
+  btn.textContent = 'Auto-Rotate: ' + (autoRotate ? 'ON' : 'OFF');
+  btn.classList.toggle('active', autoRotate);
+});
+
+// ── Save PNG ──
+document.getElementById('save-png').addEventListener('click', () => {
+  composer.render();
+  const link = document.createElement('a');
+  link.download = 'force-graph-3d.png';
+  link.href = renderer.domElement.toDataURL('image/png');
+  link.click();
+});
 
 // ── Boot ──
 loadPreset('social');
