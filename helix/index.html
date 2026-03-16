@@ -27,17 +27,16 @@
 
   canvas { display: block; }
 
-  /* Controls panel */
   #controls {
     position: fixed;
     top: 16px;
     right: 16px;
-    width: 280px;
+    width: 270px;
     background: rgba(26, 13, 0, 0.92);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(221, 193, 101, 0.15);
     border-radius: 12px;
-    padding: 20px;
+    padding: 18px;
     z-index: 10;
     font-size: 13px;
     max-height: calc(100vh - 32px);
@@ -52,32 +51,50 @@
 
   #controls h1 {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 500;
     letter-spacing: 1px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     color: #FFE9A3;
   }
 
-  #controls .subtitle {
-    font-size: 11px;
-    color: rgba(221, 193, 101, 0.5);
-    margin-bottom: 16px;
+  .subtitle {
+    font-size: 10px;
+    color: rgba(221, 193, 101, 0.45);
+    margin-bottom: 14px;
     font-family: 'JetBrains Mono', monospace;
   }
 
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: rgba(221, 193, 101, 0.35);
+    margin: 14px 0 8px;
+    border-top: 1px solid rgba(221,193,101,0.08);
+    padding-top: 10px;
+  }
+
   .control-group {
-    margin-bottom: 14px;
+    margin-bottom: 10px;
   }
 
   .control-group label {
-    display: block;
+    display: flex;
+    justify-content: space-between;
     font-size: 11px;
     font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: rgba(221, 193, 101, 0.6);
-    margin-bottom: 6px;
+    letter-spacing: 0.6px;
+    color: rgba(221, 193, 101, 0.55);
+    margin-bottom: 4px;
+  }
+
+  .control-group label .val {
+    color: #DDC165;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
   }
 
   .control-group select,
@@ -87,17 +104,11 @@
     border: 1px solid rgba(221, 193, 101, 0.2);
     border-radius: 6px;
     color: #DDC165;
-    padding: 7px 10px;
+    padding: 6px 8px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
+    font-size: 11px;
     outline: none;
     cursor: pointer;
-    transition: border-color 0.2s;
-  }
-
-  .control-group select:hover,
-  .control-group select:focus {
-    border-color: rgba(221, 193, 101, 0.4);
   }
 
   .control-group select option {
@@ -112,167 +123,69 @@
     background: rgba(221, 193, 101, 0.15);
     border-radius: 2px;
     outline: none;
-    cursor: pointer;
   }
 
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 14px;
     height: 14px;
-    background: #DDC165;
     border-radius: 50%;
+    background: #DDC165;
     cursor: pointer;
-    box-shadow: 0 0 8px rgba(221, 193, 101, 0.4);
+    border: 2px solid #241200;
   }
 
-  input[type="range"]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    background: #DDC165;
-    border-radius: 50%;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 0 8px rgba(221, 193, 101, 0.4);
-  }
-
-  .range-row {
+  .btn-row {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 6px;
   }
 
-  .range-row input[type="range"] { flex: 1; }
-
-  .range-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: rgba(221, 193, 101, 0.7);
-    min-width: 32px;
-    text-align: right;
-  }
-
-  .preset-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
-
-  .preset-btn {
-    background: rgba(36, 18, 0, 0.8);
+  .btn {
+    flex: 1;
+    min-width: 55px;
+    padding: 6px 4px;
+    background: rgba(221, 193, 101, 0.08);
     border: 1px solid rgba(221, 193, 101, 0.2);
     border-radius: 6px;
     color: #DDC165;
-    padding: 8px 6px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
-    transition: all 0.2s;
     text-align: center;
+    transition: all 0.15s;
+    white-space: nowrap;
   }
 
-  .preset-btn:hover {
+  .btn:hover {
+    background: rgba(221, 193, 101, 0.15);
+    border-color: rgba(221, 193, 101, 0.4);
+  }
+
+  .btn.active {
+    background: rgba(229, 89, 28, 0.25);
     border-color: #E5591C;
-    background: rgba(229, 89, 28, 0.1);
     color: #FFE9A3;
   }
 
-  .preset-btn.active {
-    border-color: #E5591C;
-    background: rgba(229, 89, 28, 0.15);
-    color: #FFE9A3;
-    box-shadow: 0 0 10px rgba(229, 89, 28, 0.15);
-  }
-
-  .csv-btn {
-    width: 100%;
-    background: rgba(229, 89, 28, 0.12);
-    border: 1px solid rgba(229, 89, 28, 0.3);
-    border-radius: 6px;
-    color: #E5591C;
-    padding: 9px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.5px;
-  }
-
-  .csv-btn:hover {
-    background: rgba(229, 89, 28, 0.2);
-    border-color: #E5591C;
-    box-shadow: 0 0 12px rgba(229, 89, 28, 0.15);
-  }
-
-  .divider {
-    height: 1px;
-    background: rgba(221, 193, 101, 0.1);
-    margin: 14px 0;
-  }
-
-  /* Tooltip */
   #tooltip {
     position: fixed;
     display: none;
     background: rgba(26, 13, 0, 0.95);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(221, 193, 101, 0.25);
-    border-radius: 8px;
-    padding: 10px 14px;
+    border: 1px solid rgba(221, 193, 101, 0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
+    font-size: 11px;
     color: #FFE9A3;
     pointer-events: none;
     z-index: 20;
     white-space: nowrap;
   }
 
-  #tooltip .tt-date { color: rgba(221,193,101,0.6); font-size: 11px; }
-  #tooltip .tt-value { font-size: 14px; font-weight: 500; margin-top: 2px; }
-
-  /* Legend */
-  #legend {
-    position: fixed;
-    bottom: 16px;
-    left: 16px;
-    background: rgba(26, 13, 0, 0.85);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(221, 193, 101, 0.12);
-    border-radius: 8px;
-    padding: 12px 16px;
-    z-index: 10;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-  }
-
-  #legend-bar {
-    width: 200px;
-    height: 8px;
-    border-radius: 4px;
-    margin: 6px 0 4px;
-  }
-
-  .legend-labels {
-    display: flex;
-    justify-content: space-between;
-    color: rgba(221, 193, 101, 0.5);
-    font-size: 10px;
-  }
-
-  /* Info overlay */
-  #info {
-    position: fixed;
-    bottom: 16px;
-    right: 16px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: rgba(221, 193, 101, 0.35);
-    z-index: 10;
-    text-align: right;
-    line-height: 1.6;
-  }
-
-  #csv-input { display: none; }
+  #tooltip .tt-date { color: rgba(221,193,101,0.6); font-size: 10px; }
+  #tooltip .tt-val { font-size: 13px; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -281,1033 +194,644 @@
 
 <div id="controls">
   <h1>TEMPORAL HELIX</h1>
-  <div class="subtitle">3D cyclical time series</div>
+  <div class="subtitle">time series on a spiral</div>
 
+  <div class="section-label">Dataset</div>
+  <div class="btn-row" id="dataset-btns">
+    <button class="btn active" data-ds="temperature">Temp</button>
+    <button class="btn" data-ds="stock">Stock</button>
+    <button class="btn" data-ds="traffic">Traffic</button>
+    <button class="btn" data-ds="ecg">ECG</button>
+  </div>
   <div class="control-group">
-    <label>Dataset</label>
-    <div class="preset-grid">
-      <button class="preset-btn active" data-preset="temperature">Temperature</button>
-      <button class="preset-btn" data-preset="stock">Stock Price</button>
-      <button class="preset-btn" data-preset="traffic">Web Traffic</button>
-      <button class="preset-btn" data-preset="heartbeat">Heartbeat</button>
-    </div>
+    <label>CSV Upload</label>
+    <input type="file" id="csv-upload" accept=".csv">
   </div>
 
-  <div class="control-group">
-    <button class="csv-btn" id="csv-btn">Load CSV (date, value)</button>
-    <input type="file" id="csv-input" accept=".csv,.tsv,.txt">
+  <div class="section-label">Camera</div>
+  <div class="btn-row" id="camera-btns">
+    <button class="btn active" data-cam="side">Side</button>
+    <button class="btn" data-cam="top">Top</button>
+    <button class="btn" data-cam="through">Through</button>
+    <button class="btn" data-cam="free">Free</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn" id="btn-rotate">Auto-Rotate</button>
+    <button class="btn" id="btn-save">Save PNG</button>
   </div>
 
-  <div class="divider"></div>
+  <div class="section-label">Helix Shape</div>
+  <div class="control-group">
+    <label>Radius <span class="val" id="v-radius">3.0</span></label>
+    <input type="range" id="s-radius" min="0.5" max="8" step="0.1" value="3">
+  </div>
+  <div class="control-group">
+    <label>Pitch <span class="val" id="v-pitch">1.5</span></label>
+    <input type="range" id="s-pitch" min="0.2" max="5" step="0.1" value="1.5">
+  </div>
+  <div class="control-group">
+    <label>Line Width <span class="val" id="v-linewidth">2.0</span></label>
+    <input type="range" id="s-linewidth" min="0.5" max="6" step="0.1" value="2">
+  </div>
+  <div class="control-group">
+    <label>Smoothing <span class="val" id="v-smooth">5</span></label>
+    <input type="range" id="s-smooth" min="0" max="20" step="1" value="5">
+  </div>
+  <div class="control-group">
+    <label>Data Thickness <span class="val" id="v-thickness">1.0</span></label>
+    <input type="range" id="s-thickness" min="0.1" max="3" step="0.1" value="1">
+  </div>
 
+  <div class="section-label">Effects</div>
+  <div class="control-group">
+    <label>Glow <span class="val" id="v-glow">0.8</span></label>
+    <input type="range" id="s-glow" min="0" max="3" step="0.05" value="0.8">
+  </div>
   <div class="control-group">
     <label>Cycle Period</label>
-    <select id="cycle-period">
-      <option value="week">Week (7 days)</option>
-      <option value="month">Month (30 days)</option>
-      <option value="quarter">Quarter (91 days)</option>
-      <option value="year" selected>Year (365 days)</option>
+    <select id="s-cycle">
+      <option value="365">Year (365 days)</option>
+      <option value="30">Month (30 days)</option>
+      <option value="7">Week (7 days)</option>
+      <option value="1">Day</option>
     </select>
-  </div>
-
-  <div class="control-group">
-    <label>Helix Radius <span class="range-value" id="radius-val">3.0</span></label>
-    <div class="range-row">
-      <input type="range" id="radius" min="1" max="8" step="0.1" value="3">
-    </div>
-  </div>
-
-  <div class="control-group">
-    <label>Helix Pitch <span class="range-value" id="pitch-val">2.0</span></label>
-    <div class="range-row">
-      <input type="range" id="pitch" min="0.5" max="6" step="0.1" value="2">
-    </div>
-  </div>
-
-  <div class="control-group">
-    <label>Line Width <span class="range-value" id="linewidth-val">3.0</span></label>
-    <div class="range-row">
-      <input type="range" id="linewidth" min="1" max="8" step="0.5" value="3">
-    </div>
-  </div>
-
-  <div class="control-group">
-    <label>Smoothing <span class="range-value" id="smooth-val">0.3</span></label>
-    <div class="range-row">
-      <input type="range" id="smooth" min="0" max="1" step="0.05" value="0.3">
-    </div>
-  </div>
-
-  <div class="control-group">
-    <label>Glow Intensity <span class="range-value" id="glow-val">0.6</span></label>
-    <div class="range-row">
-      <input type="range" id="glow" min="0" max="1" step="0.05" value="0.6">
-    </div>
-  </div>
-
-  <div class="control-group">
-    <label>Data Thickness <span class="range-value" id="thickness-val">0.0</span></label>
-    <div class="range-row">
-      <input type="range" id="thickness" min="0" max="1" step="0.05" value="0">
-    </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="control-group">
-    <label>Camera</label>
-    <div class="preset-grid">
-      <button class="preset-btn" data-camera="side">Side</button>
-      <button class="preset-btn" data-camera="top">Top</button>
-      <button class="preset-btn" data-camera="through">Look Through</button>
-      <button class="preset-btn" data-camera="free">Free</button>
-    </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="control-group" style="display:flex;gap:6px">
-    <button class="preset-btn" id="rotate-toggle" style="flex:1;padding:8px">Auto-Rotate: OFF</button>
-    <button class="preset-btn" id="save-png" style="flex:1;padding:8px">Save PNG</button>
   </div>
 </div>
 
 <div id="tooltip">
-  <div class="tt-date"></div>
-  <div class="tt-value"></div>
+  <div class="tt-date" id="tt-date"></div>
+  <div class="tt-val" id="tt-val"></div>
 </div>
 
-<div id="legend">
-  <div style="color: rgba(221,193,101,0.6);">Value</div>
-  <div id="legend-bar"></div>
-  <div class="legend-labels">
-    <span id="legend-min">0</span>
-    <span id="legend-max">100</span>
-  </div>
-</div>
-
-<div id="info">
-  drag to rotate / scroll to zoom<br>
-  hover for data values
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- Three.js r128 — regular script tags, no modules -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<!-- Shaders and dependencies loaded BEFORE passes -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 
 <script>
 (function() {
-  // ─── Color utilities ───
-  function valueToColor(t) {
-    // t in [0,1] → cold blue → gold → hot orange
-    const stops = [
-      [0.0, 0.15, 0.30, 0.65],   // deep blue
-      [0.2, 0.25, 0.55, 0.85],   // blue
-      [0.4, 0.45, 0.75, 0.60],   // teal
-      [0.55, 0.75, 0.75, 0.35],  // gold-green
-      [0.7, 0.87, 0.76, 0.40],   // gold (#DDC165)
-      [0.85, 1.0, 0.91, 0.64],   // bright gold (#FFE9A3)
-      [1.0, 0.90, 0.35, 0.11],   // burnt orange (#E5591C)
-    ];
-    let i = 0;
-    while (i < stops.length - 1 && stops[i + 1][0] < t) i++;
-    if (i >= stops.length - 1) return new THREE.Color(stops[stops.length-1][1], stops[stops.length-1][2], stops[stops.length-1][3]);
-    const a = stops[i], b = stops[i+1];
-    const f = (t - a[0]) / (b[0] - a[0]);
-    return new THREE.Color(
-      a[1] + (b[1] - a[1]) * f,
-      a[2] + (b[2] - a[2]) * f,
-      a[3] + (b[3] - a[3]) * f
-    );
-  }
+  'use strict';
 
-  function colorToCSS(c) {
-    return `rgb(${Math.round(c.r*255)},${Math.round(c.g*255)},${Math.round(c.b*255)})`;
-  }
+  // ── Preset Datasets ──────────────────────────────────────
 
-  // ─── Data generators ───
-  function genTemperature() {
+  function generateTemperature() {
     const data = [];
-    const start = new Date(2021, 0, 1);
-    for (let d = 0; d < 365 * 3; d++) {
-      const date = new Date(start.getTime() + d * 86400000);
-      const dayOfYear = d % 365;
-      const seasonal = 15 * Math.sin((dayOfYear - 80) / 365 * Math.PI * 2);
-      const noise = (Math.random() - 0.5) * 8;
-      const trend = d * 0.002;
-      data.push({ date, value: 55 + seasonal + noise + trend });
+    const start = new Date('2020-01-01');
+    for (let i = 0; i < 1095; i++) {
+      const d = new Date(start.getTime() + i * 86400000);
+      const season = Math.sin((i / 365) * Math.PI * 2 - Math.PI / 2) * 15;
+      const daily = Math.sin((i / 7) * Math.PI * 2) * 2;
+      const noise = (Math.random() - 0.5) * 4;
+      data.push({ date: new Date(d), value: 15 + season + daily + noise });
     }
-    return { data, label: 'Temperature (F)', unit: 'F' };
+    return data;
   }
 
-  function genStock() {
+  function generateStock() {
     const data = [];
-    const start = new Date(2021, 0, 1);
-    let price = 150;
-    for (let d = 0; d < 365 * 3; d++) {
-      const date = new Date(start.getTime() + d * 86400000);
+    const start = new Date('2021-01-01');
+    let price = 100;
+    for (let i = 0; i < 730; i++) {
+      const d = new Date(start.getTime() + i * 86400000);
       const trend = 0.05;
-      const seasonal = 8 * Math.sin(d / 365 * Math.PI * 2);
-      const quarterly = 4 * Math.sin(d / 91 * Math.PI * 2);
-      const noise = (Math.random() - 0.5) * 6;
-      price += trend + noise * 0.3;
-      data.push({ date, value: price + seasonal + quarterly });
+      const cycle = Math.sin((i / 365) * Math.PI * 2) * 8;
+      const noise = (Math.random() - 0.5) * 5;
+      price += trend + noise * 0.5;
+      data.push({ date: new Date(d), value: price + cycle });
     }
-    return { data, label: 'Stock Price', unit: '$' };
+    return data;
   }
 
-  function genTraffic() {
+  function generateTraffic() {
     const data = [];
-    const start = new Date(2021, 0, 1);
-    for (let d = 0; d < 365 * 3; d++) {
-      const date = new Date(start.getTime() + d * 86400000);
-      const dow = date.getDay();
-      const weekly = dow === 0 || dow === 6 ? 0.5 : 1.0;
-      const friday = dow === 5 ? 1.15 : 1.0;
-      const dayOfYear = d % 365;
-      const yearly = 1 + 0.3 * Math.sin((dayOfYear - 30) / 365 * Math.PI * 2);
-      const growth = 1 + d * 0.0005;
-      const noise = 0.85 + Math.random() * 0.3;
-      data.push({ date, value: 10000 * weekly * friday * yearly * growth * noise });
+    const start = new Date('2022-01-01');
+    for (let i = 0; i < 730; i++) {
+      const d = new Date(start.getTime() + i * 86400000);
+      const weekly = Math.sin((i / 7) * Math.PI * 2) * 300;
+      const yearly = Math.sin((i / 365) * Math.PI * 2) * 500;
+      const base = 2000;
+      const noise = (Math.random() - 0.5) * 200;
+      data.push({ date: new Date(d), value: base + weekly + yearly + noise });
     }
-    return { data, label: 'Daily Visitors', unit: '' };
+    return data;
   }
 
-  function genHeartbeat() {
+  function generateECG() {
     const data = [];
-    const start = new Date(2021, 0, 1);
-    // 180 beats, each "beat" is a cluster of samples
-    for (let i = 0; i < 720; i++) {
-      const date = new Date(start.getTime() + i * 1000); // 1 per second
-      const phase = (i % 4) / 4;
+    const start = new Date('2024-01-01T00:00:00');
+    for (let i = 0; i < 2000; i++) {
+      const d = new Date(start.getTime() + i * 5); // 5ms per sample
+      const t = (i % 200) / 200;
       let v = 0;
-      if (phase < 0.1) v = 0.2;
-      else if (phase < 0.2) v = -0.1;
-      else if (phase < 0.25) v = 1.0;  // R peak
-      else if (phase < 0.3) v = -0.3;  // S
-      else if (phase < 0.5) v = 0.1;
-      else if (phase < 0.7) v = 0.3;   // T wave
-      else v = 0;
-      v += (Math.random() - 0.5) * 0.05;
-      data.push({ date, value: v });
+      // P wave
+      if (t > 0.05 && t < 0.15) v = 0.15 * Math.sin((t - 0.05) / 0.1 * Math.PI);
+      // QRS complex
+      if (t > 0.2 && t < 0.22) v = -0.2 * Math.sin((t - 0.2) / 0.02 * Math.PI);
+      if (t > 0.22 && t < 0.28) v = 1.0 * Math.sin((t - 0.22) / 0.06 * Math.PI);
+      if (t > 0.28 && t < 0.31) v = -0.3 * Math.sin((t - 0.28) / 0.03 * Math.PI);
+      // T wave
+      if (t > 0.35 && t < 0.5) v = 0.25 * Math.sin((t - 0.35) / 0.15 * Math.PI);
+      v += (Math.random() - 0.5) * 0.03;
+      data.push({ date: new Date(d), value: v });
     }
-    return { data, label: 'ECG Signal', unit: 'mV' };
+    return data;
   }
 
   const presets = {
-    temperature: genTemperature,
-    stock: genStock,
-    traffic: genTraffic,
-    heartbeat: genHeartbeat,
+    temperature: generateTemperature,
+    stock: generateStock,
+    traffic: generateTraffic,
+    ecg: generateECG
   };
 
-  const cycleDays = { week: 7, month: 30, quarter: 91, year: 365 };
+  // ── State ──────────────────────────────────────────────
 
-  // ─── State ───
-  let currentDataset = null;
+  let currentData = [];
   let helixMesh = null;
-  let glowMesh = null;
-  let pointsForRaycast = [];
-  let dataMin = 0, dataMax = 1;
+  let ringMarkers = null;
+  let gridGroup = null;
+  let particleSystem = null;
+  let dataPoints = []; // for raycasting tooltip
 
-  // ─── Three.js setup ───
+  // ── Three.js Setup ────────────────────────────────────
+
   const container = document.getElementById('canvas-container');
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x241200);
-  scene.fog = new THREE.FogExp2(0x241200, 0.025);
+  scene.fog = new THREE.FogExp2(0x241200, 0.02);
 
-  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+  const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
   camera.position.set(8, 5, 8);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    preserveDrawingBuffer: true
+  });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.2;
   container.appendChild(renderer.domElement);
 
-  // Orbit controls
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.rotateSpeed = 0.6;
-  controls.zoomSpeed = 0.8;
-  controls.minDistance = 2;
-  controls.maxDistance = 50;
   controls.autoRotate = false;
-  controls.autoRotateSpeed = 0.5;
+  controls.autoRotateSpeed = 1.0;
 
-  // Bloom
+  // ── Post-processing ───────────────────────────────────
+
   const composer = new THREE.EffectComposer(renderer);
   const renderPass = new THREE.RenderPass(scene, camera);
   composer.addPass(renderPass);
 
   const bloomPass = new THREE.UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.6, 0.4, 0.85
+    0.8, 0.4, 0.85
   );
   composer.addPass(bloomPass);
 
-  // Lights
-  const ambient = new THREE.AmbientLight(0x442200, 0.4);
+  // ── Lighting ──────────────────────────────────────────
+
+  const ambient = new THREE.AmbientLight(0xDDC165, 0.3);
   scene.add(ambient);
-  const dirLight = new THREE.DirectionalLight(0xFFE9A3, 0.3);
+  const dirLight = new THREE.DirectionalLight(0xFFE9A3, 0.6);
   dirLight.position.set(5, 10, 5);
   scene.add(dirLight);
 
-  // Subtle grid
-  function createGrid() {
-    const gridGeo = new THREE.BufferGeometry();
-    const verts = [];
-    const size = 20, step = 2;
-    for (let i = -size; i <= size; i += step) {
-      verts.push(-size, 0, i, size, 0, i);
-      verts.push(i, 0, -size, i, 0, size);
-    }
-    gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-    const gridMat = new THREE.LineBasicMaterial({ color: 0xDDC165, transparent: true, opacity: 0.04 });
-    const grid = new THREE.LineSegments(gridGeo, gridMat);
-    grid.position.y = -3;
-    scene.add(grid);
-  }
-  createGrid();
+  // ── Particles ─────────────────────────────────────────
 
-  // Axis indicator (subtle vertical line)
-  function createAxis() {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute([0, -10, 0, 0, 10, 0], 3));
-    const mat = new THREE.LineBasicMaterial({ color: 0xDDC165, transparent: true, opacity: 0.08 });
-    scene.add(new THREE.LineSegments(geo, mat));
-  }
-  createAxis();
-
-  // Floating particles for depth
   function createParticles() {
-    const count = 300;
-    const positions = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      positions[i*3] = (Math.random() - 0.5) * 30;
-      positions[i*3+1] = (Math.random() - 0.5) * 20;
-      positions[i*3+2] = (Math.random() - 0.5) * 30;
-    }
+    if (particleSystem) scene.remove(particleSystem);
+    const count = 400;
     const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 40;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 30;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 40;
+      const gold = new THREE.Color(0xDDC165);
+      colors[i * 3] = gold.r;
+      colors[i * 3 + 1] = gold.g;
+      colors[i * 3 + 2] = gold.b;
+    }
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     const mat = new THREE.PointsMaterial({
-      color: 0xDDC165, size: 0.04, transparent: true, opacity: 0.3,
-      blending: THREE.AdditiveBlending, depthWrite: false
+      size: 0.06,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.4,
+      sizeAttenuation: true
     });
-    scene.add(new THREE.Points(geo, mat));
+    particleSystem = new THREE.Points(geo, mat);
+    scene.add(particleSystem);
   }
   createParticles();
 
-  // ─── Build helix ───
-  function smoothData(values, factor) {
-    if (factor <= 0) return values.slice();
-    const result = values.slice();
-    const passes = Math.round(factor * 10);
-    for (let p = 0; p < passes; p++) {
-      const prev = result.slice();
-      for (let i = 1; i < result.length - 1; i++) {
-        result[i] = prev[i] * 0.5 + (prev[i-1] + prev[i+1]) * 0.25;
+  // ── Grid & Axis ───────────────────────────────────────
+
+  function createGrid() {
+    if (gridGroup) scene.remove(gridGroup);
+    gridGroup = new THREE.Group();
+
+    // ground grid
+    const gridHelper = new THREE.GridHelper(20, 20, 0x3A2200, 0x2A1600);
+    gridHelper.position.y = -6;
+    gridHelper.material.opacity = 0.3;
+    gridHelper.material.transparent = true;
+    gridGroup.add(gridHelper);
+
+    // vertical axis line
+    const axisGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -6, 0),
+      new THREE.Vector3(0, 20, 0)
+    ]);
+    const axisMat = new THREE.LineBasicMaterial({
+      color: 0xDDC165,
+      transparent: true,
+      opacity: 0.12
+    });
+    gridGroup.add(new THREE.Line(axisGeo, axisMat));
+
+    scene.add(gridGroup);
+  }
+  createGrid();
+
+  // ── Smoothing ─────────────────────────────────────────
+
+  function smooth(values, window) {
+    if (window < 1) return values.slice();
+    const result = [];
+    for (let i = 0; i < values.length; i++) {
+      let sum = 0, count = 0;
+      for (let j = Math.max(0, i - window); j <= Math.min(values.length - 1, i + window); j++) {
+        sum += values[j];
+        count++;
       }
+      result.push(sum / count);
     }
     return result;
   }
 
-  function buildHelix() {
-    // Remove old
-    if (helixMesh) { scene.remove(helixMesh); helixMesh.geometry.dispose(); }
-    if (glowMesh) { scene.remove(glowMesh); glowMesh.geometry.dispose(); }
+  // ── Color mapping ─────────────────────────────────────
 
-    if (!currentDataset) return;
-
-    const radius = parseFloat(document.getElementById('radius').value);
-    const pitch = parseFloat(document.getElementById('pitch').value);
-    const smoothFactor = parseFloat(document.getElementById('smooth').value);
-    const glowIntensity = parseFloat(document.getElementById('glow').value);
-    const thicknessFactor = parseFloat(document.getElementById('thickness').value);
-    const lineWidth = parseFloat(document.getElementById('linewidth').value);
-    const cyclePeriod = cycleDays[document.getElementById('cycle-period').value];
-
-    const rawValues = currentDataset.data.map(d => d.value);
-    const values = smoothData(rawValues, smoothFactor);
-    const n = values.length;
-
-    dataMin = Math.min(...values);
-    dataMax = Math.max(...values);
-    const range = dataMax - dataMin || 1;
-
-    // Update legend
-    document.getElementById('legend-min').textContent = dataMin.toFixed(1);
-    document.getElementById('legend-max').textContent = dataMax.toFixed(1);
-    const gradStops = [];
-    for (let i = 0; i <= 10; i++) {
-      const c = valueToColor(i / 10);
-      gradStops.push(colorToCSS(c) + ' ' + (i * 10) + '%');
+  function valueToColor(t) {
+    // t: 0 (low/blue) → 0.5 (gold) → 1.0 (orange)
+    const blue = new THREE.Color(0x2266AA);
+    const gold = new THREE.Color(0xDDC165);
+    const orange = new THREE.Color(0xE5591C);
+    if (t < 0.5) {
+      return blue.clone().lerp(gold, t * 2);
+    } else {
+      return gold.clone().lerp(orange, (t - 0.5) * 2);
     }
-    document.getElementById('legend-bar').style.background = `linear-gradient(to right, ${gradStops.join(', ')})`;
+  }
 
-    // Build tube path
-    const pathPoints = [];
-    pointsForRaycast = [];
+  // ── Build Helix (THE ONE build function) ──────────────
 
-    for (let i = 0; i < n; i++) {
-      const t = i / n;
+  function buildHelix() {
+    // Remove old objects
+    if (helixMesh) {
+      scene.remove(helixMesh);
+      helixMesh = null;
+    }
+    if (ringMarkers) {
+      scene.remove(ringMarkers);
+      ringMarkers = null;
+    }
+
+    if (currentData.length === 0) return;
+
+    // Read controls
+    const radius = parseFloat(document.getElementById('s-radius').value);
+    const pitch = parseFloat(document.getElementById('s-pitch').value);
+    const smoothWindow = parseInt(document.getElementById('s-smooth').value);
+    const thickness = parseFloat(document.getElementById('s-thickness').value);
+    const cyclePeriod = parseInt(document.getElementById('s-cycle').value);
+
+    // Extract and smooth values
+    const rawValues = currentData.map(d => d.value);
+    const smoothed = smooth(rawValues, smoothWindow);
+
+    const minVal = Math.min(...smoothed);
+    const maxVal = Math.max(...smoothed);
+    const range = maxVal - minVal || 1;
+
+    // Build helix points and colors
+    const positions = [];
+    const colors = [];
+    dataPoints = [];
+
+    const totalCycles = currentData.length / cyclePeriod;
+
+    for (let i = 0; i < smoothed.length; i++) {
+      const fraction = i / currentData.length;
       const angle = (i / cyclePeriod) * Math.PI * 2;
       const y = (i / cyclePeriod) * pitch;
-      const x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius;
 
-      // Offset radius by value for visual encoding
-      const norm = (values[i] - dataMin) / range;
-      const valRadius = radius + (norm - 0.5) * 0.6;
-      const px = Math.cos(angle) * valRadius;
-      const pz = Math.sin(angle) * valRadius;
+      const norm = (smoothed[i] - minVal) / range;
+      const r = radius + (norm - 0.5) * thickness * 2;
 
-      pathPoints.push(new THREE.Vector3(px, y - (n / cyclePeriod * pitch) / 2, pz));
-      pointsForRaycast.push({
-        pos: new THREE.Vector3(px, y - (n / cyclePeriod * pitch) / 2, pz),
-        index: i,
-        date: currentDataset.data[i].date,
-        value: values[i],
-        rawValue: rawValues[i],
-        norm
+      const x = Math.cos(angle) * r;
+      const z = Math.sin(angle) * r;
+
+      positions.push(x, y, z);
+
+      const col = valueToColor(norm);
+      colors.push(col.r, col.g, col.b);
+
+      dataPoints.push({
+        pos: new THREE.Vector3(x, y, z),
+        date: currentData[i].date,
+        value: currentData[i].value,
+        smoothedValue: smoothed[i]
       });
     }
 
-    // Build geometry with vertex colors and variable width via tube segments
-    const colors = [];
-    const positions = [];
-    const sizes = [];
+    // Create line geometry
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
-    // We'll use a line with vertex colors for the main helix
-    const lineGeo = new THREE.BufferGeometry();
-    const posArr = new Float32Array(n * 3);
-    const colArr = new Float32Array(n * 3);
-
-    for (let i = 0; i < n; i++) {
-      const p = pathPoints[i];
-      posArr[i*3] = p.x;
-      posArr[i*3+1] = p.y;
-      posArr[i*3+2] = p.z;
-
-      const norm = (values[i] - dataMin) / range;
-      const col = valueToColor(norm);
-      colArr[i*3] = col.r;
-      colArr[i*3+1] = col.g;
-      colArr[i*3+2] = col.b;
-    }
-
-    lineGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
-    lineGeo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
-
-    const lineMat = new THREE.LineBasicMaterial({
+    const material = new THREE.LineBasicMaterial({
       vertexColors: true,
-      linewidth: 1, // WebGL limitation — linewidth >1 only works on some systems
-      transparent: true,
-      opacity: 0.95,
+      linewidth: 1 // WebGL limitation — actual width controlled by tube below
     });
 
-    helixMesh = new THREE.Line(lineGeo, lineMat);
+    // For thicker lines, use a tube
+    const lineWidth = parseFloat(document.getElementById('s-linewidth').value);
+    if (lineWidth > 1.5) {
+      // Build a CatmullRom curve from points
+      const curvePoints = [];
+      for (let i = 0; i < positions.length; i += 3) {
+        curvePoints.push(new THREE.Vector3(positions[i], positions[i+1], positions[i+2]));
+      }
+      // Downsample for performance if needed
+      const step = Math.max(1, Math.floor(curvePoints.length / 2000));
+      const sampledPoints = [];
+      for (let i = 0; i < curvePoints.length; i += step) {
+        sampledPoints.push(curvePoints[i]);
+      }
+      if (sampledPoints.length > 1) {
+        const curve = new THREE.CatmullRomCurve3(sampledPoints);
+        const tubeGeo = new THREE.TubeGeometry(curve, sampledPoints.length * 2, lineWidth * 0.02, 6, false);
+
+        // Apply vertex colors to tube
+        const tubeColors = new Float32Array(tubeGeo.attributes.position.count * 3);
+        for (let i = 0; i < tubeGeo.attributes.position.count; i++) {
+          const pos = new THREE.Vector3().fromBufferAttribute(tubeGeo.attributes.position, i);
+          // Find nearest curve point for color
+          let bestT = 0;
+          let bestDist = Infinity;
+          const testSteps = 200;
+          for (let t = 0; t <= testSteps; t++) {
+            const frac = t / testSteps;
+            const cp = curve.getPoint(frac);
+            const dist = pos.distanceTo(cp);
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestT = frac;
+            }
+          }
+          const dataIdx = Math.floor(bestT * (smoothed.length - 1));
+          const norm = (smoothed[dataIdx] - minVal) / range;
+          const col = valueToColor(norm);
+          tubeColors[i * 3] = col.r;
+          tubeColors[i * 3 + 1] = col.g;
+          tubeColors[i * 3 + 2] = col.b;
+        }
+        tubeGeo.setAttribute('color', new THREE.BufferAttribute(tubeColors, 3));
+
+        const tubeMat = new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          emissive: new THREE.Color(0xDDC165),
+          emissiveIntensity: 0.15,
+          roughness: 0.5,
+          metalness: 0.2
+        });
+        helixMesh = new THREE.Mesh(tubeGeo, tubeMat);
+      }
+    }
+
+    if (!helixMesh) {
+      helixMesh = new THREE.Line(geometry, material);
+    }
+
     scene.add(helixMesh);
 
-    // Glow line (slightly larger, additive blending, lower opacity)
-    if (glowIntensity > 0) {
-      const glowGeo = lineGeo.clone();
-      const glowMat = new THREE.LineBasicMaterial({
-        vertexColors: true,
-        linewidth: 1,
-        transparent: true,
-        opacity: glowIntensity * 0.5,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
-      glowMesh = new THREE.Line(glowGeo, glowMat);
-      scene.add(glowMesh);
-    }
+    // ── Ring markers (year/cycle boundaries) ──────────
 
-    // Add spheres along the line for thickness and better visual
-    // Use instanced mesh for performance
-    const sphereCount = Math.min(n, 2000);
-    const step = Math.max(1, Math.floor(n / sphereCount));
-    const baseSize = lineWidth * 0.02;
-
-    const sphereGeo = new THREE.SphereGeometry(1, 6, 4);
-    const sphereMat = new THREE.MeshBasicMaterial({ vertexColors: false, transparent: true, opacity: 0.9 });
-    // Use a simpler approach: add colored points
-    const pointGeo = new THREE.BufferGeometry();
-    const ptPos = new Float32Array(sphereCount * 3);
-    const ptCol = new Float32Array(sphereCount * 3);
-    const ptSizes = new Float32Array(sphereCount);
-
-    let idx = 0;
-    for (let i = 0; i < n && idx < sphereCount; i += step, idx++) {
-      const p = pathPoints[i];
-      ptPos[idx*3] = p.x;
-      ptPos[idx*3+1] = p.y;
-      ptPos[idx*3+2] = p.z;
-
-      const norm = (values[i] - dataMin) / range;
-      const col = valueToColor(norm);
-      ptCol[idx*3] = col.r;
-      ptCol[idx*3+1] = col.g;
-      ptCol[idx*3+2] = col.b;
-
-      const thickMult = thicknessFactor > 0 ? (0.5 + norm * thicknessFactor) : 1;
-      ptSizes[idx] = baseSize * 40 * thickMult;
-    }
-
-    pointGeo.setAttribute('position', new THREE.BufferAttribute(ptPos.slice(0, idx*3), 3));
-    pointGeo.setAttribute('color', new THREE.BufferAttribute(ptCol.slice(0, idx*3), 3));
-    pointGeo.setAttribute('size', new THREE.BufferAttribute(ptSizes.slice(0, idx), 1));
-
-    // Custom shader for sized colored points
-    const pointMat = new THREE.ShaderMaterial({
-      vertexShader: `
-        attribute float size;
-        attribute vec3 color;
-        varying vec3 vColor;
-        void main() {
-          vColor = color;
-          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = size * (300.0 / -mvPosition.z);
-          gl_Position = projectionMatrix * mvPosition;
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vColor;
-        void main() {
-          float d = length(gl_PointCoord - vec2(0.5));
-          if (d > 0.5) discard;
-          float alpha = 1.0 - smoothstep(0.2, 0.5, d);
-          gl_FragColor = vec4(vColor, alpha * 0.85);
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-
-    const points = new THREE.Points(pointGeo, pointMat);
-    // Store reference to clean up
-    if (!helixMesh.userData.extras) helixMesh.userData.extras = [];
-    helixMesh.userData.extras.push(points);
-    scene.add(points);
-
-    // Glow points
-    if (glowIntensity > 0) {
-      const glowPtMat = new THREE.ShaderMaterial({
-        vertexShader: `
-          attribute float size;
-          attribute vec3 color;
-          varying vec3 vColor;
-          void main() {
-            vColor = color;
-            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = size * 2.5 * (300.0 / -mvPosition.z);
-            gl_Position = projectionMatrix * mvPosition;
-          }
-        `,
-        fragmentShader: `
-          uniform float uGlow;
-          varying vec3 vColor;
-          void main() {
-            float d = length(gl_PointCoord - vec2(0.5));
-            if (d > 0.5) discard;
-            float alpha = (1.0 - smoothstep(0.0, 0.5, d)) * uGlow * 0.3;
-            gl_FragColor = vec4(vColor, alpha);
-          }
-        `,
-        uniforms: { uGlow: { value: glowIntensity } },
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-      });
-
-      const glowPoints = new THREE.Points(pointGeo.clone(), glowPtMat);
-      helixMesh.userData.extras.push(glowPoints);
-      scene.add(glowPoints);
-    }
-
-    // Year markers along the axis
-    const totalCycles = n / cyclePeriod;
-    for (let c = 0; c <= Math.ceil(totalCycles); c++) {
-      const y = c * pitch - (n / cyclePeriod * pitch) / 2;
-      // Ring
-      const ringGeo = new THREE.RingGeometry(radius - 0.1, radius + 0.1, 64);
+    ringMarkers = new THREE.Group();
+    const numCycles = Math.ceil(currentData.length / cyclePeriod);
+    for (let c = 0; c <= numCycles; c++) {
+      const y = c * pitch;
+      const ringGeo = new THREE.RingGeometry(radius - 0.15, radius + 0.15, 64);
       const ringMat = new THREE.MeshBasicMaterial({
-        color: 0xDDC165, transparent: true, opacity: 0.06,
-        side: THREE.DoubleSide, depthWrite: false
+        color: 0xDDC165,
+        transparent: true,
+        opacity: 0.12,
+        side: THREE.DoubleSide
       });
       const ring = new THREE.Mesh(ringGeo, ringMat);
       ring.rotation.x = -Math.PI / 2;
       ring.position.y = y;
-      helixMesh.userData.extras.push(ring);
-      scene.add(ring);
-    }
+      ringMarkers.add(ring);
 
-    bloomPass.strength = 0.4 + glowIntensity * 0.8;
-  }
-
-  // Clean up extras when removing helix
-  const origRemove = buildHelix;
-  function cleanHelix() {
-    if (helixMesh) {
-      if (helixMesh.userData.extras) {
-        helixMesh.userData.extras.forEach(obj => {
-          scene.remove(obj);
-          if (obj.geometry) obj.geometry.dispose();
-          if (obj.material) obj.material.dispose();
-        });
+      // Label
+      if (c < numCycles && currentData[c * cyclePeriod]) {
+        const d = currentData[c * cyclePeriod].date;
+        const label = formatDateShort(d);
+        const sprite = makeTextSprite(label);
+        sprite.position.set(radius + 0.8, y, 0);
+        sprite.scale.set(1.5, 0.5, 1);
+        ringMarkers.add(sprite);
       }
-      scene.remove(helixMesh);
-      helixMesh.geometry.dispose();
-      helixMesh.material.dispose();
-      helixMesh = null;
     }
-    if (glowMesh) {
-      scene.remove(glowMesh);
-      glowMesh.geometry.dispose();
-      glowMesh.material.dispose();
-      glowMesh = null;
+    scene.add(ringMarkers);
+
+    // Center camera vertically
+    const midY = (numCycles * pitch) / 2;
+    controls.target.set(0, midY, 0);
+    controls.update();
+  }
+
+  function formatDateShort(d) {
+    if (!(d instanceof Date) || isNaN(d.getTime())) return '—';
+    const ms = d.getTime();
+    // If dates are very close together (sub-second data like ECG), show time
+    if (currentData.length > 1) {
+      const span = currentData[currentData.length-1].date.getTime() - currentData[0].date.getTime();
+      if (span < 86400000) { // less than a day
+        return d.toLocaleTimeString();
+      }
+    }
+    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  }
+
+  function makeTextSprite(text) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.font = '28px JetBrains Mono, monospace';
+    ctx.fillStyle = 'rgba(221, 193, 101, 0.5)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 128, 32);
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    return new THREE.Sprite(mat);
+  }
+
+  // ── Load Dataset ──────────────────────────────────────
+
+  function loadDataset(name) {
+    if (presets[name]) {
+      currentData = presets[name]();
+      buildHelix();
     }
   }
 
-  // Wrap buildHelix to clean first
-  const _buildHelix = buildHelix;
-  function rebuildHelix() {
-    cleanHelix();
-    _buildHelix();
-  }
+  // ── CSV Parsing ───────────────────────────────────────
 
-  // Override
-  function buildHelixFull() {
-    cleanHelix();
-    // Re-run the build logic — just call the inner code
-    // Actually, let me restructure: put build logic in rebuildHelix
-  }
-
-  // Actually let me just make buildHelix handle cleanup properly
-  // The original buildHelix already removes old meshes at the top, but doesn't handle extras.
-  // Let me fix by wrapping calls.
-
-  function rebuild() {
-    cleanHelix();
-
-    if (!currentDataset) return;
-
-    const radius = parseFloat(document.getElementById('radius').value);
-    const pitch = parseFloat(document.getElementById('pitch').value);
-    const smoothFactor = parseFloat(document.getElementById('smooth').value);
-    const glowIntensity = parseFloat(document.getElementById('glow').value);
-    const thicknessFactor = parseFloat(document.getElementById('thickness').value);
-    const lineWidth = parseFloat(document.getElementById('linewidth').value);
-    const cyclePeriod = cycleDays[document.getElementById('cycle-period').value];
-
-    const rawValues = currentDataset.data.map(d => d.value);
-    const values = smoothData(rawValues, smoothFactor);
-    const n = values.length;
-
-    dataMin = Math.min(...values);
-    dataMax = Math.max(...values);
-    const range = dataMax - dataMin || 1;
-
-    // Legend
-    document.getElementById('legend-min').textContent = dataMin.toFixed(1);
-    document.getElementById('legend-max').textContent = dataMax.toFixed(1);
-    const gradStops = [];
-    for (let i = 0; i <= 10; i++) {
-      gradStops.push(colorToCSS(valueToColor(i / 10)) + ' ' + (i * 10) + '%');
-    }
-    document.getElementById('legend-bar').style.background = `linear-gradient(to right, ${gradStops.join(', ')})`;
-
-    const pathPoints = [];
-    pointsForRaycast = [];
-    const totalHeight = (n / cyclePeriod) * pitch;
-
-    for (let i = 0; i < n; i++) {
-      const angle = (i / cyclePeriod) * Math.PI * 2;
-      const y = (i / cyclePeriod) * pitch - totalHeight / 2;
-      const norm = (values[i] - dataMin) / range;
-      const valRadius = radius + (norm - 0.5) * 0.8;
-      const px = Math.cos(angle) * valRadius;
-      const pz = Math.sin(angle) * valRadius;
-
-      const pt = new THREE.Vector3(px, y, pz);
-      pathPoints.push(pt);
-      pointsForRaycast.push({
-        pos: pt,
-        index: i,
-        date: currentDataset.data[i].date,
-        value: values[i],
-        rawValue: rawValues[i],
-        norm
-      });
-    }
-
-    // Main line
-    const posArr = new Float32Array(n * 3);
-    const colArr = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) {
-      posArr[i*3] = pathPoints[i].x;
-      posArr[i*3+1] = pathPoints[i].y;
-      posArr[i*3+2] = pathPoints[i].z;
-      const norm = (values[i] - dataMin) / range;
-      const col = valueToColor(norm);
-      colArr[i*3] = col.r;
-      colArr[i*3+1] = col.g;
-      colArr[i*3+2] = col.b;
-    }
-
-    const lineGeo = new THREE.BufferGeometry();
-    lineGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
-    lineGeo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
-
-    helixMesh = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
-      vertexColors: true, transparent: true, opacity: 0.95
-    }));
-    helixMesh.userData.extras = [];
-    scene.add(helixMesh);
-
-    // Glow line
-    if (glowIntensity > 0) {
-      glowMesh = new THREE.Line(lineGeo.clone(), new THREE.LineBasicMaterial({
-        vertexColors: true, transparent: true, opacity: glowIntensity * 0.4,
-        blending: THREE.AdditiveBlending, depthWrite: false
-      }));
-      scene.add(glowMesh);
-    }
-
-    // Data points (colored spherical points)
-    const sphereCount = Math.min(n, 3000);
-    const step = Math.max(1, Math.floor(n / sphereCount));
-    const baseSize = lineWidth * 0.018;
-    let idx = 0;
-
-    const ptPos = [];
-    const ptCol = [];
-    const ptSizes = [];
-
-    for (let i = 0; i < n; i += step) {
-      ptPos.push(pathPoints[i].x, pathPoints[i].y, pathPoints[i].z);
-      const norm = (values[i] - dataMin) / range;
-      const col = valueToColor(norm);
-      ptCol.push(col.r, col.g, col.b);
-      const thickMult = thicknessFactor > 0 ? (0.5 + norm * thicknessFactor) : 1;
-      ptSizes.push(baseSize * 45 * thickMult);
-      idx++;
-    }
-
-    const pointGeo = new THREE.BufferGeometry();
-    pointGeo.setAttribute('position', new THREE.Float32BufferAttribute(ptPos, 3));
-    pointGeo.setAttribute('color', new THREE.Float32BufferAttribute(ptCol, 3));
-    pointGeo.setAttribute('size', new THREE.Float32BufferAttribute(ptSizes, 1));
-
-    const pointMat = new THREE.ShaderMaterial({
-      vertexShader: `
-        attribute float size;
-        attribute vec3 color;
-        varying vec3 vColor;
-        varying float vAlpha;
-        void main() {
-          vColor = color;
-          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = size * (250.0 / -mvPosition.z);
-          gl_Position = projectionMatrix * mvPosition;
+  function parseCSV(text) {
+    const lines = text.trim().split('\n');
+    const data = [];
+    // Skip header
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(',');
+      if (parts.length >= 2) {
+        const date = new Date(parts[0].trim());
+        const value = parseFloat(parts[1].trim());
+        if (!isNaN(date.getTime()) && !isNaN(value)) {
+          data.push({ date, value });
         }
-      `,
-      fragmentShader: `
-        varying vec3 vColor;
-        void main() {
-          float d = length(gl_PointCoord - vec2(0.5));
-          if (d > 0.5) discard;
-          float alpha = 1.0 - smoothstep(0.15, 0.5, d);
-          gl_FragColor = vec4(vColor * 1.1, alpha * 0.9);
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.NormalBlending,
-    });
-
-    const pts = new THREE.Points(pointGeo, pointMat);
-    helixMesh.userData.extras.push(pts);
-    scene.add(pts);
-
-    // Glow points
-    if (glowIntensity > 0) {
-      const glowPtGeo = pointGeo.clone();
-      // Scale up sizes for glow
-      const gSizes = new Float32Array(ptSizes.length);
-      for (let i = 0; i < ptSizes.length; i++) gSizes[i] = ptSizes[i] * 2.5;
-      glowPtGeo.setAttribute('size', new THREE.Float32BufferAttribute(gSizes, 1));
-
-      const glowPtMat = new THREE.ShaderMaterial({
-        vertexShader: `
-          attribute float size;
-          attribute vec3 color;
-          varying vec3 vColor;
-          void main() {
-            vColor = color;
-            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = size * (250.0 / -mvPosition.z);
-            gl_Position = projectionMatrix * mvPosition;
-          }
-        `,
-        fragmentShader: `
-          uniform float uGlow;
-          varying vec3 vColor;
-          void main() {
-            float d = length(gl_PointCoord - vec2(0.5));
-            if (d > 0.5) discard;
-            float alpha = (1.0 - smoothstep(0.0, 0.5, d)) * uGlow * 0.25;
-            gl_FragColor = vec4(vColor, alpha);
-          }
-        `,
-        uniforms: { uGlow: { value: glowIntensity } },
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-      });
-
-      const gPts = new THREE.Points(glowPtGeo, glowPtMat);
-      helixMesh.userData.extras.push(gPts);
-      scene.add(gPts);
+      }
     }
-
-    // Cycle markers (subtle rings)
-    const totalCycles = n / cyclePeriod;
-    for (let c = 0; c <= Math.ceil(totalCycles); c++) {
-      const y = c * pitch - totalHeight / 2;
-      const ringGeo = new THREE.TorusGeometry(radius, 0.01, 8, 64);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color: 0xDDC165, transparent: true, opacity: 0.08, depthWrite: false
-      });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.rotation.x = Math.PI / 2;
-      ring.position.y = y;
-      helixMesh.userData.extras.push(ring);
-      scene.add(ring);
-    }
-
-    bloomPass.strength = 0.3 + glowIntensity * 0.9;
+    return data;
   }
 
-  // ─── Raycasting for tooltip ───
+  // ── Tooltip / Raycasting ──────────────────────────────
+
   const raycaster = new THREE.Raycaster();
+  raycaster.params.Line = { threshold: 0.3 };
   const mouse = new THREE.Vector2();
   const tooltip = document.getElementById('tooltip');
-  let hoveredPoint = null;
-  let highlightSphere = null;
+  const ttDate = document.getElementById('tt-date');
+  const ttVal = document.getElementById('tt-val');
 
-  // Create highlight sphere
-  const hlGeo = new THREE.SphereGeometry(0.08, 16, 12);
-  const hlMat = new THREE.MeshBasicMaterial({
-    color: 0xFFE9A3, transparent: true, opacity: 0.9,
-    blending: THREE.AdditiveBlending
-  });
-  highlightSphere = new THREE.Mesh(hlGeo, hlMat);
-  highlightSphere.visible = false;
-  scene.add(highlightSphere);
-
-  renderer.domElement.addEventListener('mousemove', (e) => {
+  function onMouseMove(e) {
     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
 
-    // Find nearest point to ray
-    let minDist = Infinity;
-    let nearest = null;
+    // Find nearest data point to ray
+    let bestDist = 0.5;
+    let bestPoint = null;
 
-    for (const pt of pointsForRaycast) {
-      const d = raycaster.ray.distanceToPoint(pt.pos);
-      if (d < minDist && d < 0.3) {
-        minDist = d;
-        nearest = pt;
+    for (let i = 0; i < dataPoints.length; i++) {
+      const dist = raycaster.ray.distanceToPoint(dataPoints[i].pos);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestPoint = dataPoints[i];
       }
     }
 
-    if (nearest) {
-      hoveredPoint = nearest;
-      highlightSphere.position.copy(nearest.pos);
-      highlightSphere.visible = true;
-
-      const dateStr = nearest.date instanceof Date ?
-        nearest.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) :
-        String(nearest.date);
-
-      tooltip.querySelector('.tt-date').textContent = dateStr;
-      const unit = currentDataset.unit || '';
-      tooltip.querySelector('.tt-value').textContent =
-        (unit === '$' ? '$' : '') + nearest.rawValue.toFixed(2) + (unit && unit !== '$' ? ' ' + unit : '');
-
+    if (bestPoint) {
       tooltip.style.display = 'block';
-      tooltip.style.left = (e.clientX + 16) + 'px';
+      tooltip.style.left = (e.clientX + 15) + 'px';
       tooltip.style.top = (e.clientY - 10) + 'px';
-    } else {
-      hoveredPoint = null;
-      highlightSphere.visible = false;
-      tooltip.style.display = 'none';
-    }
-  });
 
-  // ─── Controls ───
-  document.querySelectorAll('.preset-btn[data-preset]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.preset-btn[data-preset]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const key = btn.dataset.preset;
-      currentDataset = presets[key]();
-
-      // Set sensible cycle period per dataset
-      if (key === 'heartbeat') {
-        document.getElementById('cycle-period').value = 'week';
-      } else if (key === 'traffic') {
-        document.getElementById('cycle-period').value = 'year';
-      } else {
-        document.getElementById('cycle-period').value = 'year';
-      }
-
-      rebuild();
-    });
-  });
-
-  // Camera presets
-  document.querySelectorAll('.preset-btn[data-camera]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cam = btn.dataset.camera;
-      const totalHeight = currentDataset ?
-        (currentDataset.data.length / cycleDays[document.getElementById('cycle-period').value]) *
-        parseFloat(document.getElementById('pitch').value) : 6;
-
-      controls.enabled = true;
-
-      if (cam === 'side') {
-        animateCamera(new THREE.Vector3(12, 2, 0), new THREE.Vector3(0, 0, 0));
-      } else if (cam === 'top') {
-        animateCamera(new THREE.Vector3(0, totalHeight * 0.8 + 5, 0.01), new THREE.Vector3(0, 0, 0));
-      } else if (cam === 'through') {
-        animateCamera(new THREE.Vector3(0, -totalHeight / 2 - 3, 0.01), new THREE.Vector3(0, totalHeight / 2, 0));
-      } else if (cam === 'free') {
-        animateCamera(new THREE.Vector3(8, 5, 8), new THREE.Vector3(0, 0, 0));
-      }
-    });
-  });
-
-  function animateCamera(targetPos, targetLook) {
-    const startPos = camera.position.clone();
-    const startTarget = controls.target.clone();
-    const duration = 800;
-    const startTime = performance.now();
-
-    function easeInOut(t) {
-      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    }
-
-    function step() {
-      const t = Math.min(1, (performance.now() - startTime) / duration);
-      const e = easeInOut(t);
-
-      camera.position.lerpVectors(startPos, targetPos, e);
-      controls.target.lerpVectors(startTarget, targetLook, e);
-      controls.update();
-
-      if (t < 1) requestAnimationFrame(step);
-    }
-    step();
-  }
-
-  // Sliders
-  ['radius', 'pitch', 'smooth', 'glow', 'linewidth', 'thickness'].forEach(id => {
-    const el = document.getElementById(id);
-    const valEl = document.getElementById(id + '-val');
-    el.addEventListener('input', () => {
-      valEl.textContent = parseFloat(el.value).toFixed(1);
-      rebuild();
-    });
-  });
-
-  document.getElementById('cycle-period').addEventListener('change', rebuild);
-
-  // CSV
-  document.getElementById('csv-btn').addEventListener('click', () => {
-    document.getElementById('csv-input').click();
-  });
-
-  document.getElementById('csv-input').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target.result;
-      const lines = text.trim().split('\n');
-      const data = [];
-      // Skip header if present
-      const start = lines[0].match(/[a-zA-Z]/) ? 1 : 0;
-      for (let i = start; i < lines.length; i++) {
-        const parts = lines[i].split(/[,\t]/);
-        if (parts.length >= 2) {
-          const date = new Date(parts[0].trim());
-          const value = parseFloat(parts[1].trim());
-          if (!isNaN(value)) {
-            data.push({ date: isNaN(date.getTime()) ? new Date(2021, 0, i) : date, value });
-          }
+      let dateStr = '—';
+      if (bestPoint.date instanceof Date && !isNaN(bestPoint.date.getTime())) {
+        const span = currentData.length > 1 ?
+          currentData[currentData.length-1].date.getTime() - currentData[0].date.getTime() : Infinity;
+        if (span < 86400000) {
+          dateStr = bestPoint.date.toLocaleTimeString();
+        } else {
+          dateStr = bestPoint.date.toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric'
+          });
         }
       }
-      if (data.length > 0) {
-        currentDataset = { data, label: file.name, unit: '' };
-        document.querySelectorAll('.preset-btn[data-preset]').forEach(b => b.classList.remove('active'));
-        rebuild();
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  });
-
-  // ─── Animation loop ───
-  let time = 0;
-  function animate() {
-    requestAnimationFrame(animate);
-    time += 0.016;
-    controls.update();
-
-    // Subtle auto-rotation when idle
-    if (!controls.enabled || true) {
-      // Very slow rotation
-      // scene.rotation.y += 0.0003;
+      ttDate.textContent = dateStr;
+      ttVal.textContent = bestPoint.value.toFixed(2);
+    } else {
+      tooltip.style.display = 'none';
     }
-
-    // Pulse the highlight sphere
-    if (highlightSphere.visible) {
-      const s = 1 + Math.sin(time * 4) * 0.2;
-      highlightSphere.scale.setScalar(s);
-    }
-
-    composer.render();
   }
 
-  // ─── Resize ───
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
+  renderer.domElement.addEventListener('mousemove', onMouseMove);
+
+  // ── Camera Presets ────────────────────────────────────
+
+  function setCameraPreset(name) {
+    const cyclePeriod = parseInt(document.getElementById('s-cycle').value);
+    const pitch = parseFloat(document.getElementById('s-pitch').value);
+    const numCycles = Math.ceil(currentData.length / cyclePeriod);
+    const midY = (numCycles * pitch) / 2;
+
+    switch (name) {
+      case 'side':
+        camera.position.set(12, midY, 0);
+        controls.target.set(0, midY, 0);
+        break;
+      case 'top':
+        camera.position.set(0, midY + 15, 0.01);
+        controls.target.set(0, midY, 0);
+        break;
+      case 'through':
+        camera.position.set(0, -2, 0.01);
+        controls.target.set(0, midY, 0);
+        break;
+      case 'free':
+        // Don't change position, just let OrbitControls take over
+        break;
+    }
+    controls.update();
+  }
+
+  // ── Event Listeners ───────────────────────────────────
+
+  // Dataset buttons
+  document.querySelectorAll('#dataset-btns .btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#dataset-btns .btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+      loadDataset(btn.getAttribute('data-ds'));
+    });
   });
 
-  // ─── Auto-Rotate Toggle ───
-  document.getElementById('rotate-toggle').addEventListener('click', () => {
+  // Camera buttons
+  document.querySelectorAll('#camera-btns .btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#camera-btns .btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+      setCameraPreset(btn.getAttribute('data-cam'));
+    });
+  });
+
+  // Auto-Rotate
+  document.getElementById('btn-rotate').addEventListener('click', function() {
     controls.autoRotate = !controls.autoRotate;
-    document.getElementById('rotate-toggle').textContent = 'Auto-Rotate: ' + (controls.autoRotate ? 'ON' : 'OFF');
+    this.classList.toggle('active', controls.autoRotate);
   });
 
-  // ─── Save PNG ───
-  document.getElementById('save-png').addEventListener('click', () => {
+  // Save PNG
+  document.getElementById('btn-save').addEventListener('click', function() {
     composer.render();
     const link = document.createElement('a');
     link.download = 'temporal-helix.png';
@@ -1315,9 +839,82 @@
     link.click();
   });
 
-  // ─── Init ───
-  currentDataset = presets.temperature();
-  rebuild();
+  // CSV Upload
+  document.getElementById('csv-upload').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const data = parseCSV(evt.target.result);
+      if (data.length > 0) {
+        currentData = data;
+        // Clear active dataset button
+        document.querySelectorAll('#dataset-btns .btn').forEach(function(b) {
+          b.classList.remove('active');
+        });
+        buildHelix();
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // Sliders — update display values and rebuild
+  const sliders = [
+    { id: 's-radius', display: 'v-radius' },
+    { id: 's-pitch', display: 'v-pitch' },
+    { id: 's-linewidth', display: 'v-linewidth' },
+    { id: 's-smooth', display: 'v-smooth' },
+    { id: 's-thickness', display: 'v-thickness' },
+    { id: 's-glow', display: 'v-glow' }
+  ];
+
+  sliders.forEach(function(s) {
+    var el = document.getElementById(s.id);
+    el.addEventListener('input', function() {
+      document.getElementById(s.display).textContent = this.value;
+      if (s.id === 's-glow') {
+        bloomPass.strength = parseFloat(this.value);
+      } else {
+        buildHelix();
+      }
+    });
+  });
+
+  // Cycle period dropdown
+  document.getElementById('s-cycle').addEventListener('change', function() {
+    buildHelix();
+  });
+
+  // ── Resize ────────────────────────────────────────────
+
+  window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ── Animate ───────────────────────────────────────────
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+
+    // Subtle particle drift
+    if (particleSystem) {
+      const pos = particleSystem.geometry.attributes.position.array;
+      for (let i = 0; i < pos.length; i += 3) {
+        pos[i + 1] += Math.sin(Date.now() * 0.0003 + i) * 0.001;
+      }
+      particleSystem.geometry.attributes.position.needsUpdate = true;
+    }
+
+    composer.render();
+  }
+
+  // ── Init ──────────────────────────────────────────────
+
+  loadDataset('temperature');
   animate();
 
 })();
