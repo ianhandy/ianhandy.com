@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Force Graph 3D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1A0D00;color:#DDC165;font-family:'SF Mono',Menlo,monospace;overflow:hidden;height:100vh}
+canvas{display:block}
+#ui{position:fixed;top:16px;left:16px;z-index:10;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+#ui>*{pointer-events:auto}
+.panel{background:rgba(26,13,0,0.85);border:1px solid rgba(221,193,101,0.2);border-radius:6px;padding:12px 16px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.panel h3{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:rgba(221,193,101,0.5);margin-bottom:8px;font-weight:400}
+.preset-btn{background:rgba(221,193,101,0.08);border:1px solid rgba(221,193,101,0.2);color:#DDC165;padding:6px 12px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px;transition:all .2s}
+.preset-btn:hover{background:rgba(221,193,101,0.15);border-color:rgba(221,193,101,0.4)}
+.preset-btn.active{background:rgba(229,89,28,0.2);border-color:#E5591C;color:#FFE9A3}
+.presets{display:flex;flex-wrap:wrap;gap:4px}
+.slider-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.slider-row label{font-size:10px;color:rgba(221,193,101,0.6);min-width:80px;text-transform:uppercase;letter-spacing:1px}
+.slider-row input[type=range]{flex:1;-webkit-appearance:none;height:3px;background:rgba(221,193,101,0.15);border-radius:2px;outline:none}
+.slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#DDC165;cursor:pointer;border:none}
+.slider-row .val{font-size:10px;color:rgba(221,193,101,0.4);min-width:28px;text-align:right}
+#load-btn{background:rgba(229,89,28,0.15);border:1px solid rgba(229,89,28,0.3);color:#E5591C;padding:6px 12px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px;transition:all .2s;width:100%}
+#load-btn:hover{background:rgba(229,89,28,0.25)}
+#tooltip{position:fixed;pointer-events:none;background:rgba(26,13,0,0.92);border:1px solid rgba(221,193,101,0.3);border-radius:4px;padding:8px 12px;font-size:11px;color:#FFE9A3;display:none;z-index:20;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);white-space:nowrap}
+#tooltip .tt-label{font-weight:600;margin-bottom:2px}
+#tooltip .tt-info{color:rgba(221,193,101,0.6);font-size:10px}
+#stats{position:fixed;bottom:16px;left:16px;font-size:10px;color:rgba(221,193,101,0.3);z-index:10;letter-spacing:1px}
+#json-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:30;display:none;align-items:center;justify-content:center}
+#json-modal.show{display:flex}
+#json-modal .modal-inner{background:#1A0D00;border:1px solid rgba(221,193,101,0.3);border-radius:8px;padding:20px;width:500px;max-width:90vw}
+#json-modal textarea{width:100%;height:200px;background:rgba(221,193,101,0.05);border:1px solid rgba(221,193,101,0.15);border-radius:4px;color:#DDC165;font-family:inherit;font-size:11px;padding:10px;resize:vertical;outline:none}
+#json-modal textarea:focus{border-color:rgba(221,193,101,0.4)}
+#json-modal .modal-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+#json-modal .modal-btns button{padding:6px 16px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px;border:1px solid rgba(221,193,101,0.2)}
+#json-modal .modal-btns .cancel{background:transparent;color:rgba(221,193,101,0.5)}
+#json-modal .modal-btns .apply{background:rgba(229,89,28,0.2);border-color:#E5591C;color:#E5591C}
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <div class="panel">
+    <h3>Presets</h3>
+    <div class="presets">
+      <button class="preset-btn active" data-preset="social">Social Network</button>
+      <button class="preset-btn" data-preset="neural">Neural Net</button>
+      <button class="preset-btn" data-preset="random">Random (E-R)</button>
+      <button class="preset-btn" data-preset="tree">Hierarchy</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Physics</h3>
+    <div class="slider-row"><label>Nodes</label><input type="range" id="s-nodes" min="10" max="120" value="30"><span class="val" id="v-nodes">30</span></div>
+    <div class="slider-row"><label>Density</label><input type="range" id="s-density" min="1" max="20" value="6"><span class="val" id="v-density">6</span></div>
+    <div class="slider-row"><label>Repulsion</label><input type="range" id="s-repulsion" min="10" max="500" value="120"><span class="val" id="v-repulsion">120</span></div>
+    <div class="slider-row"><label>Attraction</label><input type="range" id="s-attraction" min="1" max="100" value="20"><span class="val" id="v-attraction">20</span></div>
+  </div>
+  <div class="panel">
+    <button id="load-btn">Load JSON</button>
+  </div>
+</div>
+
+<div id="tooltip"><div class="tt-label"></div><div class="tt-info"></div></div>
+<div id="stats"></div>
+
+<div id="json-modal">
+  <div class="modal-inner">
+    <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:rgba(221,193,101,0.5);margin-bottom:12px;font-weight:400">Load Graph JSON</h3>
+    <textarea id="json-input" placeholder='{"nodes":[{"id":"a","label":"Node A"}],"edges":[{"source":"a","target":"b","weight":1}]}'></textarea>
+    <div class="modal-btns">
+      <button class="cancel" id="json-cancel">Cancel</button>
+      <button class="apply" id="json-apply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+// ── Palette ──
+const C = {
+  bg: 0x1A0D00,
+  gold: 0xDDC165,
+  goldBright: 0xFFE9A3,
+  orange: 0xE5591C,
+  goldVec: new THREE.Color(0xDDC165),
+  orangeVec: new THREE.Color(0xE5591C),
+  brightVec: new THREE.Color(0xFFE9A3),
+};
+
+// ── Three setup ──
+const renderer = new THREE.WebGLRenderer({antialias: true, alpha: false});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(C.bg);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(C.bg, 0.003);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
+camera.position.set(0, 0, 200);
+
+// ── Post-processing ──
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.8, 0.6, 0.3);
+composer.addPass(bloom);
+
+// ── Lights ──
+scene.add(new THREE.AmbientLight(0xDDC165, 0.3));
+const dirLight = new THREE.DirectionalLight(0xFFE9A3, 0.6);
+dirLight.position.set(50, 80, 100);
+scene.add(dirLight);
+
+// ── Ambient particles ──
+const particleCount = 600;
+const particleGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(particleCount * 3);
+const pAlpha = new Float32Array(particleCount);
+for (let i = 0; i < particleCount; i++) {
+  pPos[i*3]   = (Math.random() - 0.5) * 500;
+  pPos[i*3+1] = (Math.random() - 0.5) * 500;
+  pPos[i*3+2] = (Math.random() - 0.5) * 500;
+  pAlpha[i] = Math.random();
+}
+particleGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+particleGeo.setAttribute('alpha', new THREE.BufferAttribute(pAlpha, 1));
+
+const particleMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { uTime: {value: 0}, uColor: {value: new THREE.Color(0xDDC165)} },
+  vertexShader: `
+    attribute float alpha;
+    varying float vAlpha;
+    uniform float uTime;
+    void main(){
+      vAlpha = alpha;
+      vec3 p = position;
+      p.y += sin(uTime * 0.1 + position.x * 0.02) * 2.0;
+      p.x += cos(uTime * 0.08 + position.z * 0.015) * 1.5;
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      gl_PointSize = max(1.0, 3.0 * (150.0 / -mv.z));
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    varying float vAlpha;
+    uniform vec3 uColor;
+    void main(){
+      float d = length(gl_PointCoord - 0.5) * 2.0;
+      float a = smoothstep(1.0, 0.0, d) * vAlpha * 0.15;
+      gl_FragColor = vec4(uColor, a);
+    }`
+});
+scene.add(new THREE.Points(particleGeo, particleMat));
+
+// ── Graph state ──
+let nodes = [], edges = [];
+let nodeMeshes = [], edgeLines = [];
+let selectedNode = null;
+const graphGroup = new THREE.Group();
+scene.add(graphGroup);
+
+const nodeSphereGeo = new THREE.SphereGeometry(1, 24, 16);
+
+function clearGraph() {
+  graphGroup.clear();
+  nodeMeshes = [];
+  edgeLines = [];
+  selectedNode = null;
+}
+
+function buildGraph(data) {
+  clearGraph();
+  nodes = data.nodes.map(n => ({
+    ...n,
+    x: (Math.random() - 0.5) * 80,
+    y: (Math.random() - 0.5) * 80,
+    z: (Math.random() - 0.5) * 80,
+    vx: 0, vy: 0, vz: 0,
+    connections: 0
+  }));
+  edges = data.edges.map(e => ({...e, weight: e.weight || 1}));
+
+  const idMap = {};
+  nodes.forEach((n, i) => { idMap[n.id] = i; });
+
+  edges.forEach(e => {
+    const si = idMap[e.source], ti = idMap[e.target];
+    if (si !== undefined) nodes[si].connections++;
+    if (ti !== undefined) nodes[ti].connections++;
+  });
+
+  const maxConn = Math.max(1, ...nodes.map(n => n.connections));
+
+  // Create node meshes
+  nodes.forEach((n, i) => {
+    const frac = n.connections / maxConn;
+    const isHub = frac > 0.5;
+    const radius = 1 + frac * 3;
+    const color = isHub ? C.orangeVec.clone() : C.goldVec.clone();
+
+    const mat = new THREE.MeshStandardMaterial({
+      color, emissive: color.clone().multiplyScalar(0.4),
+      emissiveIntensity: 0.6 + frac * 0.4,
+      metalness: 0.3, roughness: 0.4,
+      transparent: true, opacity: 1.0
+    });
+
+    const mesh = new THREE.Mesh(nodeSphereGeo, mat);
+    mesh.scale.setScalar(radius);
+    mesh.position.set(n.x, n.y, n.z);
+    mesh.userData = {index: i, baseColor: color.clone(), baseRadius: radius, isHub};
+    graphGroup.add(mesh);
+    nodeMeshes.push(mesh);
+
+    // Glow sprite
+    const spriteMat = new THREE.SpriteMaterial({
+      color: isHub ? C.orange : C.gold,
+      transparent: true, opacity: 0.15 + frac * 0.15,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.scale.setScalar(radius * 5);
+    mesh.add(sprite);
+  });
+
+  // Create edge lines
+  edges.forEach(e => {
+    const si = idMap[e.source], ti = idMap[e.target];
+    if (si === undefined || ti === undefined) return;
+
+    const w = Math.min(e.weight || 1, 5);
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(6);
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const mat = new THREE.LineBasicMaterial({
+      color: C.gold, transparent: true,
+      opacity: 0.08 + (w / 5) * 0.2,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    const line = new THREE.Line(geo, mat);
+    line.userData = {source: si, target: ti, baseOpacity: mat.opacity};
+    graphGroup.add(line);
+    edgeLines.push(line);
+  });
+}
+
+// ── Physics ──
+function getParams() {
+  return {
+    repulsion: +document.getElementById('s-repulsion').value,
+    attraction: +document.getElementById('s-attraction').value / 1000,
+    damping: 0.92,
+    centerForce: 0.002,
+    dt: 0.8
+  };
+}
+
+function simulate() {
+  const p = getParams();
+  const N = nodes.length;
+
+  // Repulsion (Barnes-Hut would be better but n<120 so direct is fine)
+  for (let i = 0; i < N; i++) {
+    for (let j = i + 1; j < N; j++) {
+      let dx = nodes[i].x - nodes[j].x;
+      let dy = nodes[i].y - nodes[j].y;
+      let dz = nodes[i].z - nodes[j].z;
+      let dist2 = dx*dx + dy*dy + dz*dz + 1;
+      let dist = Math.sqrt(dist2);
+      let force = p.repulsion / dist2;
+      let fx = (dx / dist) * force;
+      let fy = (dy / dist) * force;
+      let fz = (dz / dist) * force;
+      nodes[i].vx += fx; nodes[i].vy += fy; nodes[i].vz += fz;
+      nodes[j].vx -= fx; nodes[j].vy -= fy; nodes[j].vz -= fz;
+    }
+  }
+
+  // Attraction along edges
+  const idMap = {};
+  nodes.forEach((n, i) => { idMap[n.id] = i; });
+  edges.forEach(e => {
+    const si = idMap[e.source], ti = idMap[e.target];
+    if (si === undefined || ti === undefined) return;
+    let dx = nodes[ti].x - nodes[si].x;
+    let dy = nodes[ti].y - nodes[si].y;
+    let dz = nodes[ti].z - nodes[si].z;
+    let dist = Math.sqrt(dx*dx + dy*dy + dz*dz + 1);
+    let force = dist * p.attraction * (e.weight || 1);
+    let fx = (dx / dist) * force;
+    let fy = (dy / dist) * force;
+    let fz = (dz / dist) * force;
+    nodes[si].vx += fx; nodes[si].vy += fy; nodes[si].vz += fz;
+    nodes[ti].vx -= fx; nodes[ti].vy -= fy; nodes[ti].vz -= fz;
+  });
+
+  // Centering + damping + integrate
+  for (let i = 0; i < N; i++) {
+    nodes[i].vx -= nodes[i].x * p.centerForce;
+    nodes[i].vy -= nodes[i].y * p.centerForce;
+    nodes[i].vz -= nodes[i].z * p.centerForce;
+    nodes[i].vx *= p.damping;
+    nodes[i].vy *= p.damping;
+    nodes[i].vz *= p.damping;
+    nodes[i].x += nodes[i].vx * p.dt;
+    nodes[i].y += nodes[i].vy * p.dt;
+    nodes[i].z += nodes[i].vz * p.dt;
+  }
+}
+
+function updatePositions() {
+  const camPos = camera.position;
+  nodes.forEach((n, i) => {
+    const mesh = nodeMeshes[i];
+    if (!mesh) return;
+    mesh.position.set(n.x, n.y, n.z);
+
+    // Depth-of-field: opacity falloff based on distance from camera
+    const dist = mesh.position.distanceTo(camPos);
+    const depthFade = THREE.MathUtils.clamp(1.0 - (dist - 100) / 400, 0.15, 1.0);
+    mesh.material.opacity = depthFade;
+  });
+
+  edgeLines.forEach(line => {
+    const s = nodes[line.userData.source];
+    const t = nodes[line.userData.target];
+    if (!s || !t) return;
+    const pos = line.geometry.attributes.position.array;
+    pos[0] = s.x; pos[1] = s.y; pos[2] = s.z;
+    pos[3] = t.x; pos[4] = t.y; pos[5] = t.z;
+    line.geometry.attributes.position.needsUpdate = true;
+
+    // Depth fade for edges too
+    const midDist = Math.sqrt(
+      ((s.x+t.x)/2-camPos.x)**2 + ((s.y+t.y)/2-camPos.y)**2 + ((s.z+t.z)/2-camPos.z)**2
+    );
+    const fade = THREE.MathUtils.clamp(1.0 - (midDist - 100) / 400, 0.05, 1.0);
+    line.material.opacity = line.userData.baseOpacity * fade;
+  });
+}
+
+// ── Selection / Highlight ──
+function highlightNode(idx) {
+  // Reset previous
+  nodeMeshes.forEach((m, i) => {
+    const d = m.userData;
+    m.material.color.copy(d.baseColor);
+    m.material.emissive.copy(d.baseColor).multiplyScalar(0.4);
+    m.scale.setScalar(d.baseRadius);
+  });
+  edgeLines.forEach(l => {
+    l.material.opacity = l.userData.baseOpacity;
+    l.material.color.set(C.gold);
+  });
+
+  if (idx === null) { selectedNode = null; return; }
+  selectedNode = idx;
+
+  // Highlight selected node
+  const mesh = nodeMeshes[idx];
+  mesh.material.color.copy(C.brightVec);
+  mesh.material.emissive.copy(C.brightVec).multiplyScalar(0.8);
+  mesh.scale.setScalar(mesh.userData.baseRadius * 1.4);
+
+  // Highlight connected edges and neighbor nodes
+  const neighbors = new Set();
+  edgeLines.forEach(l => {
+    const {source, target} = l.userData;
+    if (source === idx || target === idx) {
+      l.material.opacity = 0.6;
+      l.material.color.set(C.goldBright);
+      neighbors.add(source === idx ? target : source);
+    }
+  });
+  neighbors.forEach(ni => {
+    const m = nodeMeshes[ni];
+    if (m) {
+      m.material.emissive.copy(m.userData.baseColor).multiplyScalar(0.7);
+      m.scale.setScalar(m.userData.baseRadius * 1.2);
+    }
+  });
+}
+
+// ── Orbit controls (manual) ──
+let isDragging = false, prevMouse = {x:0,y:0};
+let spherical = {theta: 0, phi: Math.PI/2, radius: 200};
+let targetSpherical = {...spherical};
+
+function updateCamera() {
+  spherical.theta += (targetSpherical.theta - spherical.theta) * 0.08;
+  spherical.phi += (targetSpherical.phi - spherical.phi) * 0.08;
+  spherical.radius += (targetSpherical.radius - spherical.radius) * 0.08;
+
+  const r = spherical.radius;
+  camera.position.x = r * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+  camera.position.y = r * Math.cos(spherical.phi);
+  camera.position.z = r * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+  camera.lookAt(0, 0, 0);
+}
+
+renderer.domElement.addEventListener('pointerdown', e => {
+  if (e.target !== renderer.domElement) return;
+  isDragging = true;
+  prevMouse = {x: e.clientX, y: e.clientY};
+});
+window.addEventListener('pointerup', () => { isDragging = false; });
+window.addEventListener('pointermove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x;
+  const dy = e.clientY - prevMouse.y;
+  targetSpherical.theta += dx * 0.005;
+  targetSpherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, targetSpherical.phi - dy * 0.005));
+  prevMouse = {x: e.clientX, y: e.clientY};
+});
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  targetSpherical.radius = Math.max(30, Math.min(600, targetSpherical.radius + e.deltaY * 0.3));
+}, {passive: false});
+
+// ── Raycaster for hover/click ──
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let hoveredNode = -1;
+const tooltip = document.getElementById('tooltip');
+
+window.addEventListener('pointermove', e => {
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(nodeMeshes);
+  if (hits.length > 0) {
+    const idx = hits[0].object.userData.index;
+    if (idx !== hoveredNode) {
+      hoveredNode = idx;
+      const n = nodes[idx];
+      tooltip.querySelector('.tt-label').textContent = n.label || n.id;
+      tooltip.querySelector('.tt-info').textContent = `${n.connections} connection${n.connections !== 1 ? 's' : ''}`;
+      tooltip.style.display = 'block';
+      document.body.style.cursor = 'pointer';
+    }
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top = (e.clientY - 10) + 'px';
+  } else {
+    if (hoveredNode !== -1) {
+      hoveredNode = -1;
+      tooltip.style.display = 'none';
+      document.body.style.cursor = 'default';
+    }
+  }
+});
+
+renderer.domElement.addEventListener('click', e => {
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(nodeMeshes);
+  if (hits.length > 0) {
+    const idx = hits[0].object.userData.index;
+    highlightNode(selectedNode === idx ? null : idx);
+  } else {
+    highlightNode(null);
+  }
+});
+
+// ── Presets ──
+function genSocial(count) {
+  const ns = [], es = [];
+  const clusters = 4;
+  const perCluster = Math.floor(count / clusters);
+  for (let c = 0; c < clusters; c++) {
+    const hub = `hub${c}`;
+    ns.push({id: hub, label: `Hub ${c+1}`});
+    for (let i = 0; i < perCluster - 1; i++) {
+      const id = `c${c}n${i}`;
+      ns.push({id, label: `Person ${c*perCluster+i+1}`});
+      es.push({source: hub, target: id, weight: 1 + Math.random() * 2});
+      // Intra-cluster links
+      if (Math.random() < 0.3 && i > 0) {
+        es.push({source: id, target: `c${c}n${i-1}`, weight: 1});
+      }
+    }
+    // Inter-cluster links
+    if (c > 0) {
+      es.push({source: hub, target: `hub${c-1}`, weight: 3});
+      if (Math.random() < 0.5 && perCluster > 2) {
+        es.push({source: `c${c}n0`, target: `c${c-1}n1`, weight: 1});
+      }
+    }
+  }
+  return {nodes: ns, edges: es};
+}
+
+function genNeural(count) {
+  const layers = [Math.floor(count*0.25), Math.floor(count*0.35), Math.floor(count*0.25), Math.floor(count*0.15)];
+  const names = ['Input', 'Hidden 1', 'Hidden 2', 'Output'];
+  const ns = [], es = [];
+  let prev = [];
+  layers.forEach((size, li) => {
+    const cur = [];
+    for (let i = 0; i < size; i++) {
+      const id = `L${li}N${i}`;
+      ns.push({id, label: `${names[li]} ${i+1}`});
+      cur.push(id);
+    }
+    if (prev.length) {
+      // Sparse connections
+      cur.forEach(cid => {
+        const numConn = Math.max(1, Math.floor(prev.length * 0.4));
+        const shuffled = [...prev].sort(() => Math.random() - 0.5);
+        for (let k = 0; k < numConn; k++) {
+          es.push({source: shuffled[k], target: cid, weight: 0.5 + Math.random() * 2});
+        }
+      });
+    }
+    prev = cur;
+  });
+  return {nodes: ns, edges: es};
+}
+
+function genRandom(count, density) {
+  const ns = [], es = [];
+  for (let i = 0; i < count; i++) ns.push({id: `n${i}`, label: `Node ${i+1}`});
+  const prob = density / 100;
+  for (let i = 0; i < count; i++) {
+    for (let j = i + 1; j < count; j++) {
+      if (Math.random() < prob) {
+        es.push({source: `n${i}`, target: `n${j}`, weight: 1 + Math.random() * 3});
+      }
+    }
+  }
+  return {nodes: ns, edges: es};
+}
+
+function genTree(count) {
+  const ns = [], es = [];
+  ns.push({id: 'root', label: 'Root'});
+  let queue = ['root'];
+  let id = 1;
+  while (id < count && queue.length) {
+    const nextQueue = [];
+    for (const parent of queue) {
+      const children = 2 + Math.floor(Math.random() * 2); // 2-3 children
+      for (let c = 0; c < children && id < count; c++) {
+        const cid = `n${id}`;
+        ns.push({id: cid, label: `Node ${id}`});
+        es.push({source: parent, target: cid, weight: 2});
+        nextQueue.push(cid);
+        id++;
+      }
+    }
+    queue = nextQueue;
+  }
+  return {nodes: ns, edges: es};
+}
+
+function loadPreset(name) {
+  const count = +document.getElementById('s-nodes').value;
+  const density = +document.getElementById('s-density').value;
+  let data;
+  switch(name) {
+    case 'social': data = genSocial(count); break;
+    case 'neural': data = genNeural(count); break;
+    case 'random': data = genRandom(count, density); break;
+    case 'tree': data = genTree(count); break;
+    default: data = genSocial(count);
+  }
+  buildGraph(data);
+}
+
+// ── UI wiring ──
+let activePreset = 'social';
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activePreset = btn.dataset.preset;
+    loadPreset(activePreset);
+  });
+});
+
+['nodes','density','repulsion','attraction'].forEach(id => {
+  const slider = document.getElementById(`s-${id}`);
+  const val = document.getElementById(`v-${id}`);
+  slider.addEventListener('input', () => {
+    val.textContent = slider.value;
+    if (id === 'nodes' || id === 'density') loadPreset(activePreset);
+  });
+});
+
+// JSON modal
+document.getElementById('load-btn').addEventListener('click', () => {
+  document.getElementById('json-modal').classList.add('show');
+});
+document.getElementById('json-cancel').addEventListener('click', () => {
+  document.getElementById('json-modal').classList.remove('show');
+});
+document.getElementById('json-apply').addEventListener('click', () => {
+  try {
+    const data = JSON.parse(document.getElementById('json-input').value);
+    if (!data.nodes || !data.edges) throw new Error('Need nodes and edges');
+    buildGraph(data);
+    activePreset = null;
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('json-modal').classList.remove('show');
+  } catch(e) {
+    alert('Invalid JSON: ' + e.message);
+  }
+});
+
+// ── Resize ──
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ── Main loop ──
+const stats = document.getElementById('stats');
+let frame = 0;
+function animate(time) {
+  requestAnimationFrame(animate);
+  frame++;
+  const t = time * 0.001;
+
+  particleMat.uniforms.uTime.value = t;
+
+  // Run physics
+  for (let i = 0; i < 2; i++) simulate();
+  updatePositions();
+  updateCamera();
+
+  // Slow auto-rotation when not dragging
+  if (!isDragging && selectedNode === null) {
+    targetSpherical.theta += 0.0008;
+  }
+
+  composer.render();
+
+  if (frame % 30 === 0) {
+    stats.textContent = `${nodes.length} nodes  ${edges.length} edges`;
+  }
+}
+
+// ── Boot ──
+loadPreset('social');
+animate(0);
+</script>
+</body>
+</html>
