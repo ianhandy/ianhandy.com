@@ -177,35 +177,69 @@
     white-space: nowrap;
   }
 
-  /* Toggle button for mobile */
+  /* Toggle button for mobile — hidden, replaced by tray */
   #toggle-controls {
     display: none;
-    position: fixed;
-    top: 16px; left: 16px;
-    z-index: 11;
-    width: 36px; height: 36px;
-    background: rgba(26, 13, 0, 0.9);
-    border: 1px solid rgba(221, 193, 101, 0.3);
-    border-radius: 6px;
-    color: #DDC165;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 0;
-    line-height: 36px;
-    text-align: center;
   }
 
+  .tray-tab { display: none; }
+  /* ── Mobile tool tray ── */
   @media (max-width: 768px) {
-    #controls { width: min(260px, 80vw); }
-    #toggle-controls { display: block; width: 44px; height: 44px; font-size: 20px; line-height: 44px; }
-    #controls { display: none; top: 68px; }
-    #controls.visible { display: block; }
+    #controls {
+      position: fixed;
+      bottom: 0; left: 0; right: 0; top: auto;
+      width: 100%; max-height: 55vh;
+      border-radius: 0;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      z-index: 100;
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+    #controls.tray-open { transform: translateY(0); }
+    .tray-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: fixed;
+      bottom: 0;
+      right: 16px;
+      z-index: 101;
+      background: rgba(26,13,0,0.95);
+      border: 1px solid rgba(221,193,101,0.25);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      padding: 7px 14px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: bottom 0.3s ease;
+      font-family: inherit;
+    }
+    .tray-tab-label {
+      font-size: 11px;
+      color: rgba(221,193,101,0.7);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .tray-tab-chevron {
+      font-size: 10px;
+      color: rgba(221,193,101,0.5);
+      transition: transform 0.3s ease;
+      line-height: 1;
+    }
+    .tray-tab.tab-active .tray-tab-chevron {
+      transform: rotate(180deg);
+    }
+    #stats { bottom: 52px; }
+    #info { bottom: 52px; }
     .control-group select, .control-group input[type="range"] { min-height: 36px; font-size: 13px; }
   }
   @media (max-width: 480px) {
-    #controls { width: min(280px, 90vw); padding: 14px; }
-    .control-group label { font-size: 11px; }
-    .control-group select { min-height: 44px; font-size: 14px; padding: 8px; }
+    #controls { padding: 10px 14px; }
+    .control-group label { font-size: 9px; }
+    .range-val { font-size: 10px; }
   }
 </style>
 </head>
@@ -884,6 +918,50 @@ document.getElementById('toggle-controls').addEventListener('click', () => {
 // ── Init ──
 generateGraph();
 loop();
+
+// Mobile tool tray — folder tab
+(function() {
+  var tray = document.getElementById('controls');
+  if (!tray) return;
+
+  var tab = document.createElement('div');
+  tab.className = 'tray-tab';
+  tab.innerHTML = '<span class="tray-tab-label">Controls</span><span class="tray-tab-chevron">&#9650;</span>';
+  tray.parentNode.insertBefore(tab, tray.nextSibling);
+
+  var isOpen = false;
+
+  function toggle() {
+    isOpen = !isOpen;
+    tray.classList.toggle('tray-open', isOpen);
+    tab.classList.toggle('tab-active', isOpen);
+    if (isOpen) {
+      tab.style.bottom = tray.offsetHeight + 'px';
+    } else {
+      tab.style.bottom = '0';
+    }
+  }
+
+  tab.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle();
+  });
+
+  document.addEventListener('click', function(e) {
+    if (isOpen && !tray.contains(e.target) && !tab.contains(e.target)) {
+      toggle();
+    }
+  });
+
+  var startY = 0;
+  tray.addEventListener('touchstart', function(e) {
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  tray.addEventListener('touchend', function(e) {
+    if (e.changedTouches[0].clientY - startY > 50 && isOpen) toggle();
+  }, { passive: true });
+})();
 </script>
 </body>
 </html>

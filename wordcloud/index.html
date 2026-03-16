@@ -414,7 +414,13 @@
       border-right: none;
       border-bottom: 1px solid var(--border);
       max-height: 40vh;
+      overflow-y: auto;
     }
+  }
+  @media (max-width: 480px) {
+    .sidebar { padding: 12px; }
+    header { padding: 10px 16px; }
+    header h1 { font-size: 16px; }
   }
 </style>
 </head>

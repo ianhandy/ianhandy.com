@@ -7,7 +7,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#1A0D00;color:#DDC165;font-family:'SF Mono',Menlo,monospace;overflow:hidden;height:100vh}
-canvas{display:block}
+canvas{display:block;position:relative;z-index:0}
 #ui{position:fixed;top:16px;left:16px;z-index:10;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 #ui>*{pointer-events:auto}
 .panel{background:rgba(26,13,0,0.85);border:1px solid rgba(221,193,101,0.2);border-radius:6px;padding:12px 16px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -36,6 +36,81 @@ canvas{display:block}
 #json-modal .modal-btns button{padding:6px 16px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px;border:1px solid rgba(221,193,101,0.2)}
 #json-modal .modal-btns .cancel{background:transparent;color:rgba(221,193,101,0.5)}
 #json-modal .modal-btns .apply{background:rgba(229,89,28,0.2);border-color:#E5591C;color:#E5591C}
+.tray-tab { display: none; }
+/* ── Mobile tool tray ── */
+@media (max-width: 768px) {
+  #ui {
+    position: fixed;
+    bottom: 0; left: 0; right: 0; top: auto;
+    width: 100%; max-height: 60vh;
+    border-radius: 0;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    overflow-y: auto;
+    padding: 12px 16px 20px;
+    background: rgba(26,13,0,0.95);
+    border-top: 1px solid rgba(221,193,101,0.2);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    flex-direction: column;
+    pointer-events: auto;
+    gap: 6px;
+  }
+  #ui.tray-open { transform: translateY(0); }
+  #ui > * { pointer-events: auto; }
+  .tray-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 101;
+    background: rgba(26,13,0,0.95);
+    border: 1px solid rgba(221,193,101,0.3);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    padding: 10px 24px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: bottom 0.3s ease, background 0.2s;
+    font-family: inherit;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.4);
+    min-width: 120px;
+  }
+  .tray-tab:active {
+    background: rgba(229,89,28,0.2);
+  }
+  .tray-tab-label {
+    font-size: 12px;
+    color: #DDC165;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .tray-tab-chevron {
+    font-size: 12px;
+    color: rgba(221,193,101,0.6);
+    transition: transform 0.3s ease;
+    line-height: 1;
+  }
+  .tray-tab.tab-active .tray-tab-chevron {
+    transform: rotate(180deg);
+  }
+  #stats { bottom: 40px; }
+  .panel { border: none; border-bottom: 1px solid rgba(221,193,101,0.1); border-radius: 0; }
+}
+@media (max-width: 480px) {
+  .slider-row label { font-size: 9px; }
+  .slider-row .val { font-size: 9px; }
+  .panel { padding: 8px 12px; }
+}
 </style>
 </head>
 <body>
@@ -698,6 +773,68 @@ document.getElementById('save-png').addEventListener('click', () => {
 // ── Boot ──
 loadPreset('social');
 animate(0);
+</script>
+<script>
+// Mobile tool tray — folder tab
+(function() {
+  var tray = document.getElementById('ui') || document.getElementById('controls');
+  if (!tray) return;
+
+  // Create folder tab — centered at bottom
+  var tab = document.createElement('div');
+  tab.className = 'tray-tab';
+  tab.setAttribute('role', 'button');
+  tab.setAttribute('aria-label', 'Toggle controls panel');
+  tab.innerHTML = '<span class="tray-tab-label">Controls</span><span class="tray-tab-chevron">&#9650;</span>';
+  document.body.appendChild(tab);
+
+  var isOpen = false;
+
+  function toggle(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    isOpen = !isOpen;
+    tray.classList.toggle('tray-open', isOpen);
+    tab.classList.toggle('tab-active', isOpen);
+    // Move tab to sit on top of open tray
+    requestAnimationFrame(function() {
+      if (isOpen) {
+        tab.style.bottom = tray.offsetHeight + 'px';
+      } else {
+        tab.style.bottom = '0';
+      }
+    });
+  }
+
+  // Both click and touchend for maximum compatibility
+  tab.addEventListener('click', toggle);
+  tab.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    toggle(e);
+  });
+
+  // Close on tap outside
+  document.addEventListener('touchend', function(e) {
+    if (isOpen && !tray.contains(e.target) && !tab.contains(e.target)) {
+      toggle();
+    }
+  });
+  document.addEventListener('click', function(e) {
+    if (isOpen && !tray.contains(e.target) && !tab.contains(e.target)) {
+      toggle();
+    }
+  });
+
+  // Swipe down on tray to close
+  var startY = 0;
+  tray.addEventListener('touchstart', function(e) {
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  tray.addEventListener('touchend', function(e) {
+    if (e.changedTouches[0].clientY - startY > 60 && isOpen) {
+      toggle();
+    }
+  }, { passive: true });
+})();
 </script>
 </body>
 </html>

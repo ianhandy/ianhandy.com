@@ -190,6 +190,19 @@
     color: #E5591C;
     text-decoration: none;
   }
+
+  @media (max-width: 768px) {
+    .controls { gap: 8px; padding: 0 12px; }
+    h1 { font-size: 1.2rem; }
+    .control-group input[type="range"] { width: 80px; }
+    canvas { max-width: 100%; height: auto; }
+  }
+  @media (max-width: 480px) {
+    .controls { gap: 6px; }
+    button { padding: 6px 14px; font-size: 0.75rem; }
+    .seed-input { width: 90px; font-size: 0.75rem; }
+    .presets button { padding: 4px 8px; font-size: 0.6rem; }
+  }
 </style>
 </head>
 <body>

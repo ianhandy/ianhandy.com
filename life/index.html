@@ -158,7 +158,12 @@
   @media (max-width: 900px) {
     header { flex-direction: column; gap: 8px; padding: 8px 12px; }
     .controls { justify-content: center; }
-    .stats { justify-content: center; }
+    .stats { justify-content: center; flex-wrap: wrap; }
+    h1 { font-size: 15px; text-align: center; }
+  }
+  @media (max-width: 480px) {
+    header { padding: 8px 12px; }
+    button, select { padding: 5px 10px; font-size: 11px; }
   }
 </style>
 </head>

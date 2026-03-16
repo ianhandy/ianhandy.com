@@ -172,6 +172,85 @@
     color: rgba(221,193,101,0.7);
     cursor: pointer;
   }
+
+  .tray-tab { display: none; }
+
+  /* ── Mobile tool tray ── */
+  @media (max-width: 768px) {
+    #controls {
+      position: fixed;
+      bottom: 0; left: 0; right: 0; top: auto;
+      width: 100%; max-height: 55vh;
+      border-radius: 0;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      z-index: 100;
+      overflow-y: auto;
+      padding-bottom: 20px;
+      min-width: unset;
+    }
+    #controls.collapsed {
+      transform: translateY(100%);
+    }
+    #controls.tray-open {
+      transform: translateY(0);
+    }
+    .tray-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: fixed;
+      bottom: 0;
+      right: 16px;
+      z-index: 101;
+      background: rgba(26,13,0,0.95);
+      border: 1px solid rgba(221,193,101,0.25);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      padding: 7px 14px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: bottom 0.3s ease;
+      font-family: inherit;
+    }
+    .tray-tab-label {
+      font-size: 11px;
+      color: rgba(221,193,101,0.7);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .tray-tab-chevron {
+      font-size: 10px;
+      color: rgba(221,193,101,0.5);
+      transition: transform 0.3s ease;
+      line-height: 1;
+    }
+    .tray-tab.tab-active .tray-tab-chevron {
+      transform: rotate(180deg);
+    }
+    #info {
+      bottom: 52px;
+    }
+  }
+  @media (max-width: 480px) {
+    #controls {
+      padding: 10px;
+      padding-bottom: 16px;
+    }
+    #controls h2 {
+      font-size: 0.75rem;
+      margin-bottom: 8px;
+    }
+    .param-group label {
+      font-size: 0.65rem;
+    }
+    button {
+      font-size: 0.6rem;
+      padding: 5px 8px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -741,6 +820,50 @@ function render(time) {
 
 // ── Start immediately — no Pyodide needed ──
 requestAnimationFrame(render);
+
+// Mobile tool tray — folder tab
+(function() {
+  var tray = document.getElementById('controls');
+  if (!tray) return;
+
+  var tab = document.createElement('div');
+  tab.className = 'tray-tab';
+  tab.innerHTML = '<span class="tray-tab-label">Controls</span><span class="tray-tab-chevron">&#9650;</span>';
+  tray.parentNode.insertBefore(tab, tray.nextSibling);
+
+  var isOpen = false;
+
+  function toggle() {
+    isOpen = !isOpen;
+    tray.classList.toggle('tray-open', isOpen);
+    tab.classList.toggle('tab-active', isOpen);
+    if (isOpen) {
+      tab.style.bottom = tray.offsetHeight + 'px';
+    } else {
+      tab.style.bottom = '0';
+    }
+  }
+
+  tab.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle();
+  });
+
+  document.addEventListener('click', function(e) {
+    if (isOpen && !tray.contains(e.target) && !tab.contains(e.target)) {
+      toggle();
+    }
+  });
+
+  var startY = 0;
+  tray.addEventListener('touchstart', function(e) {
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  tray.addEventListener('touchend', function(e) {
+    if (e.changedTouches[0].clientY - startY > 50 && isOpen) toggle();
+  }, { passive: true });
+})();
 </script>
 </body>
 </html>

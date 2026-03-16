@@ -223,6 +223,17 @@
     color: #5A3A10;
     pointer-events: none;
   }
+
+  @media (max-width: 768px) {
+    body { flex-direction: column; overflow: auto; height: auto; }
+    #sidebar { width: 100%; min-width: unset; max-height: 45vh; overflow-y: auto; border-right: none; border-bottom: 1px solid #3A2200; }
+    #canvas-wrap { min-height: 50vh; }
+  }
+  @media (max-width: 480px) {
+    #sidebar { padding: 12px; gap: 10px; }
+    h1 { font-size: 15px; }
+    .matrix-grid input { font-size: 14px; padding: 6px; }
+  }
 </style>
 </head>
 <body>

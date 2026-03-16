@@ -438,9 +438,22 @@
   }
 
   @media (max-width: 768px) {
-    .controls { flex-direction: column; }
+    .controls { flex-direction: column; align-items: stretch; }
+    .control-group { justify-content: space-between; }
+    .text-input-row { flex-direction: column; }
     .text-input-row input[type="text"] { width: 100%; }
     header h1 { font-size: 1.3rem; }
+    .actions-row { flex-direction: column; align-items: stretch; }
+    .mode-tabs { flex-wrap: wrap; justify-content: center; }
+  }
+  @media (max-width: 480px) {
+    .container { padding: 1rem 0.75rem; }
+    header h1 { font-size: 1.1rem; }
+    header p { font-size: 0.75rem; }
+    button { padding: 0.4rem 0.6rem; font-size: 0.75rem; }
+    .grid-wrapper { padding: 0.5rem 0; }
+    .output-section { padding: 0.75rem; }
+    .script-output { font-size: 0.6rem; max-height: 200px; }
   }
 </style>
 </head>
