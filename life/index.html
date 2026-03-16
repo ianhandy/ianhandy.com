@@ -160,11 +160,6 @@
     .controls { justify-content: center; }
     .stats { justify-content: center; }
   }
-  @media (max-width: 480px) {
-    header { padding: 6px 8px; }
-    .controls button, .controls select { min-height: 44px; min-width: 44px; font-size: 13px; padding: 6px 12px; }
-    h1 { font-size: 1.1rem; }
-  }
 </style>
 </head>
 <body>
@@ -193,12 +188,13 @@
       <option value="block">Block</option>
     </select>
     <select id="sel-speed" title="Speed">
-      <option value="1">1x</option>
-      <option value="2">2x</option>
-      <option value="4" selected>4x</option>
-      <option value="8">8x</option>
-      <option value="16">16x</option>
-      <option value="30">30x</option>
+      <option value="1">0.5x</option>
+      <option value="2" selected>1x</option>
+      <option value="5">2.5x</option>
+      <option value="10">5x</option>
+      <option value="20">10x</option>
+      <option value="60">30x</option>
+      <option value="0">Max</option>
     </select>
     <div class="separator"></div>
     <button id="btn-share" title="Copy URL">Share</button>
@@ -248,7 +244,7 @@ let trail = new Uint8Array(GRID_W * GRID_H);
 let generation = 0;
 let population = 0;
 let running = false;
-let stepsPerFrame = 4;
+let targetGPS = 2;  // generations per second (0 = unlimited)
 
 // --- Canvas ---
 const canvas = document.getElementById('c');
@@ -398,6 +394,7 @@ let lastTime = 0;
 let frameCount = 0;
 let fpsTime = 0;
 let fps = 0;
+let simAccumulator = 0;  // tracks time owed for simulation steps
 
 function loop(ts) {
   requestAnimationFrame(loop);
@@ -407,9 +404,26 @@ function loop(ts) {
     frameCount = 0;
     fpsTime = ts;
   }
+
+  const dt = lastTime ? (ts - lastTime) : 0;
+  lastTime = ts;
+
   if (running) {
-    for (let i = 0; i < stepsPerFrame; i++) step();
+    if (targetGPS === 0) {
+      // Unlimited: run as many steps as possible per frame
+      for (let i = 0; i < 30; i++) step();
+    } else {
+      const stepInterval = 1000 / targetGPS;
+      simAccumulator += dt;
+      // Cap accumulator to prevent spiral of death
+      if (simAccumulator > 500) simAccumulator = 500;
+      while (simAccumulator >= stepInterval) {
+        step();
+        simAccumulator -= stepInterval;
+      }
+    }
   }
+
   draw();
   document.getElementById('stat-gen').textContent = generation;
   document.getElementById('stat-pop').textContent = population;
@@ -668,7 +682,8 @@ document.getElementById('sel-pattern').addEventListener('change', (e) => {
 });
 
 document.getElementById('sel-speed').addEventListener('change', (e) => {
-  stepsPerFrame = parseInt(e.target.value);
+  targetGPS = parseInt(e.target.value);
+  simAccumulator = 0;  // reset accumulator on speed change
 });
 
 document.getElementById('btn-share').addEventListener('click', () => {
