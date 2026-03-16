@@ -212,12 +212,17 @@
     <input type="text" class="seed-input" id="seedInput" value="42" />
   </div>
   <div class="control-group">
+    <label>Map Size</label>
+    <input type="range" id="mapSizeSlider" min="64" max="512" value="256" step="64" />
+    <span class="value" id="mapSizeVal">256</span>
+  </div>
+  <div class="control-group">
     <label>Octaves</label>
     <input type="range" id="octaves" min="1" max="8" value="6" />
     <span class="value" id="octavesVal">6</span>
   </div>
   <div class="control-group">
-    <label>Scale</label>
+    <label>Detail Level</label>
     <input type="range" id="scale" min="20" max="200" value="80" />
     <span class="value" id="scaleVal">80</span>
   </div>
@@ -387,7 +392,7 @@ let mapSize = 256;
 
 // Camera state for 3D view
 let camTilt = 0.5;   // 0 = flat top-down, 1 = full isometric. Constrained to [0.25, 0.75]
-let camZoom = 1.0;   // 1.0 = default. Scroll to change.
+let camZoom = 1.5;   // 1.5 = default. Scroll to change.
 let camPanX = 0;
 let camPanY = 0;
 let isDragging = false;
@@ -396,6 +401,7 @@ let dragLastY = 0;
 
 // === Generate Heightmap ===
 function generateHeightmap() {
+  mapSize = parseInt(document.getElementById('mapSizeSlider').value) || 256;
   const seed = parseInt(document.getElementById('seedInput').value) || 0;
   const octaves = parseInt(document.getElementById('octaves').value);
   const scale = parseInt(document.getElementById('scale').value);
@@ -674,6 +680,7 @@ function randomSeed() {
 function shareURL() {
   const params = new URLSearchParams({
     seed: document.getElementById('seedInput').value,
+    size: document.getElementById('mapSizeSlider').value,
     oct: document.getElementById('octaves').value,
     scale: document.getElementById('scale').value,
     pers: document.getElementById('persistence').value,
@@ -728,6 +735,7 @@ function applyPreset(name) {
 
 // === Slider Labels ===
 function updateSliderLabels() {
+  document.getElementById('mapSizeVal').textContent = document.getElementById('mapSizeSlider').value;
   document.getElementById('octavesVal').textContent = document.getElementById('octaves').value;
   document.getElementById('scaleVal').textContent = document.getElementById('scale').value;
   document.getElementById('persistenceVal').textContent = (parseInt(document.getElementById('persistence').value) / 100).toFixed(2);
@@ -740,6 +748,7 @@ function updateSliderLabels() {
 function loadFromURL() {
   const params = new URLSearchParams(window.location.search);
   if (params.has('seed')) document.getElementById('seedInput').value = params.get('seed');
+  if (params.has('size')) document.getElementById('mapSizeSlider').value = params.get('size');
   if (params.has('oct')) document.getElementById('octaves').value = params.get('oct');
   if (params.has('scale')) document.getElementById('scale').value = params.get('scale');
   if (params.has('pers')) document.getElementById('persistence').value = params.get('pers');
