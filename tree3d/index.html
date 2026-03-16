@@ -481,6 +481,25 @@ function getDepthColor(depth) {
   return depthColors[depthColors.length - 1].clone();
 }
 
+// ─── Glow texture ───
+function createGlowTexture() {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  gradient.addColorStop(0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(0.2, 'rgba(255,255,255,0.5)');
+  gradient.addColorStop(0.5, 'rgba(255,255,255,0.1)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  return tex;
+}
+const glowTexture = createGlowTexture();
+
 // ─── Tree Processing ───
 function countDescendants(node) {
   if (!node.children || node.children.length === 0) return 0;
@@ -600,9 +619,10 @@ function buildScene(data) {
     // Glow sprite
     if (glowIntensity > 0) {
       const spriteMat = new THREE.SpriteMaterial({
-        color, transparent: true,
+        map: glowTexture, color, transparent: true,
         opacity: 0.15 * glowIntensity,
         blending: THREE.AdditiveBlending,
+        depthWrite: false,
       });
       const sprite = new THREE.Sprite(spriteMat);
       sprite.scale.setScalar(size * 4);
