@@ -402,6 +402,109 @@
   /* Hide scientist params in strategy mode */
   .strategy-mode .scientist-params { display: none; }
   .strategy-mode #run-btn { display: none; }
+
+  /* ── ATMOSPHERE ── */
+  body {
+    transition: background 2s ease, box-shadow 2s ease;
+  }
+  .atmosphere-drought {
+    background: radial-gradient(ellipse at 50% 100%, rgba(80,40,10,0.08) 0%, var(--bg) 70%) !important;
+  }
+  .atmosphere-wet {
+    background: radial-gradient(ellipse at 50% 100%, rgba(10,40,60,0.06) 0%, var(--bg) 70%) !important;
+  }
+  .atmosphere-disease {
+    box-shadow: inset 0 0 200px rgba(180,120,220,0.04);
+  }
+  @keyframes kpiDangerPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(224,82,82,0); }
+    50% { box-shadow: 0 0 8px 2px rgba(224,82,82,0.25); }
+  }
+  .kpi-danger-pulse {
+    animation: kpiDangerPulse 2s ease-in-out infinite;
+  }
+
+  /* ── EVENT NOTIFICATIONS ── */
+  #notification-container {
+    position: fixed;
+    top: 80px;
+    right: 16px;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+    max-width: 320px;
+  }
+  .event-notification {
+    background: rgba(11,15,20,0.92);
+    border: 1px solid rgba(221,193,101,0.2);
+    border-left: 3px solid var(--gold);
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: #DDC165;
+    font-family: var(--mono);
+    font-size: 10px;
+    line-height: 1.5;
+    backdrop-filter: blur(8px);
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.4s ease, opacity 0.4s ease;
+    pointer-events: auto;
+  }
+  .event-notification.visible {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  .event-notification.fading {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+  .event-notification .notif-gen {
+    color: var(--dim);
+    font-size: 8px;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ── EPOCH TRANSITION OVERLAY ── */
+  .epoch-transition-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 800;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .epoch-transition-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .epoch-transition-overlay .epoch-year {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .epoch-transition-overlay .epoch-narrative {
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--text);
+    max-width: 440px;
+    text-align: center;
+    line-height: 1.7;
+  }
 </style>
 </head>
 <body>
@@ -717,6 +820,12 @@
   <div class="final-score">Final Population: <span id="victory-pop">0</span></div>
   <button onclick="newGame()">PLAY AGAIN</button>
 </div>
+
+<!-- EVENT NOTIFICATIONS -->
+<div id="notification-container"></div>
+
+<!-- EPOCH TRANSITION OVERLAY -->
+<div class="epoch-transition-overlay" id="epoch-transition"></div>
 
 <script>
 // ─────────────────────────────────────────────────────────
@@ -1187,6 +1296,209 @@ function drawNormalized(id, data, seriesDef) {
 }
 
 // ─────────────────────────────────────────────────────────
+//  ENVIRONMENTAL STORYTELLING
+// ─────────────────────────────────────────────────────────
+
+// 1a. Atmosphere shifts
+function updateAtmosphere(lastEntry) {
+  if (!lastEntry) return;
+  const body = document.body;
+  const kpiGrid = document.querySelector('.kpi-grid');
+  const K = parseFloat(document.getElementById('K').value) || 800;
+  const food = lastEntry.food;
+  const N = lastEntry.N;
+  const diseaseRate = gameMode === 'strategy'
+    ? parseFloat(document.getElementById('god-disease').value)
+    : 0;
+
+  // Remove previous atmosphere classes
+  body.classList.remove('atmosphere-drought', 'atmosphere-wet', 'atmosphere-disease');
+  if (kpiGrid) kpiGrid.classList.remove('kpi-danger-pulse');
+
+  // Low food → warm drought tint
+  if (food < 0.4) {
+    body.classList.add('atmosphere-drought');
+  }
+  // High food → cool wet tint
+  else if (food > 0.7) {
+    body.classList.add('atmosphere-wet');
+  }
+
+  // Disease haze
+  if (diseaseRate > 0.2) {
+    body.classList.add('atmosphere-disease');
+  }
+
+  // Population crash — pulse KPI grid
+  if (N < 50 && kpiGrid) {
+    kpiGrid.classList.add('kpi-danger-pulse');
+  }
+}
+
+// 1b. Event notification system
+let _prevAnnotationState = { minN: Infinity, pCrossed: null, lastPredGen: -Infinity, lastAnnotationGen: -1 };
+let _notificationQueue = [];
+
+function generateAnnotations(history) {
+  if (history.length < 10) return [];
+  const annotations = [];
+  const recentLen = history.length;
+  const last = history[recentLen - 1];
+
+  // Only check the most recent chunk (last epoch or last run)
+  // Conservative: check last 20 gens only to avoid re-firing old events
+  const checkStart = Math.max(0, recentLen - 22);
+  const recent = history.slice(checkStart);
+
+  // 1. Population drop >40% in 5 gens (scan recent window)
+  for (let i = 5; i < recent.length; i++) {
+    const prev = recent[i - 5];
+    const curr = recent[i];
+    if (prev.N > 0 && (prev.N - curr.N) / prev.N > 0.40 && curr.g > _prevAnnotationState.lastAnnotationGen) {
+      annotations.push({ gen: curr.g, text: `Colony declined sharply \u2014 ${prev.N} to ${curr.N} over 5 generations.` });
+      _prevAnnotationState.lastAnnotationGen = curr.g;
+      break; // one per run
+    }
+  }
+
+  // 2. Allele p crosses 0.5 threshold
+  if (recent.length >= 2) {
+    for (let i = 1; i < recent.length; i++) {
+      const prev = recent[i-1];
+      const curr = recent[i];
+      const crossed = (prev.p < 0.5 && curr.p >= 0.5) ? 'above' : (prev.p >= 0.5 && curr.p < 0.5) ? 'below' : null;
+      if (crossed && _prevAnnotationState.pCrossed !== crossed) {
+        annotations.push({ gen: curr.g, text: `Bright crest allele ${crossed === 'above' ? 'rose above' : 'fell below'} majority.` });
+        _prevAnnotationState.pCrossed = crossed;
+        break;
+      }
+    }
+  }
+
+  // 3. Population hits new all-time low
+  if (last.N < _prevAnnotationState.minN && last.N < 100) {
+    annotations.push({ gen: last.g, text: `Population reached ${last.N} \u2014 lowest recorded.` });
+    _prevAnnotationState.minN = last.N;
+  }
+
+  // 4. Predator phase begins after >10 gens of calm
+  if (recent.length >= 2) {
+    for (let i = 1; i < recent.length; i++) {
+      if (recent[i].predator && !recent[i-1].predator) {
+        // Count how many gens since last predator
+        let calm = 0;
+        for (let j = i - 1; j >= 0 && !recent[j].predator; j--) calm++;
+        // Also check earlier history
+        if (calm < 10 && checkStart > 0) {
+          for (let j = checkStart - 1; j >= Math.max(0, checkStart - 30) && !history[j].predator; j--) calm++;
+        }
+        if (calm > 10) {
+          annotations.push({ gen: recent[i].g, text: `Predator pressure returned after ${calm} generations of calm.` });
+          break;
+        }
+      }
+    }
+  }
+
+  // 5. Food scarcity drops below 0.35
+  if (last.food < 0.35 && recent.length > 1 && recent[recent.length - 2].food >= 0.35) {
+    annotations.push({ gen: last.g, text: `Food scarce \u2014 marshes drying.` });
+  }
+
+  // 6. Disease rate increases (strategy mode)
+  if (gameMode === 'strategy') {
+    const diseaseRate = parseFloat(document.getElementById('god-disease').value);
+    if (diseaseRate > 0.3 && !_prevAnnotationState.diseaseWarned) {
+      annotations.push({ gen: last.g, text: `Disease spreading through the colony.` });
+      _prevAnnotationState.diseaseWarned = true;
+    } else if (diseaseRate <= 0.3) {
+      _prevAnnotationState.diseaseWarned = false;
+    }
+  }
+
+  return annotations;
+}
+
+function showNotification(text, genLabel) {
+  const container = document.getElementById('notification-container');
+  if (!container) return;
+
+  const card = document.createElement('div');
+  card.className = 'event-notification';
+  card.innerHTML = `<div class="notif-gen">${genLabel}</div><div>${text}</div>`;
+  container.appendChild(card);
+
+  // Slide in
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      card.classList.add('visible');
+    });
+  });
+
+  // Fade out after 3s
+  setTimeout(() => {
+    card.classList.remove('visible');
+    card.classList.add('fading');
+    setTimeout(() => card.remove(), 500);
+  }, 3000);
+}
+
+function fireAnnotations(history) {
+  const annotations = generateAnnotations(history);
+  annotations.forEach((ann, i) => {
+    setTimeout(() => {
+      showNotification(ann.text, `Year ${ann.gen}`);
+    }, i * 400); // stagger slightly
+  });
+}
+
+// 1c. Epoch transition cards
+function showEpochTransition(epochNum, prevState, currentState) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('epoch-transition');
+    if (!overlay) { resolve(); return; }
+
+    const genOffset = currentState.gen_offset || 0;
+    const foodVal = parseFloat(document.getElementById('god-food').value);
+    const food = 1.0 - foodVal; // food_base = 1 - scarcity
+
+    // Food description
+    let foodDesc;
+    if (food > 0.7) foodDesc = 'The rains came early.';
+    else if (food < 0.4) foodDesc = 'Drought deepened.';
+    else foodDesc = 'Conditions held steady.';
+
+    // Population delta
+    const prevN = prevState ? prevState.N : null;
+    const currN = currentState.N;
+    let popDesc;
+    if (prevN && currN > prevN * 1.1) popDesc = `The colony grew to ${currN}.`;
+    else if (prevN && currN < prevN * 0.7) popDesc = `Only ${currN} remain.`;
+    else popDesc = `${currN} individuals persist.`;
+
+    // Crest shift
+    const p = currentState.p;
+    let crestDesc = '';
+    if (p > 0.6) crestDesc = 'Bright crests dominate.';
+    else if (p < 0.4) crestDesc = 'Dull crests spread.';
+
+    overlay.innerHTML = `
+      <div class="epoch-year">Year ${genOffset}</div>
+      <div class="epoch-narrative">${foodDesc} ${popDesc} ${crestDesc}</div>
+    `;
+
+    // Fade in
+    overlay.classList.add('visible');
+
+    // Hold 1.5s, then fade out
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      setTimeout(resolve, 300); // wait for fade-out transition
+    }, 1500);
+  });
+}
+
+// ─────────────────────────────────────────────────────────
 //  RENDER ALL CHARTS
 // ─────────────────────────────────────────────────────────
 let simData = [];
@@ -1250,6 +1562,9 @@ function renderCharts() {
     { key: 'body',  color: C.violet, label: 'body size' },
     { key: 'wbar',  color: C.gold,   label: 'w̄' },
   ]);
+
+  // Environmental storytelling
+  updateAtmosphere(last);
 }
 
 function renderStats(stats) {
@@ -1370,6 +1685,7 @@ async function runSim() {
 
     renderCharts();
     renderStats(stats);
+    fireAnnotations(simData);
   } catch(e) {
     console.error('Simulation error:', e);
     btn.textContent = 'ERROR — check console';
@@ -1417,6 +1733,16 @@ function newGame() {
   totalScore = 0;
   gameOver = false;
   simData = [];
+  _prevAnnotationState = { minN: Infinity, pCrossed: null, lastPredGen: -Infinity, lastAnnotationGen: -1 };
+
+  // Clear atmosphere
+  document.body.classList.remove('atmosphere-drought', 'atmosphere-wet', 'atmosphere-disease');
+  const kpiGrid = document.querySelector('.kpi-grid');
+  if (kpiGrid) kpiGrid.classList.remove('kpi-danger-pulse');
+
+  // Clear any lingering notifications
+  const nc = document.getElementById('notification-container');
+  if (nc) nc.innerHTML = '';
 
   // Reset God Panel to defaults
   document.getElementById('god-food').value = 0.3;
@@ -1508,6 +1834,7 @@ async function advanceEpoch() {
     epochState = result.end_state;
 
     // Append epoch history to cumulative simData
+    const prevEpochState = epochNum > 1 ? { N: simData.length ? simData[simData.length - 1].N : null, p: simData.length ? simData[simData.length - 1].p : null } : null;
     simData = simData.concat(result.history);
 
     // Compute epoch stats
@@ -1516,6 +1843,9 @@ async function advanceEpoch() {
     const epochMeanWbar = epochHistory.reduce((s, d) => s + d.wbar, 0) / epochHistory.length;
     const epochScore = Math.round(epochMeanWbar * lastEntry.N);
     totalScore += epochScore;
+
+    // Show epoch transition card
+    await showEpochTransition(epochNum, prevEpochState, epochState);
 
     // Update epoch summary
     document.getElementById('epoch-summary-title').textContent = `EPOCH ${epochNum} / ${MAX_EPOCHS}`;
@@ -1530,6 +1860,7 @@ async function advanceEpoch() {
 
     // Render
     renderCharts();
+    fireAnnotations(simData);
     const histJson = JSON.stringify(simData);
     pyodide.globals.set('_hist_json', histJson);
     const statsJson = await pyodide.runPythonAsync('compute_stats(json.loads(_hist_json))');
