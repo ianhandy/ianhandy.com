@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radial Tree 3D</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #1A0D00; font-family: 'Segoe UI', system-ui, sans-serif; color: #DDC165; }
+canvas { display: block; }
+
+#ui {
+  position: fixed; top: 0; left: 0; z-index: 10;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 16px; width: 280px;
+  background: rgba(26, 13, 0, 0.92); border-right: 1px solid rgba(221, 193, 101, 0.15);
+  height: 100vh; overflow-y: auto;
+}
+#ui::-webkit-scrollbar { width: 4px; }
+#ui::-webkit-scrollbar-thumb { background: rgba(221, 193, 101, 0.3); border-radius: 2px; }
+
+h1 { font-size: 16px; font-weight: 600; color: #FFE9A3; letter-spacing: 0.5px; }
+.section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(221, 193, 101, 0.5); margin-top: 8px; }
+
+select, button {
+  background: rgba(221, 193, 101, 0.08); border: 1px solid rgba(221, 193, 101, 0.2);
+  color: #DDC165; padding: 6px 10px; border-radius: 4px; font-size: 13px; cursor: pointer;
+  width: 100%; transition: all 0.15s;
+}
+select:hover, button:hover { border-color: rgba(221, 193, 101, 0.4); background: rgba(221, 193, 101, 0.12); }
+button:active { background: rgba(229, 89, 28, 0.3); }
+
+.slider-row { display: flex; flex-direction: column; gap: 2px; }
+.slider-row label { font-size: 11px; display: flex; justify-content: space-between; }
+.slider-row label span { color: #FFE9A3; }
+input[type="range"] {
+  -webkit-appearance: none; width: 100%; height: 4px; background: rgba(221, 193, 101, 0.15);
+  border-radius: 2px; outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+  background: #DDC165; cursor: pointer; border: 2px solid #1A0D00;
+}
+
+#info {
+  position: fixed; bottom: 16px; left: 16px; z-index: 10;
+  background: rgba(26, 13, 0, 0.9); padding: 10px 14px; border-radius: 6px;
+  border: 1px solid rgba(221, 193, 101, 0.15); font-size: 12px; max-width: 300px;
+  pointer-events: none; opacity: 0; transition: opacity 0.3s;
+}
+#info.visible { opacity: 1; }
+#info .name { color: #FFE9A3; font-weight: 600; font-size: 14px; }
+#info .detail { color: rgba(221, 193, 101, 0.6); margin-top: 4px; }
+
+#help {
+  position: fixed; bottom: 16px; right: 16px; z-index: 10;
+  background: rgba(26, 13, 0, 0.9); padding: 10px 14px; border-radius: 6px;
+  border: 1px solid rgba(221, 193, 101, 0.15); font-size: 11px; color: rgba(221, 193, 101, 0.5);
+  line-height: 1.6;
+}
+
+#json-modal {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.7); align-items: center; justify-content: center;
+}
+#json-modal.visible { display: flex; }
+#json-modal .inner {
+  background: #1A0D00; border: 1px solid rgba(221, 193, 101, 0.3); border-radius: 8px;
+  padding: 20px; width: 500px; max-width: 90vw;
+}
+#json-modal textarea {
+  width: 100%; height: 250px; background: rgba(0,0,0,0.3); border: 1px solid rgba(221, 193, 101, 0.2);
+  color: #DDC165; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 4px;
+  resize: vertical; margin: 10px 0;
+}
+#json-modal .btn-row { display: flex; gap: 8px; }
+#json-modal .btn-row button { flex: 1; }
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <h1>Radial Tree 3D</h1>
+  <div class="section-label">Dataset</div>
+  <select id="dataset">
+    <option value="filesystem">File System Tree</option>
+    <option value="orgchart">Org Chart</option>
+    <option value="biology">Biology Taxonomy</option>
+    <option value="dom">DOM Tree</option>
+  </select>
+  <button id="btn-json">Load JSON</button>
+  <div class="section-label">Controls</div>
+  <div class="slider-row">
+    <label>Depth Limit <span id="val-depth">8</span></label>
+    <input type="range" id="ctrl-depth" min="1" max="12" value="8" step="1">
+  </div>
+  <div class="slider-row">
+    <label>Node Spacing <span id="val-spacing">1.0</span></label>
+    <input type="range" id="ctrl-spacing" min="0.3" max="3.0" value="1.0" step="0.1">
+  </div>
+  <div class="slider-row">
+    <label>Ring Radius <span id="val-radius">1.0</span></label>
+    <input type="range" id="ctrl-radius" min="0.5" max="3.0" value="1.0" step="0.1">
+  </div>
+  <div class="slider-row">
+    <label>Connection Opacity <span id="val-opacity">0.6</span></label>
+    <input type="range" id="ctrl-opacity" min="0.0" max="1.0" value="0.6" step="0.05">
+  </div>
+  <div class="slider-row">
+    <label>Glow Intensity <span id="val-glow">1.0</span></label>
+    <input type="range" id="ctrl-glow" min="0.0" max="2.0" value="1.0" step="0.1">
+  </div>
+  <button id="btn-reset-camera">Reset Camera</button>
+</div>
+
+<div id="info">
+  <div class="name" id="info-name"></div>
+  <div class="detail" id="info-detail"></div>
+</div>
+
+<div id="help">
+  WASD / Arrow Keys &mdash; fly<br>
+  Mouse drag &mdash; orbit<br>
+  Scroll &mdash; zoom<br>
+  Click &mdash; focus node<br>
+  Double-click &mdash; expand/collapse
+</div>
+
+<div id="json-modal">
+  <div class="inner">
+    <div class="section-label">Load Custom JSON</div>
+    <textarea id="json-input" placeholder='{ "name": "root", "children": [ { "name": "child", "children": [] } ] }'></textarea>
+    <div class="btn-row">
+      <button id="json-cancel">Cancel</button>
+      <button id="json-load">Load</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─── Datasets ───
+const DATASETS = {
+  filesystem: {
+    name: "~/Programming", children: [
+      { name: "repos", children: [
+        { name: "evo", children: [
+          { name: "src", children: [
+            { name: "simulation", children: [
+              { name: "world.ts" }, { name: "organism.ts" }, { name: "genetics.ts" },
+              { name: "environment.ts" }, { name: "reproduction.ts" }
+            ]},
+            { name: "rendering", children: [
+              { name: "renderer.ts" }, { name: "shaders", children: [
+                { name: "organism.vert" }, { name: "organism.frag" }, { name: "terrain.vert" }, { name: "terrain.frag" }
+              ]},
+              { name: "camera.ts" }, { name: "hud.ts" }
+            ]},
+            { name: "ui", children: [
+              { name: "controls.ts" }, { name: "panels.ts" }, { name: "timeline.ts" }
+            ]},
+            { name: "utils", children: [
+              { name: "math.ts" }, { name: "color.ts" }, { name: "random.ts" }
+            ]}
+          ]},
+          { name: "assets", children: [
+            { name: "textures", children: [{ name: "terrain.png" }, { name: "noise.png" }] },
+            { name: "models", children: [{ name: "stalker.glb" }] }
+          ]},
+          { name: "tests", children: [
+            { name: "world.test.ts" }, { name: "genetics.test.ts" }, { name: "renderer.test.ts" }
+          ]},
+          { name: "package.json" }, { name: "tsconfig.json" }, { name: "README.md" }
+        ]},
+        { name: "ianhandy.com", children: [
+          { name: "index.html" }, { name: "styles.css" },
+          { name: "evo", children: [{ name: "index.html" }] },
+          { name: "terrain", children: [{ name: "index.html" }] },
+          { name: "lorenz", children: [{ name: "index.html" }] },
+          { name: "force3d", children: [{ name: "index.html" }] },
+          { name: "life", children: [{ name: "index.html" }] },
+          { name: "sort", children: [{ name: "index.html" }] }
+        ]},
+        { name: "radial-tree-3d", children: [
+          { name: "index.html" }, { name: "README.md" }
+        ]},
+        { name: "git-sage", children: [
+          { name: "src", children: [{ name: "main.rs" }, { name: "git.rs" }, { name: "ai.rs" }] },
+          { name: "Cargo.toml" }
+        ]}
+      ]},
+      { name: "workspace", children: [
+        { name: "CLAUDE.md" }, { name: "IAN.md" }, { name: "IDEAS.md" },
+        { name: "tasks", children: [
+          { name: "inbox" }, { name: "outbox" },
+          { name: "repos", children: [
+            { name: "evo", children: [{ name: "INDEX.md" }, { name: "sessions" }] },
+            { name: "ianhandy.com", children: [{ name: "INDEX.md" }] }
+          ]}
+        ]}
+      ]}
+    ]
+  },
+
+  orgchart: {
+    name: "CEO", children: [
+      { name: "CTO", children: [
+        { name: "VP Engineering", children: [
+          { name: "Dir. Frontend", children: [
+            { name: "Lead React", children: [{ name: "Sr. Dev" }, { name: "Jr. Dev" }, { name: "Jr. Dev" }] },
+            { name: "Lead Mobile", children: [{ name: "iOS Dev" }, { name: "Android Dev" }] }
+          ]},
+          { name: "Dir. Backend", children: [
+            { name: "Lead API", children: [{ name: "Sr. Dev" }, { name: "Sr. Dev" }, { name: "Dev" }] },
+            { name: "Lead Infra", children: [{ name: "SRE" }, { name: "SRE" }, { name: "DevOps" }] },
+            { name: "Lead Data", children: [{ name: "DBA" }, { name: "Data Eng" }] }
+          ]},
+          { name: "Dir. QA", children: [
+            { name: "Lead Manual", children: [{ name: "Tester" }, { name: "Tester" }] },
+            { name: "Lead Automation", children: [{ name: "SDET" }, { name: "SDET" }] }
+          ]}
+        ]},
+        { name: "VP Product", children: [
+          { name: "PM Core", children: [{ name: "APM" }, { name: "Designer" }] },
+          { name: "PM Growth", children: [{ name: "APM" }, { name: "Analyst" }] },
+          { name: "PM Platform", children: [{ name: "APM" }] }
+        ]}
+      ]},
+      { name: "CFO", children: [
+        { name: "Controller", children: [{ name: "Accountant" }, { name: "Accountant" }, { name: "AP Clerk" }] },
+        { name: "FP&A Manager", children: [{ name: "Analyst" }, { name: "Analyst" }] },
+        { name: "Treasury", children: [{ name: "Analyst" }] }
+      ]},
+      { name: "COO", children: [
+        { name: "VP Operations", children: [
+          { name: "Facilities", children: [{ name: "Coordinator" }, { name: "Coordinator" }] },
+          { name: "Procurement", children: [{ name: "Buyer" }, { name: "Buyer" }] }
+        ]},
+        { name: "VP HR", children: [
+          { name: "Recruiting", children: [{ name: "Recruiter" }, { name: "Recruiter" }, { name: "Sourcer" }] },
+          { name: "People Ops", children: [{ name: "HR Gen" }, { name: "Benefits" }] }
+        ]}
+      ]},
+      { name: "CMO", children: [
+        { name: "Dir. Marketing", children: [
+          { name: "Content", children: [{ name: "Writer" }, { name: "Writer" }, { name: "Editor" }] },
+          { name: "Design", children: [{ name: "Sr. Designer" }, { name: "Designer" }] },
+          { name: "SEO", children: [{ name: "Specialist" }] }
+        ]},
+        { name: "Dir. Sales", children: [
+          { name: "Enterprise", children: [{ name: "AE" }, { name: "AE" }, { name: "AE" }] },
+          { name: "SMB", children: [{ name: "AE" }, { name: "AE" }, { name: "SDR" }, { name: "SDR" }] }
+        ]}
+      ]}
+    ]
+  },
+
+  biology: {
+    name: "Life", children: [
+      { name: "Animalia", children: [
+        { name: "Chordata", children: [
+          { name: "Mammalia", children: [
+            { name: "Primates", children: [
+              { name: "Hominidae", children: [
+                { name: "Homo", children: [{ name: "H. sapiens" }] },
+                { name: "Pan", children: [{ name: "P. troglodytes" }, { name: "P. paniscus" }] },
+                { name: "Gorilla", children: [{ name: "G. gorilla" }] },
+                { name: "Pongo", children: [{ name: "P. pygmaeus" }] }
+              ]},
+              { name: "Cercopithecidae", children: [
+                { name: "Macaca", children: [{ name: "M. mulatta" }, { name: "M. fascicularis" }] }
+              ]}
+            ]},
+            { name: "Carnivora", children: [
+              { name: "Felidae", children: [
+                { name: "Panthera", children: [{ name: "P. leo" }, { name: "P. tigris" }, { name: "P. pardus" }] },
+                { name: "Felis", children: [{ name: "F. catus" }, { name: "F. silvestris" }] }
+              ]},
+              { name: "Canidae", children: [
+                { name: "Canis", children: [{ name: "C. lupus" }, { name: "C. latrans" }] },
+                { name: "Vulpes", children: [{ name: "V. vulpes" }] }
+              ]}
+            ]},
+            { name: "Cetacea", children: [
+              { name: "Delphinidae", children: [
+                { name: "Tursiops", children: [{ name: "T. truncatus" }] },
+                { name: "Orcinus", children: [{ name: "O. orca" }] }
+              ]},
+              { name: "Balaenopteridae", children: [
+                { name: "Balaenoptera", children: [{ name: "B. musculus" }, { name: "B. physalus" }] }
+              ]}
+            ]}
+          ]},
+          { name: "Aves", children: [
+            { name: "Passeriformes", children: [
+              { name: "Corvidae", children: [{ name: "Corvus corax" }, { name: "Corvus brachyrhynchos" }] },
+              { name: "Fringillidae", children: [{ name: "Carduelis carduelis" }] }
+            ]},
+            { name: "Accipitriformes", children: [
+              { name: "Accipitridae", children: [{ name: "Aquila chrysaetos" }, { name: "Haliaeetus leucocephalus" }] }
+            ]}
+          ]},
+          { name: "Reptilia", children: [
+            { name: "Squamata", children: [
+              { name: "Pythonidae", children: [{ name: "Python regius" }] },
+              { name: "Varanidae", children: [{ name: "Varanus komodoensis" }] }
+            ]}
+          ]}
+        ]},
+        { name: "Arthropoda", children: [
+          { name: "Insecta", children: [
+            { name: "Coleoptera", children: [{ name: "Coccinellidae" }, { name: "Scarabaeidae" }] },
+            { name: "Lepidoptera", children: [{ name: "Nymphalidae" }, { name: "Papilionidae" }] },
+            { name: "Hymenoptera", children: [{ name: "Formicidae" }, { name: "Apidae" }] }
+          ]},
+          { name: "Arachnida", children: [
+            { name: "Araneae", children: [{ name: "Theraphosidae" }, { name: "Araneidae" }] }
+          ]}
+        ]},
+        { name: "Mollusca", children: [
+          { name: "Cephalopoda", children: [
+            { name: "Octopoda", children: [{ name: "Octopus vulgaris" }] },
+            { name: "Teuthida", children: [{ name: "Architeuthis dux" }] }
+          ]}
+        ]}
+      ]},
+      { name: "Plantae", children: [
+        { name: "Angiosperms", children: [
+          { name: "Rosaceae", children: [{ name: "Rosa" }, { name: "Malus" }, { name: "Prunus" }] },
+          { name: "Fabaceae", children: [{ name: "Pisum" }, { name: "Glycine" }] },
+          { name: "Poaceae", children: [{ name: "Oryza" }, { name: "Triticum" }, { name: "Zea" }] }
+        ]},
+        { name: "Gymnosperms", children: [
+          { name: "Pinaceae", children: [{ name: "Pinus" }, { name: "Picea" }] }
+        ]}
+      ]},
+      { name: "Fungi", children: [
+        { name: "Basidiomycota", children: [
+          { name: "Agaricales", children: [{ name: "Amanita" }, { name: "Agaricus" }] }
+        ]},
+        { name: "Ascomycota", children: [
+          { name: "Saccharomycetes", children: [{ name: "Saccharomyces" }] }
+        ]}
+      ]}
+    ]
+  },
+
+  dom: {
+    name: "html", children: [
+      { name: "head", children: [
+        { name: "meta[charset]" }, { name: "meta[viewport]" }, { name: "title" },
+        { name: "link[stylesheet]" },
+        { name: "style", children: [
+          { name: ":root vars" }, { name: "body rules" }, { name: "layout rules" },
+          { name: "component rules", children: [
+            { name: ".header" }, { name: ".nav" }, { name: ".card" }, { name: ".btn" }, { name: ".modal" }
+          ]},
+          { name: "media queries", children: [{ name: "@media (max-width: 768px)" }, { name: "@media (prefers-color-scheme: dark)" }] }
+        ]},
+        { name: "script[defer]" }
+      ]},
+      { name: "body", children: [
+        { name: "header", children: [
+          { name: "nav", children: [
+            { name: "a.logo" },
+            { name: "ul.nav-links", children: [
+              { name: "li > a[Home]" }, { name: "li > a[About]" }, { name: "li > a[Work]" }, { name: "li > a[Contact]" }
+            ]},
+            { name: "button.menu-toggle" }
+          ]}
+        ]},
+        { name: "main", children: [
+          { name: "section.hero", children: [
+            { name: "h1" }, { name: "p.subtitle" }, { name: "div.cta-group", children: [{ name: "a.btn-primary" }, { name: "a.btn-secondary" }] }
+          ]},
+          { name: "section.features", children: [
+            { name: "h2" },
+            { name: "div.grid", children: [
+              { name: "div.card", children: [{ name: "img" }, { name: "h3" }, { name: "p" }] },
+              { name: "div.card", children: [{ name: "img" }, { name: "h3" }, { name: "p" }] },
+              { name: "div.card", children: [{ name: "img" }, { name: "h3" }, { name: "p" }] },
+              { name: "div.card", children: [{ name: "img" }, { name: "h3" }, { name: "p" }] }
+            ]}
+          ]},
+          { name: "section.testimonials", children: [
+            { name: "h2" },
+            { name: "div.carousel", children: [
+              { name: "div.slide", children: [{ name: "blockquote" }, { name: "cite" }] },
+              { name: "div.slide", children: [{ name: "blockquote" }, { name: "cite" }] },
+              { name: "div.slide", children: [{ name: "blockquote" }, { name: "cite" }] }
+            ]},
+            { name: "div.carousel-nav", children: [{ name: "button.prev" }, { name: "button.next" }] }
+          ]},
+          { name: "section.contact", children: [
+            { name: "h2" },
+            { name: "form", children: [
+              { name: "input[name]" }, { name: "input[email]" }, { name: "textarea[message]" }, { name: "button[submit]" }
+            ]}
+          ]}
+        ]},
+        { name: "footer", children: [
+          { name: "div.footer-grid", children: [
+            { name: "div.col", children: [{ name: "h4" }, { name: "p" }] },
+            { name: "div.col", children: [{ name: "h4" }, { name: "ul > li*4" }] },
+            { name: "div.col", children: [{ name: "h4" }, { name: "div.social-links" }] }
+          ]},
+          { name: "p.copyright" }
+        ]}
+      ]}
+    ]
+  }
+};
+
+// ─── Three.js Setup ───
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 2000);
+camera.position.set(0, 0, 30);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x1A0D00);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+
+// Fog for depth
+scene.fog = new THREE.FogExp2(0x1A0D00, 0.008);
+
+// Lighting
+const ambient = new THREE.AmbientLight(0xDDC165, 0.3);
+scene.add(ambient);
+const dirLight = new THREE.DirectionalLight(0xFFE9A3, 0.6);
+dirLight.position.set(10, 20, 30);
+scene.add(dirLight);
+const pointLight = new THREE.PointLight(0xE5591C, 0.8, 100);
+pointLight.position.set(0, 0, 0);
+scene.add(pointLight);
+
+// ─── State ───
+const treeGroup = new THREE.Group();
+scene.add(treeGroup);
+
+let nodeObjects = [];
+let connectionObjects = [];
+let nodeDataMap = new WeakMap();
+let collapsedNodes = new Set();
+let currentData = null;
+let hoveredNode = null;
+let focusTarget = null;
+let focusLerp = 0;
+let focusStart = new THREE.Vector3();
+let focusEnd = new THREE.Vector3();
+
+// Camera control state
+const camState = {
+  theta: 0, phi: Math.PI / 2,
+  distance: 30,
+  target: new THREE.Vector3(0, 0, 0),
+  velocity: new THREE.Vector3(),
+  dragging: false,
+  lastMouse: { x: 0, y: 0 },
+  keys: {}
+};
+
+// ─── Color Palette ───
+const depthColors = [
+  new THREE.Color(0xFFE9A3),  // 0 - bright gold
+  new THREE.Color(0xDDC165),  // 1 - gold
+  new THREE.Color(0xC49A2C),  // 2 - darker gold
+  new THREE.Color(0xE5591C),  // 3 - orange
+  new THREE.Color(0xB8441A),  // 4 - burnt orange
+  new THREE.Color(0x8B3318),  // 5 - deep burnt
+  new THREE.Color(0x6B2814),  // 6 - dim
+  new THREE.Color(0x4A1C0E),  // 7+ - very dim
+];
+
+function getDepthColor(depth) {
+  const i = Math.min(depth, depthColors.length - 1);
+  if (depth < depthColors.length) return depthColors[i].clone();
+  return depthColors[depthColors.length - 1].clone();
+}
+
+// ─── Tree Processing ───
+function countDescendants(node) {
+  if (!node.children || node.children.length === 0) return 0;
+  let count = node.children.length;
+  for (const c of node.children) count += countDescendants(c);
+  return count;
+}
+
+function annotateTree(node, depth = 0) {
+  node._depth = depth;
+  node._descendants = countDescendants(node);
+  if (!node.children) node.children = [];
+  for (const c of node.children) annotateTree(c, depth + 1);
+}
+
+function layoutTree(node, settings) {
+  const { depthLimit, spacing, radiusMult } = settings;
+  const positions = [];
+  const connections = [];
+
+  function layout(n, parentPos, angleStart, angleEnd, depth) {
+    if (depth > depthLimit) return;
+
+    const pos = new THREE.Vector3();
+    if (depth === 0) {
+      pos.set(0, 0, 0);
+    } else {
+      const angle = (angleStart + angleEnd) / 2;
+      const ringRadius = depth * 8 * radiusMult;
+      const zDepth = -depth * 6 * spacing;
+      pos.set(
+        Math.cos(angle) * ringRadius,
+        Math.sin(angle) * ringRadius,
+        zDepth
+      );
+    }
+
+    positions.push({ node: n, position: pos.clone() });
+
+    if (parentPos) {
+      connections.push({ from: parentPos.clone(), to: pos.clone(), depth });
+    }
+
+    const visibleChildren = collapsedNodes.has(n._id) ? [] :
+      (n.children || []).filter(c => c._depth <= depthLimit);
+
+    if (visibleChildren.length === 0) return;
+
+    const totalWeight = visibleChildren.reduce((s, c) => s + Math.max(1, c._descendants + 1), 0);
+    const arcSize = angleEnd - angleStart;
+    let currentAngle = angleStart;
+
+    for (const child of visibleChildren) {
+      const weight = Math.max(1, child._descendants + 1);
+      const childArc = arcSize * (weight / totalWeight);
+      layout(child, pos, currentAngle, currentAngle + childArc, depth + 1);
+      currentAngle += childArc;
+    }
+  }
+
+  layout(node, null, 0, Math.PI * 2, 0);
+  return { positions, connections };
+}
+
+// ─── Rendering ───
+let nodeIdCounter = 0;
+
+function assignIds(node) {
+  node._id = nodeIdCounter++;
+  if (node.children) node.children.forEach(assignIds);
+}
+
+function buildScene(data) {
+  // Clear
+  while (treeGroup.children.length) {
+    const c = treeGroup.children[0];
+    treeGroup.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) {
+      if (c.material.dispose) c.material.dispose();
+    }
+  }
+  nodeObjects = [];
+  connectionObjects = [];
+  nodeDataMap = new WeakMap();
+
+  annotateTree(data);
+
+  const settings = {
+    depthLimit: parseInt(document.getElementById('ctrl-depth').value),
+    spacing: parseFloat(document.getElementById('ctrl-spacing').value),
+    radiusMult: parseFloat(document.getElementById('ctrl-radius').value),
+  };
+
+  const { positions, connections } = layoutTree(data, settings);
+  const connOpacity = parseFloat(document.getElementById('ctrl-opacity').value);
+  const glowIntensity = parseFloat(document.getElementById('ctrl-glow').value);
+
+  // Create nodes
+  for (const { node, position } of positions) {
+    const size = Math.max(0.15, Math.min(2.0, 0.15 + Math.sqrt(node._descendants) * 0.18));
+    const color = getDepthColor(node._depth);
+
+    // Main sphere
+    const geo = new THREE.SphereGeometry(size, 16, 12);
+    const mat = new THREE.MeshStandardMaterial({
+      color, emissive: color, emissiveIntensity: 0.3 * glowIntensity,
+      roughness: 0.4, metalness: 0.6,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(position);
+    mesh.userData.targetPosition = position.clone();
+    treeGroup.add(mesh);
+    nodeObjects.push(mesh);
+    nodeDataMap.set(mesh, node);
+
+    // Glow sprite
+    if (glowIntensity > 0) {
+      const spriteMat = new THREE.SpriteMaterial({
+        color, transparent: true,
+        opacity: 0.15 * glowIntensity,
+        blending: THREE.AdditiveBlending,
+      });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.scale.setScalar(size * 4);
+      sprite.position.copy(position);
+      sprite.userData.targetPosition = position.clone();
+      treeGroup.add(sprite);
+    }
+  }
+
+  // Create connections as bezier tube meshes
+  for (const { from, to, depth } of connections) {
+    const mid = new THREE.Vector3().lerpVectors(from, to, 0.5);
+    mid.z = (from.z + to.z) / 2;
+    // Pull midpoint slightly toward center for a curve
+    const pull = mid.clone().normalize().multiplyScalar(-2);
+    mid.add(pull);
+
+    const curve = new THREE.QuadraticBezierCurve3(from, mid, to);
+    const tubeGeo = new THREE.TubeGeometry(curve, 16, 0.04, 6, false);
+    const color = getDepthColor(depth);
+    const tubeMat = new THREE.MeshStandardMaterial({
+      color, emissive: color,
+      emissiveIntensity: 0.5 * glowIntensity,
+      transparent: true, opacity: connOpacity,
+      roughness: 0.6, metalness: 0.3,
+    });
+    const tube = new THREE.Mesh(tubeGeo, tubeMat);
+    treeGroup.add(tube);
+    connectionObjects.push(tube);
+  }
+
+  // Particle dust
+  const particleCount = 500;
+  const pGeo = new THREE.BufferGeometry();
+  const pPositions = new Float32Array(particleCount * 3);
+  for (let i = 0; i < particleCount; i++) {
+    pPositions[i * 3] = (Math.random() - 0.5) * 120;
+    pPositions[i * 3 + 1] = (Math.random() - 0.5) * 120;
+    pPositions[i * 3 + 2] = -Math.random() * 120;
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+  const pMat = new THREE.PointsMaterial({
+    color: 0xDDC165, size: 0.08, transparent: true, opacity: 0.3,
+    blending: THREE.AdditiveBlending, sizeAttenuation: true,
+  });
+  const particles = new THREE.Points(pGeo, pMat);
+  treeGroup.add(particles);
+}
+
+// ─── Controls ───
+function getSettings() {
+  return {
+    depth: document.getElementById('ctrl-depth').value,
+    spacing: document.getElementById('ctrl-spacing').value,
+    radius: document.getElementById('ctrl-radius').value,
+    opacity: document.getElementById('ctrl-opacity').value,
+    glow: document.getElementById('ctrl-glow').value,
+  };
+}
+
+function updateLabels() {
+  document.getElementById('val-depth').textContent = document.getElementById('ctrl-depth').value;
+  document.getElementById('val-spacing').textContent = parseFloat(document.getElementById('ctrl-spacing').value).toFixed(1);
+  document.getElementById('val-radius').textContent = parseFloat(document.getElementById('ctrl-radius').value).toFixed(1);
+  document.getElementById('val-opacity').textContent = parseFloat(document.getElementById('ctrl-opacity').value).toFixed(2);
+  document.getElementById('val-glow').textContent = parseFloat(document.getElementById('ctrl-glow').value).toFixed(1);
+}
+
+document.querySelectorAll('#ui input[type="range"]').forEach(input => {
+  input.addEventListener('input', () => {
+    updateLabels();
+    rebuild();
+  });
+});
+
+document.getElementById('dataset').addEventListener('change', e => {
+  collapsedNodes.clear();
+  loadDataset(e.target.value);
+});
+
+document.getElementById('btn-reset-camera').addEventListener('click', () => {
+  camState.theta = 0;
+  camState.phi = Math.PI / 2;
+  camState.distance = 30;
+  camState.target.set(0, 0, 0);
+  focusTarget = null;
+});
+
+// JSON modal
+document.getElementById('btn-json').addEventListener('click', () => {
+  document.getElementById('json-modal').classList.add('visible');
+});
+document.getElementById('json-cancel').addEventListener('click', () => {
+  document.getElementById('json-modal').classList.remove('visible');
+});
+document.getElementById('json-load').addEventListener('click', () => {
+  try {
+    const data = JSON.parse(document.getElementById('json-input').value);
+    if (!data.name) throw new Error('Root must have "name"');
+    collapsedNodes.clear();
+    nodeIdCounter = 0;
+    assignIds(data);
+    currentData = data;
+    buildScene(data);
+    document.getElementById('json-modal').classList.remove('visible');
+  } catch (e) {
+    alert('Invalid JSON: ' + e.message);
+  }
+});
+
+function loadDataset(name) {
+  const data = JSON.parse(JSON.stringify(DATASETS[name]));
+  nodeIdCounter = 0;
+  assignIds(data);
+  currentData = data;
+  buildScene(data);
+}
+
+function rebuild() {
+  if (currentData) buildScene(currentData);
+}
+
+// ─── Mouse / Keyboard ───
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+renderer.domElement.addEventListener('mousedown', e => {
+  if (e.button === 0) {
+    camState.dragging = true;
+    camState.lastMouse = { x: e.clientX, y: e.clientY };
+  }
+});
+
+renderer.domElement.addEventListener('mousemove', e => {
+  // Update mouse for raycasting
+  mouse.x = (e.clientX / innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+
+  if (camState.dragging) {
+    const dx = e.clientX - camState.lastMouse.x;
+    const dy = e.clientY - camState.lastMouse.y;
+    camState.theta -= dx * 0.005;
+    camState.phi = Math.max(0.1, Math.min(Math.PI - 0.1, camState.phi - dy * 0.005));
+    camState.lastMouse = { x: e.clientX, y: e.clientY };
+  }
+});
+
+renderer.domElement.addEventListener('mouseup', () => { camState.dragging = false; });
+renderer.domElement.addEventListener('mouseleave', () => { camState.dragging = false; });
+
+renderer.domElement.addEventListener('wheel', e => {
+  camState.distance = Math.max(2, Math.min(200, camState.distance + e.deltaY * 0.05));
+}, { passive: true });
+
+// Click = focus, dblclick = collapse
+let clickTimeout = null;
+
+renderer.domElement.addEventListener('click', e => {
+  if (clickTimeout) return; // Ignore if dblclick pending
+
+  clickTimeout = setTimeout(() => {
+    clickTimeout = null;
+    // Raycast
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(nodeObjects);
+    if (hits.length > 0) {
+      const node = nodeDataMap.get(hits[0].object);
+      if (node) {
+        focusStart = camState.target.clone();
+        focusEnd = hits[0].object.position.clone();
+        focusLerp = 0;
+        focusTarget = focusEnd;
+      }
+    }
+  }, 250);
+});
+
+renderer.domElement.addEventListener('dblclick', e => {
+  if (clickTimeout) { clearTimeout(clickTimeout); clickTimeout = null; }
+
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(nodeObjects);
+  if (hits.length > 0) {
+    const node = nodeDataMap.get(hits[0].object);
+    if (node && node.children && node.children.length > 0) {
+      if (collapsedNodes.has(node._id)) {
+        collapsedNodes.delete(node._id);
+      } else {
+        collapsedNodes.add(node._id);
+      }
+      rebuild();
+    }
+  }
+});
+
+document.addEventListener('keydown', e => { camState.keys[e.key.toLowerCase()] = true; });
+document.addEventListener('keyup', e => { camState.keys[e.key.toLowerCase()] = false; });
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ─── Animation Loop ───
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  // Keyboard fly
+  const speed = 25 * dt;
+  const forward = new THREE.Vector3(
+    Math.sin(camState.theta) * Math.sin(camState.phi),
+    Math.cos(camState.phi),
+    Math.cos(camState.theta) * Math.sin(camState.phi)
+  ).normalize();
+  const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+  if (camState.keys['w'] || camState.keys['arrowup']) camState.target.addScaledVector(forward, -speed);
+  if (camState.keys['s'] || camState.keys['arrowdown']) camState.target.addScaledVector(forward, speed);
+  if (camState.keys['a'] || camState.keys['arrowleft']) camState.target.addScaledVector(right, -speed);
+  if (camState.keys['d'] || camState.keys['arrowright']) camState.target.addScaledVector(right, speed);
+  if (camState.keys['q'] || camState.keys[' ']) camState.target.y += speed;
+  if (camState.keys['e'] || camState.keys['shift']) camState.target.y -= speed;
+
+  // Focus animation
+  if (focusTarget) {
+    focusLerp = Math.min(1, focusLerp + dt * 2);
+    const t = 1 - Math.pow(1 - focusLerp, 3); // ease out cubic
+    camState.target.lerpVectors(focusStart, focusEnd, t);
+    if (focusLerp >= 1) focusTarget = null;
+  }
+
+  // Camera orbit
+  camera.position.set(
+    camState.target.x + Math.sin(camState.theta) * Math.sin(camState.phi) * camState.distance,
+    camState.target.y + Math.cos(camState.phi) * camState.distance,
+    camState.target.z + Math.cos(camState.theta) * Math.sin(camState.phi) * camState.distance
+  );
+  camera.lookAt(camState.target);
+
+  // Move point light with camera for dramatic effect
+  pointLight.position.copy(camera.position);
+
+  // Hover detection
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(nodeObjects);
+  const infoEl = document.getElementById('info');
+
+  if (hits.length > 0) {
+    const obj = hits[0].object;
+    const node = nodeDataMap.get(obj);
+    if (node) {
+      document.getElementById('info-name').textContent = node.name;
+      const parts = [`Depth: ${node._depth}`];
+      if (node._descendants > 0) parts.push(`${node._descendants} descendants`);
+      if (node.children && node.children.length > 0) parts.push(`${node.children.length} direct children`);
+      if (collapsedNodes.has(node._id)) parts.push('(collapsed)');
+      document.getElementById('info-detail').textContent = parts.join(' | ');
+      infoEl.classList.add('visible');
+
+      // Highlight
+      if (hoveredNode !== obj) {
+        if (hoveredNode) {
+          const prevNode = nodeDataMap.get(hoveredNode);
+          if (prevNode) hoveredNode.material.emissiveIntensity = 0.3;
+        }
+        obj.material.emissiveIntensity = 1.0;
+        hoveredNode = obj;
+        renderer.domElement.style.cursor = 'pointer';
+      }
+    }
+  } else {
+    infoEl.classList.remove('visible');
+    if (hoveredNode) {
+      hoveredNode.material.emissiveIntensity = 0.3;
+      hoveredNode = null;
+      renderer.domElement.style.cursor = '';
+    }
+  }
+
+  // Slow rotation of dust particles
+  const particles = treeGroup.children.find(c => c instanceof THREE.Points);
+  if (particles) {
+    particles.rotation.z += dt * 0.01;
+    particles.rotation.x += dt * 0.005;
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ─── Init ───
+loadDataset('filesystem');
+updateLabels();
+animate();
+</script>
+</body>
+</html>
