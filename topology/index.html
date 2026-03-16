@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topology Graph</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #241200;
+    color: #DDC165;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+  #canvas-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+  canvas { display: block; }
+
+  #controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    background: rgba(26, 13, 0, 0.92);
+    border: 1px solid rgba(221, 193, 101, 0.25);
+    border-radius: 10px;
+    padding: 20px;
+    width: 260px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  #controls h2 {
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #FFE9A3;
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+  .control-group {
+    margin-bottom: 14px;
+  }
+  .control-group label {
+    display: block;
+    font-size: 11px;
+    color: rgba(221, 193, 101, 0.7);
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+  }
+  .control-group input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: rgba(221, 193, 101, 0.2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  .control-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #DDC165;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(221, 193, 101, 0.5);
+  }
+  .control-group .value {
+    float: right;
+    font-size: 11px;
+    color: #DDC165;
+  }
+
+  .btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .btn {
+    background: rgba(221, 193, 101, 0.1);
+    border: 1px solid rgba(221, 193, 101, 0.3);
+    color: #DDC165;
+    padding: 6px 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .btn:hover {
+    background: rgba(221, 193, 101, 0.2);
+    border-color: #DDC165;
+  }
+  .btn.active {
+    background: rgba(229, 89, 28, 0.3);
+    border-color: #E5591C;
+    color: #FFE9A3;
+  }
+  .btn-load {
+    width: 100%;
+    background: rgba(229, 89, 28, 0.15);
+    border-color: rgba(229, 89, 28, 0.4);
+    color: #E5591C;
+    padding: 8px;
+    font-size: 12px;
+  }
+  .btn-load:hover {
+    background: rgba(229, 89, 28, 0.3);
+  }
+  #csv-input {
+    display: none;
+  }
+
+  #title-bar {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+  }
+  #title-bar h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #FFE9A3;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  #title-bar p {
+    font-size: 11px;
+    color: rgba(221, 193, 101, 0.5);
+    letter-spacing: 0.5px;
+  }
+
+  #info {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 10;
+    font-size: 11px;
+    color: rgba(221, 193, 101, 0.4);
+  }
+  #tooltip {
+    position: fixed;
+    display: none;
+    background: rgba(26, 13, 0, 0.95);
+    border: 1px solid rgba(229, 89, 28, 0.5);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: #FFE9A3;
+    pointer-events: none;
+    z-index: 20;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<div id="title-bar">
+  <h1>TOPOLOGY GRAPH</h1>
+  <p>3D density surface visualization</p>
+</div>
+
+<div id="controls">
+  <h2>Controls</h2>
+
+  <div class="control-group">
+    <label>Surface Tension <span class="value" id="tension-val">0.50</span></label>
+    <input type="range" id="tension" min="0.1" max="2.0" step="0.05" value="0.50">
+  </div>
+
+  <div class="control-group">
+    <label>Point Size <span class="value" id="size-val">1.0</span></label>
+    <input type="range" id="pointSize" min="0.2" max="3.0" step="0.1" value="1.0">
+  </div>
+
+  <div class="control-group">
+    <label>Cluster Sensitivity <span class="value" id="sensitivity-val">1.0</span></label>
+    <input type="range" id="sensitivity" min="0.2" max="3.0" step="0.1" value="1.0">
+  </div>
+
+  <div class="control-group">
+    <label>Depth Intensity <span class="value" id="depth-val">3.0</span></label>
+    <input type="range" id="depth" min="0.5" max="8.0" step="0.25" value="3.0">
+  </div>
+
+  <h2 style="margin-top:18px">Presets</h2>
+  <div class="btn-row">
+    <button class="btn active" onclick="loadPreset('clusters')">Clusters</button>
+    <button class="btn" onclick="loadPreset('uniform')">Uniform</button>
+    <button class="btn" onclick="loadPreset('spiral')">Spiral</button>
+    <button class="btn" onclick="loadPreset('bimodal')">Bimodal</button>
+  </div>
+
+  <input type="file" id="csv-input" accept=".csv">
+  <button class="btn btn-load" onclick="document.getElementById('csv-input').click()">Load CSV (x, y, value)</button>
+</div>
+
+<div id="info">Drag to rotate &middot; Scroll to zoom &middot; Shift+drag to pan</div>
+<div id="tooltip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─── CONFIG ───
+const GRID_RES = 120;
+const SURFACE_SIZE = 20;
+const BG_COLOR = 0x241200;
+const GOLD = 0xDDC165;
+const GOLD_LIGHT = 0xFFE9A3;
+const ORANGE = 0xE5591C;
+
+// ─── STATE ───
+let dataPoints = [];
+let pointMeshes = [];
+let surfaceMesh = null;
+let gridLines = null;
+let targetHeights = null;
+let currentHeights = null;
+let scene, camera, renderer, clock;
+let mouseDown = false, shiftDown = false;
+let lastMouse = { x: 0, y: 0 };
+let sphereAngle = { theta: Math.PI * 0.3, phi: Math.PI * 0.25 };
+let cameraDistance = 28;
+let panOffset = new THREE.Vector3(0, 0, 0);
+let raycaster, mouseVec;
+let hoveredPoint = null;
+let animProgress = 1;
+let prevHeights = null;
+
+// ─── PARAMS ───
+let params = {
+  tension: 0.5,
+  pointSize: 1.0,
+  sensitivity: 1.0,
+  depth: 3.0
+};
+
+// ─── PRESET DATASETS ───
+function generateClusters() {
+  const points = [];
+  const centers = [
+    { x: -4, y: -3 }, { x: 3, y: 4 }, { x: -2, y: 5 },
+    { x: 5, y: -2 }, { x: 0, y: 0 }
+  ];
+  const sizes = [15, 12, 10, 18, 8];
+  centers.forEach((c, ci) => {
+    for (let i = 0; i < sizes[ci]; i++) {
+      const spread = 1.2 + Math.random() * 0.8;
+      points.push({
+        x: c.x + (Math.random() - 0.5) * spread * 2,
+        y: c.y + (Math.random() - 0.5) * spread * 2,
+        value: 0.5 + Math.random() * 0.5,
+        label: `Cluster ${ci + 1}, Point ${i + 1}`
+      });
+    }
+  });
+  return points;
+}
+
+function generateUniform() {
+  const points = [];
+  for (let i = 0; i < 80; i++) {
+    points.push({
+      x: (Math.random() - 0.5) * 16,
+      y: (Math.random() - 0.5) * 16,
+      value: Math.random(),
+      label: `Point ${i + 1}`
+    });
+  }
+  return points;
+}
+
+function generateSpiral() {
+  const points = [];
+  for (let i = 0; i < 90; i++) {
+    const t = i / 90 * Math.PI * 4;
+    const r = 1 + t * 0.5;
+    const noise = 0.4;
+    points.push({
+      x: Math.cos(t) * r + (Math.random() - 0.5) * noise,
+      y: Math.sin(t) * r + (Math.random() - 0.5) * noise,
+      value: i / 90,
+      label: `Spiral ${i + 1}`
+    });
+  }
+  return points;
+}
+
+function generateBimodal() {
+  const points = [];
+  for (let i = 0; i < 40; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 0.5 + Math.random() * 1.5;
+    points.push({
+      x: -4 + Math.cos(angle) * r,
+      y: 0 + Math.sin(angle) * r,
+      value: 0.8 + Math.random() * 0.2,
+      label: `Dense A-${i + 1}`
+    });
+  }
+  for (let i = 0; i < 40; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 0.5 + Math.random() * 1.5;
+    points.push({
+      x: 4 + Math.cos(angle) * r,
+      y: 0 + Math.sin(angle) * r,
+      value: 0.8 + Math.random() * 0.2,
+      label: `Dense B-${i + 1}`
+    });
+  }
+  for (let i = 0; i < 10; i++) {
+    points.push({
+      x: (Math.random() - 0.5) * 16,
+      y: (Math.random() - 0.5) * 16,
+      value: 0.2 + Math.random() * 0.3,
+      label: `Outlier ${i + 1}`
+    });
+  }
+  return points;
+}
+
+const presets = {
+  clusters: generateClusters,
+  uniform: generateUniform,
+  spiral: generateSpiral,
+  bimodal: generateBimodal
+};
+
+// ─── INIT ───
+function init() {
+  clock = new THREE.Clock();
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(BG_COLOR);
+  scene.fog = new THREE.FogExp2(BG_COLOR, 0.012);
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+  updateCamera();
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0xFFE9A3, 0.3);
+  scene.add(ambient);
+
+  const dirLight = new THREE.DirectionalLight(0xFFE9A3, 0.8);
+  dirLight.position.set(10, 15, 8);
+  scene.add(dirLight);
+
+  const pointLight1 = new THREE.PointLight(ORANGE, 1.5, 50);
+  pointLight1.position.set(-8, 10, -8);
+  scene.add(pointLight1);
+
+  const pointLight2 = new THREE.PointLight(GOLD, 1.0, 50);
+  pointLight2.position.set(8, 8, 8);
+  scene.add(pointLight2);
+
+  const rimLight = new THREE.PointLight(0xE5591C, 0.6, 60);
+  rimLight.position.set(0, -5, 15);
+  scene.add(rimLight);
+
+  // Raycaster
+  raycaster = new THREE.Raycaster();
+  mouseVec = new THREE.Vector2();
+
+  // Build surface
+  buildSurface();
+
+  // Load default
+  dataPoints = generateClusters();
+  computeHeights();
+  currentHeights = new Float32Array(targetHeights);
+  updateSurface();
+  buildPoints();
+
+  // Events
+  setupEvents();
+  animate();
+}
+
+// ─── SURFACE ───
+function buildSurface() {
+  const geo = new THREE.PlaneGeometry(SURFACE_SIZE, SURFACE_SIZE, GRID_RES, GRID_RES);
+  const mat = new THREE.MeshPhongMaterial({
+    color: 0x1A0D00,
+    emissive: 0x120800,
+    specular: GOLD,
+    shininess: 40,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.85,
+    wireframe: false,
+    flatShading: false
+  });
+  surfaceMesh = new THREE.Mesh(geo, mat);
+  surfaceMesh.rotation.x = -Math.PI / 2;
+  scene.add(surfaceMesh);
+
+  // Grid overlay
+  const gridMat = new THREE.MeshBasicMaterial({
+    color: GOLD,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.06
+  });
+  const gridGeo = new THREE.PlaneGeometry(SURFACE_SIZE, SURFACE_SIZE, GRID_RES, GRID_RES);
+  gridLines = new THREE.Mesh(gridGeo, gridMat);
+  gridLines.rotation.x = -Math.PI / 2;
+  gridLines.position.y = 0.01;
+  scene.add(gridLines);
+
+  currentHeights = new Float32Array((GRID_RES + 1) * (GRID_RES + 1));
+  targetHeights = new Float32Array((GRID_RES + 1) * (GRID_RES + 1));
+}
+
+// ─── COMPUTE HEIGHTS ───
+function computeHeights() {
+  const verts = GRID_RES + 1;
+  const halfSize = SURFACE_SIZE / 2;
+  const sigma = params.tension * 2;
+  const sens = params.sensitivity;
+  const depthMult = params.depth;
+
+  for (let j = 0; j < verts; j++) {
+    for (let i = 0; i < verts; i++) {
+      const gx = (i / GRID_RES) * SURFACE_SIZE - halfSize;
+      const gy = (j / GRID_RES) * SURFACE_SIZE - halfSize;
+
+      let density = 0;
+      for (const p of dataPoints) {
+        const dx = gx - p.x;
+        const dy = gy - p.y;
+        const dist2 = dx * dx + dy * dy;
+        density += p.value * Math.exp(-dist2 / (2 * sigma * sigma * sens));
+      }
+
+      // Valleys where dense, peaks where sparse
+      targetHeights[j * verts + i] = -density * depthMult;
+    }
+  }
+}
+
+// ─── UPDATE SURFACE GEOMETRY ───
+function updateSurface() {
+  const positions = surfaceMesh.geometry.attributes.position.array;
+  const gridPositions = gridLines.geometry.attributes.position.array;
+  const verts = GRID_RES + 1;
+
+  for (let j = 0; j < verts; j++) {
+    for (let i = 0; i < verts; i++) {
+      const idx = (j * verts + i) * 3;
+      const h = currentHeights[j * verts + i];
+      positions[idx + 2] = h;
+      gridPositions[idx + 2] = h;
+    }
+  }
+  surfaceMesh.geometry.attributes.position.needsUpdate = true;
+  surfaceMesh.geometry.computeVertexNormals();
+  gridLines.geometry.attributes.position.needsUpdate = true;
+}
+
+// ─── POINTS ───
+function buildPoints() {
+  // Remove old
+  for (const m of pointMeshes) {
+    scene.remove(m);
+    if (m.glowMesh) scene.remove(m.glowMesh);
+  }
+  pointMeshes = [];
+
+  const sphereGeo = new THREE.SphereGeometry(1, 16, 16);
+
+  for (let i = 0; i < dataPoints.length; i++) {
+    const p = dataPoints[i];
+
+    // Main sphere
+    const mat = new THREE.MeshPhongMaterial({
+      color: GOLD,
+      emissive: ORANGE,
+      emissiveIntensity: 0.4 + p.value * 0.4,
+      specular: 0xFFE9A3,
+      shininess: 80,
+      transparent: true,
+      opacity: 0.9
+    });
+
+    const mesh = new THREE.Mesh(sphereGeo, mat);
+    mesh.userData = { index: i, point: p };
+    scene.add(mesh);
+
+    // Glow sphere
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: GOLD_LIGHT,
+      transparent: true,
+      opacity: 0.15
+    });
+    const glowMesh = new THREE.Mesh(sphereGeo, glowMat);
+    scene.add(glowMesh);
+    mesh.glowMesh = glowMesh;
+
+    pointMeshes.push(mesh);
+  }
+
+  updatePointPositions();
+}
+
+function updatePointPositions() {
+  const halfSize = SURFACE_SIZE / 2;
+  const size = params.pointSize;
+
+  for (let i = 0; i < pointMeshes.length; i++) {
+    const mesh = pointMeshes[i];
+    const p = mesh.userData.point;
+
+    // Sample height at point position
+    const gx = (p.x + halfSize) / SURFACE_SIZE;
+    const gy = (p.y + halfSize) / SURFACE_SIZE;
+    const gi = Math.max(0, Math.min(GRID_RES, Math.round(gx * GRID_RES)));
+    const gj = Math.max(0, Math.min(GRID_RES, Math.round(gy * GRID_RES)));
+    const h = currentHeights[gj * (GRID_RES + 1) + gi];
+
+    const s = size * (0.12 + p.value * 0.12);
+    mesh.scale.set(s, s, s);
+    mesh.position.set(p.x, -h + s * 0.5, p.y);
+
+    if (mesh.glowMesh) {
+      const gs = s * 2.2;
+      mesh.glowMesh.scale.set(gs, gs, gs);
+      mesh.glowMesh.position.copy(mesh.position);
+    }
+  }
+}
+
+// ─── CAMERA ───
+function updateCamera() {
+  const x = cameraDistance * Math.sin(sphereAngle.phi) * Math.sin(sphereAngle.theta);
+  const y = cameraDistance * Math.cos(sphereAngle.phi);
+  const z = cameraDistance * Math.sin(sphereAngle.phi) * Math.cos(sphereAngle.theta);
+  camera.position.set(x + panOffset.x, y + panOffset.y, z + panOffset.z);
+  camera.lookAt(panOffset.x, panOffset.y, panOffset.z);
+}
+
+// ─── EVENTS ───
+function setupEvents() {
+  const el = renderer.domElement;
+
+  el.addEventListener('mousedown', (e) => {
+    mouseDown = true;
+    lastMouse.x = e.clientX;
+    lastMouse.y = e.clientY;
+  });
+
+  window.addEventListener('mouseup', () => { mouseDown = false; });
+
+  window.addEventListener('keydown', (e) => { if (e.key === 'Shift') shiftDown = true; });
+  window.addEventListener('keyup', (e) => { if (e.key === 'Shift') shiftDown = false; });
+
+  el.addEventListener('mousemove', (e) => {
+    // Tooltip
+    mouseVec.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouseVec.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    checkHover(e.clientX, e.clientY);
+
+    if (!mouseDown) return;
+    const dx = e.clientX - lastMouse.x;
+    const dy = e.clientY - lastMouse.y;
+    lastMouse.x = e.clientX;
+    lastMouse.y = e.clientY;
+
+    if (shiftDown) {
+      // Pan
+      const panSpeed = 0.03;
+      const right = new THREE.Vector3();
+      const up = new THREE.Vector3();
+      camera.getWorldDirection(new THREE.Vector3());
+      right.crossVectors(camera.up, new THREE.Vector3().subVectors(panOffset, camera.position)).normalize();
+      up.copy(camera.up);
+      panOffset.addScaledVector(right, dx * panSpeed);
+      panOffset.addScaledVector(up, -dy * panSpeed);
+    } else {
+      // Rotate
+      sphereAngle.theta -= dx * 0.005;
+      sphereAngle.phi = Math.max(0.1, Math.min(Math.PI * 0.49, sphereAngle.phi + dy * 0.005));
+    }
+    updateCamera();
+  });
+
+  el.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    cameraDistance = Math.max(8, Math.min(60, cameraDistance + e.deltaY * 0.03));
+    updateCamera();
+  }, { passive: false });
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // Sliders
+  bindSlider('tension', 'tension-val', v => { params.tension = v; recompute(); });
+  bindSlider('pointSize', 'size-val', v => { params.pointSize = v; updatePointPositions(); });
+  bindSlider('sensitivity', 'sensitivity-val', v => { params.sensitivity = v; recompute(); });
+  bindSlider('depth', 'depth-val', v => { params.depth = v; recompute(); });
+
+  // CSV
+  document.getElementById('csv-input').addEventListener('change', loadCSV);
+}
+
+function bindSlider(id, valId, cb) {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    const v = parseFloat(el.value);
+    document.getElementById(valId).textContent = v.toFixed(el.step.includes('.0') ? 1 : 2);
+    cb(v);
+  });
+}
+
+function checkHover(mx, my) {
+  raycaster.setFromCamera(mouseVec, camera);
+  const hits = raycaster.intersectObjects(pointMeshes);
+  const tooltip = document.getElementById('tooltip');
+
+  if (hits.length > 0) {
+    const p = hits[0].object.userData.point;
+    hoveredPoint = hits[0].object;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (mx + 14) + 'px';
+    tooltip.style.top = (my - 10) + 'px';
+    tooltip.innerHTML = `<strong>${p.label}</strong><br>x: ${p.x.toFixed(2)} &middot; y: ${p.y.toFixed(2)} &middot; val: ${p.value.toFixed(2)}`;
+    hoveredPoint.material.emissiveIntensity = 1.2;
+  } else {
+    if (hoveredPoint) {
+      hoveredPoint.material.emissiveIntensity = 0.4 + hoveredPoint.userData.point.value * 0.4;
+      hoveredPoint = null;
+    }
+    tooltip.style.display = 'none';
+  }
+}
+
+// ─── RECOMPUTE ───
+function recompute() {
+  prevHeights = new Float32Array(currentHeights);
+  computeHeights();
+  animProgress = 0;
+}
+
+// ─── LOAD PRESET ───
+function loadPreset(name) {
+  // Update button styles
+  document.querySelectorAll('.btn-row .btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  dataPoints = presets[name]();
+  prevHeights = new Float32Array(currentHeights);
+  computeHeights();
+  animProgress = 0;
+  buildPoints();
+}
+window.loadPreset = loadPreset;
+
+// ─── CSV LOADER ───
+function loadCSV(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const lines = ev.target.result.trim().split('\n');
+    const newPoints = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line || line.startsWith('#')) continue;
+      const parts = line.split(',');
+      const x = parseFloat(parts[0]);
+      const y = parseFloat(parts[1]);
+      const v = parts.length > 2 ? parseFloat(parts[2]) : 1;
+      if (isNaN(x) || isNaN(y)) continue;
+      newPoints.push({ x, y, value: isNaN(v) ? 1 : v, label: `CSV ${newPoints.length + 1}` });
+    }
+    if (newPoints.length > 0) {
+      dataPoints = newPoints;
+      // Clear active preset
+      document.querySelectorAll('.btn-row .btn').forEach(b => b.classList.remove('active'));
+      prevHeights = new Float32Array(currentHeights);
+      computeHeights();
+      animProgress = 0;
+      buildPoints();
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ─── ANIMATE ───
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+
+  // Animate surface transition
+  if (animProgress < 1) {
+    animProgress = Math.min(1, animProgress + dt * 2.0);
+    const t = smoothstep(animProgress);
+    const verts = (GRID_RES + 1) * (GRID_RES + 1);
+    for (let i = 0; i < verts; i++) {
+      currentHeights[i] = (prevHeights ? prevHeights[i] : 0) * (1 - t) + targetHeights[i] * t;
+    }
+    updateSurface();
+    updatePointPositions();
+  }
+
+  // Subtle point pulse
+  const time = clock.elapsedTime;
+  for (const mesh of pointMeshes) {
+    if (mesh.glowMesh && mesh !== hoveredPoint) {
+      mesh.glowMesh.material.opacity = 0.1 + Math.sin(time * 2 + mesh.userData.index) * 0.05;
+    }
+  }
+
+  // Slow auto-rotate when idle
+  if (!mouseDown) {
+    sphereAngle.theta += dt * 0.03;
+    updateCamera();
+  }
+
+  renderer.render(scene, camera);
+}
+
+function smoothstep(t) {
+  return t * t * (3 - 2 * t);
+}
+
+// ─── GO ───
+init();
+</script>
+</body>
+</html>
