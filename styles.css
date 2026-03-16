@@ -110,6 +110,12 @@ section { padding: 7rem 3rem; }
   background: linear-gradient(to right, var(--umber), transparent);
 }
 
+/*VISUAL BREAK*/
+.visual-break {
+  position: relative;
+  background-color: var(--bark);
+}
+
 /*FOOTER*/
 footer {
   background: var(--soil);
