@@ -3,1962 +3,1349 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Velothrix aurantis — Evolution Simulation</title>
+<title>Velothrix aurantis — Ecosystem Observation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
 <style>
-  :root {
-    --bg: #0b0f14;
-    --card: #131920;
-    --border: #1e2d3d;
-    --accent: #e8923a;
-    --teal: #3dd9c4;
-    --violet: #b06bcf;
-    --blue: #4d9de0;
-    --gold: #d4b44a;
-    --red: #e05252;
-    --text: #dce8f0;
-    --dim: #5a7a8a;
-    --mono: 'Space Mono', monospace;
-    --sans: 'Syne', sans-serif;
-  }
+:root {
+  --bg: #241200;
+  --bg-dark: #1A0D00;
+  --gold: #DDC165;
+  --gold-light: #FFE9A3;
+  --orange: #E5591C;
+  --text: #e8d5c0;
+  --dim: #8a7560;
+  --card: #2a1800;
+  --card-hover: #331e00;
+  --border: #3d2a10;
+  --velothrix: #DDC165;
+  --leviathan: #C0392B;
+  --crawler: #2ECC71;
+  --crab: #E5591C;
+  --worm: #9B59B6;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 12px;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-  /* ── LOADING SCREEN ── */
-  #loader {
-    position: fixed; inset: 0;
-    background: var(--bg);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    z-index: 1000;
-    gap: 20px;
-  }
-  #loader h1 {
-    font-family: var(--sans);
-    font-size: 28px; font-weight: 800;
-    color: var(--accent);
-    letter-spacing: -1px;
-  }
-  #loader p { color: var(--dim); font-size: 11px; }
-  .loader-bar {
-    width: 240px; height: 2px;
-    background: var(--border);
-    border-radius: 2px; overflow: hidden;
-  }
-  .loader-fill {
-    height: 100%;
-    background: var(--accent);
-    width: 0%;
-    transition: width 0.3s ease;
-    border-radius: 2px;
-  }
+/* ── LOADING SCREEN ── */
+#loader {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 1000;
+  gap: 20px;
+}
+#loader h1 {
+  font-family: var(--sans);
+  font-size: 28px; font-weight: 800;
+  color: var(--gold);
+}
+#loader p {
+  color: var(--dim);
+  font-size: 13px;
+}
+.loader-bar {
+  width: 200px; height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.loader-bar-fill {
+  height: 100%; width: 0%;
+  background: var(--gold);
+  transition: width 0.3s;
+}
 
-  /* ── HEADER ── */
-  header {
-    border-bottom: 1px solid var(--border);
-    padding: 16px 24px;
-    display: flex; align-items: center; gap: 20px;
-    flex-wrap: wrap;
-    background: rgba(11,15,20,0.95);
-    position: sticky; top: 0; z-index: 100;
-    backdrop-filter: blur(8px);
-  }
-  header .title { font-family: var(--sans); font-size: 18px; font-weight: 800; color: var(--accent); }
-  header .subtitle { color: var(--dim); font-size: 10px; margin-top: 2px; }
+/* ── LAYOUT ── */
+#app {
+  display: none;
+  height: 100vh;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto 1fr auto;
+}
 
-  /* ── TABS ── */
-  .tabs {
-    display: flex;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 6px; overflow: hidden;
-    margin-left: auto;
-  }
-  .tab-btn {
-    padding: 7px 14px; border: none; cursor: pointer;
-    font-family: var(--mono); font-size: 10px;
-    background: transparent; color: var(--dim);
-    transition: all 0.15s; white-space: nowrap;
-  }
-  .tab-btn.active { background: var(--accent); color: #000; font-weight: 700; }
-  .tab-btn:hover:not(.active) { color: var(--text); }
+/* ── HEADER ── */
+#header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+}
+#header h1 {
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header-controls button {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.header-controls button:hover { background: var(--card-hover); }
+.header-controls button.active {
+  background: var(--gold);
+  color: var(--bg);
+  border-color: var(--gold);
+}
+#gen-counter {
+  color: var(--dim);
+  font-size: 11px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+#gen-counter span { color: var(--gold-light); }
 
-  /* ── LAYOUT ── */
-  .layout { display: flex; min-height: calc(100vh - 60px); }
+/* ── SPECIES TABS ── */
+.species-tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: 16px;
+}
+.species-tab {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.species-tab:hover { color: var(--text); }
+.species-tab.active {
+  border-color: var(--gold);
+  color: var(--gold);
+}
 
-  /* ── SIDEBAR ── */
-  aside {
-    width: 220px; flex-shrink: 0;
-    border-right: 1px solid var(--border);
-    padding: 16px 14px;
-    background: #080c10;
-    overflow-y: auto;
-    max-height: calc(100vh - 60px);
-    position: sticky; top: 60px;
-  }
+/* ── MAP AREA ── */
+#map-area {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-dark);
+}
+#map-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 
-  .param-section {
-    font-size: 9px; color: var(--dim);
-    letter-spacing: 1.5px; text-transform: uppercase;
-    margin: 14px 0 7px;
-  }
-  .param-section:first-child { margin-top: 0; }
+/* ── EVENT FEED OVERLAY ── */
+#event-feed {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  max-height: 120px;
+  overflow-y: auto;
+  background: linear-gradient(transparent, rgba(26,13,0,0.95));
+  padding: 40px 12px 8px;
+  pointer-events: none;
+}
+#event-feed div {
+  font-size: 10px;
+  color: var(--dim);
+  padding: 2px 0;
+  pointer-events: auto;
+}
+#event-feed div .ev-gen { color: var(--gold); }
+#event-feed div .ev-text { color: var(--text); }
 
-  .slider-row { margin-bottom: 10px; }
-  .slider-label {
-    display: flex; justify-content: space-between;
-    margin-bottom: 3px;
-  }
-  .slider-label span:first-child { color: var(--dim); font-size: 10px; }
-  .slider-label span:last-child { color: var(--accent); font-size: 10px; font-family: var(--mono); }
+/* ── RIGHT PANEL ── */
+#panel {
+  background: var(--bg-dark);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.panel-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px;
+}
+.panel-section h3 {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.panel-toggle {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.panel-toggle button {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 6px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.panel-toggle button.active {
+  background: var(--card-hover);
+  color: var(--gold);
+  border-color: var(--gold);
+}
 
-  input[type=range] {
-    width: 100%; cursor: pointer;
-    accent-color: var(--accent);
-    height: 3px;
-  }
+/* ── SPECIES ROWS ── */
+.species-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.species-row:last-child { border-bottom: none; }
+.sp-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sp-name {
+  flex: 1;
+  font-size: 10px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-pop {
+  font-size: 10px;
+  color: var(--dim);
+  text-align: right;
+  min-width: 40px;
+}
+.sp-trait {
+  font-size: 10px;
+  color: var(--gold);
+  text-align: right;
+  min-width: 40px;
+}
 
-  #run-btn {
-    margin-top: 16px; width: 100%;
-    padding: 9px; border: none; border-radius: 6px;
-    font-family: var(--mono); font-weight: 700; font-size: 11px;
-    cursor: pointer; transition: all 0.2s;
-    background: var(--accent); color: #000;
-    letter-spacing: 0.5px;
-  }
-  #run-btn:disabled { background: var(--border); color: var(--dim); cursor: not-allowed; }
-  #run-btn:hover:not(:disabled) { filter: brightness(1.1); }
+/* ── CHART CANVASES ── */
+.chart-canvas {
+  width: 100%;
+  height: 120px;
+  display: block;
+}
+.chart-canvas.tall {
+  height: 160px;
+}
 
-  /* ── MAIN CONTENT ── */
-  main {
-    flex: 1; padding: 16px 18px;
-    overflow-y: auto;
-    max-height: calc(100vh - 60px);
-  }
+/* ── EVENT LOG ── */
+#event-log {
+  grid-column: 1 / -1;
+  background: var(--bg-dark);
+  border-top: 1px solid var(--border);
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 6px 12px;
+}
+#event-log .log-entry {
+  font-size: 10px;
+  color: var(--dim);
+  padding: 2px 0;
+}
+#event-log .log-entry .ev-gen { color: var(--gold); }
+#event-log .log-entry .ev-text { color: var(--text); }
 
-  /* ── CARDS ── */
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-    margin-bottom: 14px;
-  }
-  .card-title { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
-  .card-sub { font-size: 10px; color: var(--dim); margin-bottom: 12px; }
-  .card-accent-l { border-left: 3px solid var(--accent); }
-  .card-accent-teal { border-left: 3px solid var(--teal); }
-  .card-accent-blue { border-left: 3px solid var(--blue); }
-
-  /* ── KPI GRID ── */
-  .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 14px; }
-  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
-  .kpi-label { color: var(--dim); font-size: 9px; margin-bottom: 4px; }
-  .kpi-val { font-family: var(--sans); font-size: 20px; font-weight: 800; }
-
-  /* ── CANVAS CHARTS ── */
-  .chart-wrap { position: relative; width: 100%; }
-  canvas { display: block; width: 100% !important; border-radius: 4px; }
-
-  /* ── STATS TABLE ── */
-  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-  .stat-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 5px 9px; background: #0e1620; border-radius: 4px;
-  }
-  .stat-label { color: var(--dim); font-size: 10px; }
-  .stat-val { color: var(--accent); font-weight: 700; font-size: 11px; }
-  .stat-unit { color: var(--dim); font-weight: 400; font-size: 9px; margin-left: 3px; }
-
-  /* ── EQUATION LIST ── */
-  .eq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-  .eq-item { background: #0e1620; border-radius: 4px; padding: 6px 8px; }
-  .eq-name { color: var(--teal); font-size: 9px; margin-bottom: 2px; }
-  .eq-formula { color: var(--text); font-family: var(--mono); font-size: 9px; }
-
-  /* ── TRAIT CHIPS ── */
-  .trait-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
-  .trait-chip {
-    background: #0e1620; border: 1px solid var(--border);
-    border-radius: 4px; padding: 3px 8px; font-size: 10px; color: var(--dim);
-  }
-  .trait-chip strong { color: var(--accent); }
-
-  /* ── TAB PANELS ── */
-  .panel { display: none; }
-  .panel.active { display: block; }
-
-  /* ── TWO COL ── */
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-  /* ── MOBILE ── */
-  @media (max-width: 700px) {
-    aside { display: none; }
-    .kpi-grid { grid-template-columns: repeat(2,1fr); }
-    .two-col { grid-template-columns: 1fr; }
-    .stats-grid { grid-template-columns: 1fr; }
-    .eq-grid { grid-template-columns: 1fr; }
-    .tabs { margin-left: 0; width: 100%; }
-    header { gap: 10px; }
-    .tab-btn { padding: 6px 8px; font-size: 9px; }
-    #mobile-params-toggle {
-      display: block !important;
-      padding: 8px 16px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--accent);
-      font-family: var(--mono);
-      font-size: 11px;
-      cursor: pointer;
-      margin-bottom: 12px;
-      width: 100%;
-      text-align: left;
-    }
-    #mobile-params { display: none; }
-    #mobile-params.open { display: block; }
-    aside.mobile-open { display: block; position: fixed; inset: 0; z-index: 200; overflow-y: auto; }
-  }
-
-  #mobile-params-toggle { display: none; }
-
-  /* ── SCROLLBAR ── */
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  /* ── FADE IN ── */
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  .panel.active { animation: fadeIn 0.25s ease; }
-
-  /* ── MODE TOGGLE ── */
-  .mode-toggle {
-    display: flex; gap: 0; margin: 10px 0 6px;
-    border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
-  }
-  .mode-toggle button {
-    flex: 1; padding: 7px 0; font-family: var(--mono); font-size: 10px;
-    background: transparent; color: var(--dim); border: none; cursor: pointer;
-    transition: all 0.2s;
-  }
-  .mode-toggle button.active {
-    background: var(--accent); color: #000; font-weight: bold;
-  }
-
-  /* ── GOD PANEL ── */
-  .god-panel { display: none; margin-top: 8px; }
-  .god-panel.visible { display: block; }
-  .god-panel-header {
-    font-family: var(--sans); font-size: 12px; font-weight: 800;
-    color: var(--accent); letter-spacing: 1px; margin-bottom: 8px;
-    padding-bottom: 4px; border-bottom: 1px solid var(--accent);
-  }
-  .god-slider-row { margin-bottom: 10px; }
-  .god-slider-row .slider-label span:first-child {
-    color: var(--accent); font-weight: bold;
-  }
-  .god-slider-row input[type=range] {
-    accent-color: var(--accent);
-  }
-
-  #epoch-btn {
-    width: 100%; padding: 12px; margin-top: 8px;
-    background: linear-gradient(135deg, var(--accent), #c4721a);
-    color: #000; font-family: var(--sans); font-size: 14px; font-weight: 800;
-    border: none; border-radius: 6px; cursor: pointer;
-    letter-spacing: 1px; transition: all 0.2s;
-  }
-  #epoch-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
-  #epoch-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-  #epoch-btn.extinct { background: var(--red); }
-
-  #new-game-btn {
-    width: 100%; padding: 10px; margin-top: 6px;
-    background: transparent; color: var(--accent);
-    border: 1px solid var(--accent); border-radius: 6px;
-    font-family: var(--mono); font-size: 11px; cursor: pointer;
-    display: none;
-  }
-  #new-game-btn:hover { background: var(--accent); color: #000; }
-
-  /* ── EPOCH SUMMARY ── */
-  .epoch-summary {
-    display: none; margin-top: 10px; padding: 10px;
-    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
-  }
-  .epoch-summary.visible { display: block; }
-  .epoch-summary-title {
-    font-family: var(--sans); font-size: 11px; font-weight: 800;
-    color: var(--teal); margin-bottom: 8px;
-  }
-  .epoch-stat {
-    display: flex; justify-content: space-between; padding: 3px 0;
-    font-size: 10px; border-bottom: 1px solid var(--border);
-  }
-  .epoch-stat:last-child { border-bottom: none; }
-  .epoch-stat-label { color: var(--dim); }
-  .epoch-stat-val { color: var(--text); font-weight: bold; }
-  .epoch-stat-val.danger { color: var(--red); }
-  .epoch-stat-val.good { color: var(--teal); }
-
-  .extinct-overlay {
-    display: none; position: fixed; inset: 0; z-index: 999;
-    background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
-    flex-direction: column; gap: 16px;
-  }
-  .extinct-overlay.visible { display: flex; }
-  .extinct-overlay h2 {
-    font-family: var(--sans); font-size: 36px; color: var(--red);
-    letter-spacing: 4px;
-  }
-  .extinct-overlay .final-score {
-    font-family: var(--mono); font-size: 14px; color: var(--text);
-  }
-  .extinct-overlay button {
-    margin-top: 12px; padding: 10px 28px;
-    background: var(--accent); color: #000; border: none; border-radius: 6px;
-    font-family: var(--sans); font-size: 14px; font-weight: 800; cursor: pointer;
-  }
-
-  /* ── SCENARIO PRESETS ── */
-  .preset-row {
-    display: flex; gap: 4px; margin-bottom: 10px;
-  }
-  .preset-btn {
-    flex: 1; padding: 6px 0; font-family: var(--mono); font-size: 9px;
-    background: transparent; color: var(--dim); border: 1px solid var(--border);
-    border-radius: 4px; cursor: pointer; transition: all 0.2s;
-    text-transform: uppercase; letter-spacing: 0.5px;
-  }
-  .preset-btn:hover { color: var(--text); border-color: var(--dim); }
-  .preset-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
-  .preset-btn[data-preset="easy"] { }
-  .preset-btn[data-preset="hard"].active { background: var(--red); border-color: var(--red); }
-
-  /* ── SLIDER DANGER ZONES ── */
-  .god-slider-row.danger-low input[type=range] { accent-color: var(--teal); }
-  .god-slider-row.danger-mid input[type=range] { accent-color: var(--gold); }
-  .god-slider-row.danger-high input[type=range] { accent-color: var(--red); }
-  .god-slider-row.danger-low .slider-label span:first-child { color: var(--teal); }
-  .god-slider-row.danger-mid .slider-label span:first-child { color: var(--gold); }
-  .god-slider-row.danger-high .slider-label span:first-child { color: var(--red); }
-
-  /* ── EPOCH TRANSITION ANIMATION ── */
-  @keyframes epochFlash {
-    0% { box-shadow: 0 0 0 0 rgba(232,146,58,0.6); }
-    50% { box-shadow: 0 0 20px 4px rgba(232,146,58,0.3); }
-    100% { box-shadow: 0 0 0 0 rgba(232,146,58,0); }
-  }
-  @keyframes epochPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
-  }
-  .epoch-flash {
-    animation: epochFlash 0.6s ease-out;
-  }
-  .epoch-summary.epoch-enter {
-    animation: epochPulse 0.4s ease-out;
-  }
-  @keyframes dangerPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-  .epoch-stat-val.danger {
-    animation: dangerPulse 1.2s ease-in-out infinite;
-  }
-
-  /* ── VICTORY OVERLAY ── */
-  .victory-overlay {
-    display: none; position: fixed; inset: 0; z-index: 999;
-    background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
-    flex-direction: column; gap: 16px;
-  }
-  .victory-overlay.visible { display: flex; }
-  .victory-overlay h2 {
-    font-family: var(--sans); font-size: 36px; color: var(--teal);
-    letter-spacing: 4px;
-  }
-  .victory-overlay .final-score {
-    font-family: var(--mono); font-size: 14px; color: var(--text);
-  }
-  .victory-overlay button {
-    margin-top: 12px; padding: 10px 28px;
-    background: var(--accent); color: #000; border: none; border-radius: 6px;
-    font-family: var(--sans); font-size: 14px; font-weight: 800; cursor: pointer;
-  }
-
-  /* Hide scientist params in strategy mode */
-  .strategy-mode .scientist-params { display: none; }
-  .strategy-mode #run-btn { display: none; }
-
-  /* ── ATMOSPHERE ── */
-  body {
-    transition: background 2s ease, box-shadow 2s ease;
-  }
-  .atmosphere-drought {
-    background: radial-gradient(ellipse at 50% 100%, rgba(80,40,10,0.08) 0%, var(--bg) 70%) !important;
-  }
-  .atmosphere-wet {
-    background: radial-gradient(ellipse at 50% 100%, rgba(10,40,60,0.06) 0%, var(--bg) 70%) !important;
-  }
-  .atmosphere-disease {
-    box-shadow: inset 0 0 200px rgba(180,120,220,0.04);
-  }
-  @keyframes kpiDangerPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(224,82,82,0); }
-    50% { box-shadow: 0 0 8px 2px rgba(224,82,82,0.25); }
-  }
-  .kpi-danger-pulse {
-    animation: kpiDangerPulse 2s ease-in-out infinite;
-  }
-
-  /* ── EVENT NOTIFICATIONS ── */
-  #notification-container {
-    position: fixed;
-    top: 80px;
-    right: 16px;
-    z-index: 500;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    pointer-events: none;
-    max-width: 320px;
-  }
-  .event-notification {
-    background: rgba(11,15,20,0.92);
-    border: 1px solid rgba(221,193,101,0.2);
-    border-left: 3px solid var(--gold);
-    border-radius: 6px;
-    padding: 10px 14px;
-    color: #DDC165;
-    font-family: var(--mono);
-    font-size: 10px;
-    line-height: 1.5;
-    backdrop-filter: blur(8px);
-    transform: translateX(120%);
-    opacity: 0;
-    transition: transform 0.4s ease, opacity 0.4s ease;
-    pointer-events: auto;
-  }
-  .event-notification.visible {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  .event-notification.fading {
-    transform: translateX(40px);
-    opacity: 0;
-  }
-  .event-notification .notif-gen {
-    color: var(--dim);
-    font-size: 8px;
-    margin-bottom: 2px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  /* ── EPOCH TRANSITION OVERLAY ── */
-  .epoch-transition-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 800;
-    background: rgba(0,0,0,0.85);
-    backdrop-filter: blur(6px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-  }
-  .epoch-transition-overlay.visible {
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .epoch-transition-overlay .epoch-year {
-    font-family: var(--sans);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--dim);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
-  .epoch-transition-overlay .epoch-narrative {
-    font-family: var(--sans);
-    font-size: 16px;
-    font-weight: 400;
-    color: var(--text);
-    max-width: 440px;
-    text-align: center;
-    line-height: 1.7;
-  }
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-dark); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--dim); }
 </style>
 </head>
 <body>
 
 <!-- LOADER -->
 <div id="loader">
-  <div>
-    <h1>Velothrix aurantis</h1>
-    <p style="margin-top:4px;text-align:center">Amber Marsh Stalker · Evolution Simulation</p>
+  <h1>VELOTHRIX</h1>
+  <p>Loading Pyodide runtime...</p>
+  <div class="loader-bar"><div class="loader-bar-fill" id="loader-fill"></div></div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- HEADER -->
+  <div id="header">
+    <h1>VELOTHRIX</h1>
+    <div class="species-tabs" id="species-tabs"></div>
+    <div class="header-controls">
+      <button id="btn-play" onclick="togglePlay()">&#9654; Play</button>
+      <button onclick="setSpeed(1)" class="speed-btn active" data-speed="1">1x</button>
+      <button onclick="setSpeed(5)" class="speed-btn" data-speed="5">5x</button>
+      <button onclick="setSpeed(20)" class="speed-btn" data-speed="20">20x</button>
+      <button onclick="setSpeed(100)" class="speed-btn" data-speed="100">100x</button>
+    </div>
+    <div id="gen-counter">Gen <span id="gen-num">0</span></div>
   </div>
-  <div class="loader-bar"><div class="loader-fill" id="loader-fill"></div></div>
-  <p id="loader-status">Loading Python runtime...</p>
-</div>
 
-<!-- HEADER -->
-<header>
-  <div>
-    <div class="title">Velothrix aurantis</div>
-    <div class="subtitle">Amber Marsh Stalker · Multi-Equation Evolution Model</div>
+  <!-- MAP -->
+  <div id="map-area">
+    <canvas id="map-canvas"></canvas>
+    <div id="event-feed"></div>
   </div>
-  <div class="tabs" id="tabs">
-    <button class="tab-btn active" data-tab="overview">overview</button>
-    <button class="tab-btn" data-tab="selection">selection</button>
-    <button class="tab-btn" data-tab="lifehistory">life history</button>
-    <button class="tab-btn" data-tab="stats">stats</button>
+
+  <!-- RIGHT PANEL -->
+  <div id="panel">
+    <div class="panel-section">
+      <h3 id="panel-title">Global Overview</h3>
+      <div class="panel-toggle">
+        <button class="active" onclick="setPanelMode('global')">Global</button>
+        <button onclick="setPanelMode('tile')">Selected Tile</button>
+      </div>
+      <div id="species-list"></div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Population Trends</h3>
+      <canvas class="chart-canvas tall" id="pop-chart"></canvas>
+    </div>
+
+    <div class="panel-section">
+      <h3 id="trait-title">Trait Distribution</h3>
+      <canvas class="chart-canvas" id="trait-chart"></canvas>
+    </div>
   </div>
-</header>
 
-<div class="layout">
-  <!-- SIDEBAR -->
-  <aside id="sidebar">
-    <div class="mode-toggle">
-      <button id="mode-classic" class="active" onclick="setMode('classic')">CLASSIC</button>
-      <button id="mode-strategy" onclick="setMode('strategy')">STRATEGY</button>
-    </div>
-
-    <!-- GOD PANEL (strategy mode) -->
-    <div class="god-panel" id="god-panel">
-      <div class="god-panel-header">EPOCH CONTROLS</div>
-      <div class="preset-row">
-        <button class="preset-btn" data-preset="easy" onclick="loadPreset('easy')">Easy</button>
-        <button class="preset-btn" data-preset="normal" onclick="loadPreset('normal')">Normal</button>
-        <button class="preset-btn" data-preset="hard" onclick="loadPreset('hard')">Hard</button>
-      </div>
-      <div class="god-slider-row slider-row">
-        <div class="slider-label"><span>Food Scarcity</span><span id="v-god-food">0.3</span></div>
-        <input type="range" id="god-food" min="0" max="0.9" step="0.05" value="0.3">
-      </div>
-      <div class="god-slider-row slider-row">
-        <div class="slider-label"><span>Predator Pressure</span><span id="v-god-pred">0.4</span></div>
-        <input type="range" id="god-pred" min="0.05" max="0.95" step="0.05" value="0.3">
-      </div>
-      <div class="god-slider-row slider-row">
-        <div class="slider-label"><span>Climate Stress</span><span id="v-god-climate">0</span></div>
-        <input type="range" id="god-climate" min="-4" max="4" step="0.5" value="0">
-      </div>
-      <div class="god-slider-row slider-row">
-        <div class="slider-label"><span>Disease Severity</span><span id="v-god-disease">0</span></div>
-        <input type="range" id="god-disease" min="0" max="0.8" step="0.05" value="0">
-      </div>
-      <button id="epoch-btn" onclick="advanceEpoch()">ADVANCE EPOCH</button>
-      <button id="new-game-btn" onclick="newGame()">NEW GAME</button>
-      <div class="epoch-summary" id="epoch-summary">
-        <div class="epoch-summary-title" id="epoch-summary-title">EPOCH 0</div>
-        <div class="epoch-stat"><span class="epoch-stat-label">Population</span><span class="epoch-stat-val" id="es-pop">—</span></div>
-        <div class="epoch-stat"><span class="epoch-stat-label">Dominant Crest</span><span class="epoch-stat-val" id="es-crest">—</span></div>
-        <div class="epoch-stat"><span class="epoch-stat-label">Mean Spines</span><span class="epoch-stat-val" id="es-spine">—</span></div>
-        <div class="epoch-stat"><span class="epoch-stat-label">Mean Fitness</span><span class="epoch-stat-val" id="es-wbar">—</span></div>
-        <div class="epoch-stat"><span class="epoch-stat-label">Score</span><span class="epoch-stat-val good" id="es-score">0</span></div>
-      </div>
-    </div>
-
-    <div class="scientist-params">
-    <div class="param-section">Population</div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Initial N</span><span id="v-N0">200</span></div>
-      <input type="range" id="N0" min="50" max="800" step="10" value="350">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Carrying Capacity K</span><span id="v-K">500</span></div>
-      <input type="range" id="K" min="100" max="2000" step="50" value="800">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Growth Rate r</span><span id="v-r">0.22</span></div>
-      <input type="range" id="r" min="0.05" max="0.5" step="0.01" value="0.22">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Generations</span><span id="v-gens">120</span></div>
-      <input type="range" id="gens" min="40" max="300" step="10" value="120">
-    </div>
-
-    <div class="param-section">Selection</div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Crest Advantage s+</span><span id="v-s_bright">0.15</span></div>
-      <input type="range" id="s_bright" min="0" max="0.4" step="0.01" value="0.15">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Predation Cost s−</span><span id="v-s_pred">0.25</span></div>
-      <input type="range" id="s_pred" min="0" max="0.5" step="0.01" value="0.25">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Het Advantage w₁₂</span><span id="v-w12">1.05</span></div>
-      <input type="range" id="w12" min="0.9" max="1.3" step="0.01" value="1.05">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Predator Pressure</span><span id="v-pred_strength">0.4</span></div>
-      <input type="range" id="pred_strength" min="0.1" max="0.9" step="0.05" value="0.3">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Cycle Length (gens)</span><span id="v-cycle">20</span></div>
-      <input type="range" id="cycle" min="5" max="50" step="5" value="20">
-    </div>
-
-    <div class="param-section">Genetics</div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Initial p(crest)</span><span id="v-p0">0.30</span></div>
-      <input type="range" id="p0" min="0.05" max="0.95" step="0.05" value="0.30">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Migrant p</span><span id="v-p_mig">0.70</span></div>
-      <input type="range" id="p_mig" min="0.1" max="0.95" step="0.05" value="0.70">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Migration Rate m</span><span id="v-mig_rate">0.03</span></div>
-      <input type="range" id="mig_rate" min="0" max="0.15" step="0.005" value="0.03">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Spine h²</span><span id="v-h2_spine">0.50</span></div>
-      <input type="range" id="h2_spine" min="0.1" max="0.9" step="0.05" value="0.50">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Spine Optimum θ</span><span id="v-theta_spine">9.0</span></div>
-      <input type="range" id="theta_spine" min="4" max="16" step="0.5" value="9">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>Optimal Litter C*</span><span id="v-C_opt">5</span></div>
-      <input type="range" id="C_opt" min="2" max="10" step="1" value="5">
-    </div>
-
-    </div><!-- end .scientist-params -->
-    <button id="run-btn">▶ RUN SIMULATION</button>
-  </aside>
-
-  <!-- MAIN -->
-  <main>
-    <button id="mobile-params-toggle" onclick="toggleMobileParams()">⚙ Parameters</button>
-
-    <!-- OVERVIEW TAB -->
-    <div id="panel-overview" class="panel active">
-      <div class="card card-accent-l">
-        <div class="card-title">Species Profile — <em>Velothrix aurantis</em></div>
-        <p style="color:var(--text);line-height:1.65;font-size:11px;margin-top:6px">
-          A slender, semi-aquatic ambush predator (~0.4 kg) inhabiting the brackish tidal marshes of Kel Nara.
-          Males sport iridescent dorsal crests — brilliant in low-predator zones, muted near the deep channels
-          where the Kelp Leviathan hunts by bioluminescent flicker. Females select mates based on crest brightness,
-          but bright males suffer 2–3× higher predation. Lateral spines protect against gape-limited predators.
-          Litter size is under Lack-type optimization. A coastal megapopulation continuously seeds inland marsh
-          isolates via tidal corridor migration.
-        </p>
-        <div class="trait-chips">
-          <div class="trait-chip"><strong>Crest Color C</strong> — sexual selection vs. predation</div>
-          <div class="trait-chip"><strong>Spine Count</strong> — stabilizing selection</div>
-          <div class="trait-chip"><strong>Litter Size</strong> — Lack optimum</div>
-          <div class="trait-chip"><strong>Body Size</strong> — drift + h²=0.55</div>
-        </div>
-      </div>
-
-      <div class="kpi-grid">
-        <div class="kpi"><div class="kpi-label">Final p(crest)</div><div class="kpi-val" id="kpi-p" style="color:var(--accent)">—</div></div>
-        <div class="kpi"><div class="kpi-label">Mean Spines</div><div class="kpi-val" id="kpi-spine" style="color:var(--teal)">—</div></div>
-        <div class="kpi"><div class="kpi-label">Population N</div><div class="kpi-val" id="kpi-N" style="color:var(--blue)">—</div></div>
-        <div class="kpi"><div class="kpi-label">Mean Fitness w̄</div><div class="kpi-val" id="kpi-wbar" style="color:var(--gold)">—</div></div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Crest Color Allele Frequency (p)</div>
-        <div class="card-sub">HWE + dominance selection + genetic drift + island migration + mutation. Predator-active phases shown.</div>
-        <div class="chart-wrap"><canvas id="chart-p" height="180"></canvas></div>
-      </div>
-
-      <div class="two-col">
-        <div class="card">
-          <div class="card-title">Mean Fitness w̄</div>
-          <div class="card-sub">w̄ = p²w₁₁ + 2pqw₁₂ + q²w₂₂</div>
-          <div class="chart-wrap"><canvas id="chart-wbar" height="150"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-title">Population Size N</div>
-          <div class="card-sub">Logistic growth with predator penalty on r</div>
-          <div class="chart-wrap"><canvas id="chart-N" height="150"></canvas></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SELECTION TAB -->
-    <div id="panel-selection" class="panel">
-      <div class="card">
-        <div class="card-title">HWE Genotype Frequencies</div>
-        <div class="card-sub">AA (bright) · Aa (het) · aa (dull) — stacked proportions over generations</div>
-        <div class="chart-wrap"><canvas id="chart-hwe" height="200"></canvas></div>
-      </div>
-
-      <div class="two-col">
-        <div class="card">
-          <div class="card-title">Drift Variance σ²</div>
-          <div class="card-sub">σ² = p(1−p)/2N — shrinks as N→K</div>
-          <div class="chart-wrap"><canvas id="chart-drift" height="160"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-title">Kimura P(fixation)</div>
-          <div class="card-sub">P=(1−e⁻²ˢ)/(1−e⁻⁴ᴺˢ) — flips with predator</div>
-          <div class="chart-wrap"><canvas id="chart-pfix" height="160"></canvas></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Spine Count — Stabilizing Selection</div>
-        <div class="card-sub">Breeder's Eq. R=h²S · Gaussian W(z)=exp(−(z−θ)²/2ω²) · additive genetic variance V_A</div>
-        <div class="chart-wrap"><canvas id="chart-spine" height="180"></canvas></div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Body Size (kg) — Heritable Continuous Trait</div>
-        <div class="card-sub">h²=0.55 · stabilizing selection · drift amplitude ∝ 1/√N</div>
-        <div class="chart-wrap"><canvas id="chart-body" height="150"></canvas></div>
-      </div>
-    </div>
-
-    <!-- LIFE HISTORY TAB -->
-    <div id="panel-lifehistory" class="panel">
-      <div class="card">
-        <div class="card-title">Litter Size — Lack Optimum</div>
-        <div class="card-sub">W(C) = C · exp(−k(C−C*)²) · optimum shifts with predation &amp; food</div>
-        <div class="chart-wrap"><canvas id="chart-litter" height="180"></canvas></div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Euler-Lotka Intrinsic Rate r</div>
-        <div class="card-sub">Σ e^(−rx)·l(x)·m(x) = 1 · solved numerically (Newton's method) each generation</div>
-        <div class="chart-wrap"><canvas id="chart-euler" height="180"></canvas></div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Food Availability &amp; Predator Phase</div>
-        <div class="card-sub">Sinusoidal food cycle · discrete predator phase modulates survival and litter optimum</div>
-        <div class="chart-wrap"><canvas id="chart-env" height="140"></canvas></div>
-      </div>
-
-      <div class="card card-accent-blue">
-        <div class="card-title">Life History Equations</div>
-        <div style="margin-top:10px" class="eq-grid">
-          <div class="eq-item"><div class="eq-name">Lack Optimum</div><div class="eq-formula">W(C) = C · exp(−k(C−C*)²)</div></div>
-          <div class="eq-item"><div class="eq-name">Euler-Lotka</div><div class="eq-formula">Σ e^(−rx)·l(x)·m(x) = 1</div></div>
-          <div class="eq-item"><div class="eq-name">Net Reprod. Rate</div><div class="eq-formula">R₀ = Σ l(x)·m(x)</div></div>
-          <div class="eq-item"><div class="eq-name">Logistic Growth</div><div class="eq-formula">dN/dt = rN(1 − N/K)</div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- STATS TAB -->
-    <div id="panel-stats" class="panel">
-      <div class="card">
-        <div class="card-title">Summary Statistics</div>
-        <div id="stats-table" class="stats-grid" style="margin-top:10px"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">p(crest) vs. Mean Fitness w̄</div>
-        <div class="card-sub">Each point = one generation. Scatter pattern reveals selection regime.</div>
-        <div class="chart-wrap"><canvas id="chart-scatter" height="200"></canvas></div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">All Traits — Normalized (0–1)</div>
-        <div class="card-sub">Scaled to individual ranges for cross-trait phase comparison</div>
-        <div class="chart-wrap"><canvas id="chart-norm" height="200"></canvas></div>
-      </div>
-
-      <div class="card card-accent-teal">
-        <div class="card-title">All Active Equations</div>
-        <div style="margin-top:10px" class="eq-grid">
-          <div class="eq-item"><div class="eq-name">HWE</div><div class="eq-formula">p² + 2pq + q² = 1</div></div>
-          <div class="eq-item"><div class="eq-name">Selection (dominance)</div><div class="eq-formula">Δp = pq[p(w₁₁−w₁₂)+q(w₁₂−w₂₂)] / w̄</div></div>
-          <div class="eq-item"><div class="eq-name">Mean Fitness</div><div class="eq-formula">w̄ = p²w₁₁ + 2pqw₁₂ + q²w₂₂</div></div>
-          <div class="eq-item"><div class="eq-name">Drift Variance</div><div class="eq-formula">σ² = p(1−p) / 2N</div></div>
-          <div class="eq-item"><div class="eq-name">Gene Flow</div><div class="eq-formula">Δp = m(p_m − p)</div></div>
-          <div class="eq-item"><div class="eq-name">Breeder's Equation</div><div class="eq-formula">R = h²S</div></div>
-          <div class="eq-item"><div class="eq-name">Stabilizing Selection</div><div class="eq-formula">W(z) = exp(−(z−θ)²/2ω²)</div></div>
-          <div class="eq-item"><div class="eq-name">Lack Litter Optimum</div><div class="eq-formula">W(C) = C·exp(−k(C−C*)²)</div></div>
-          <div class="eq-item"><div class="eq-name">Euler-Lotka r</div><div class="eq-formula">Σ e^(−rx)·l(x)·m(x) = 1</div></div>
-          <div class="eq-item"><div class="eq-name">Logistic Growth</div><div class="eq-formula">dN/dt = rN(1−N/K)</div></div>
-          <div class="eq-item"><div class="eq-name">Kimura P(fix)</div><div class="eq-formula">P=(1−e⁻²ˢ)/(1−e⁻⁴ᴺˢ)</div></div>
-          <div class="eq-item"><div class="eq-name">Mutation-Sel. Balance</div><div class="eq-formula">q̂ ≈ √(μ/s)</div></div>
-        </div>
-      </div>
-    </div>
-  </main>
+  <!-- EVENT LOG -->
+  <div id="event-log">
+    <div class="log-entry"><span class="ev-gen">[System]</span> <span class="ev-text">Ecosystem initializing...</span></div>
+  </div>
 </div>
-
-<!-- EXTINCT OVERLAY -->
-<div class="extinct-overlay" id="extinct-overlay">
-  <h2>EXTINCTION</h2>
-  <div class="final-score">Final Score: <span id="extinct-score">0</span></div>
-  <div class="final-score">Epochs Survived: <span id="extinct-epochs">0</span></div>
-  <button onclick="newGame()">TRY AGAIN</button>
-</div>
-
-<!-- VICTORY OVERLAY -->
-<div class="victory-overlay" id="victory-overlay">
-  <h2>SURVIVED</h2>
-  <div class="final-score">Final Score: <span id="victory-score">0</span></div>
-  <div class="final-score">All <span id="victory-epochs">15</span> Epochs Survived</div>
-  <div class="final-score">Final Population: <span id="victory-pop">0</span></div>
-  <button onclick="newGame()">PLAY AGAIN</button>
-</div>
-
-<!-- EVENT NOTIFICATIONS -->
-<div id="notification-container"></div>
-
-<!-- EPOCH TRANSITION OVERLAY -->
-<div class="epoch-transition-overlay" id="epoch-transition"></div>
 
 <script>
-// ─────────────────────────────────────────────────────────
-//  PYTHON SIMULATION (Pyodide)
-// ─────────────────────────────────────────────────────────
-const PYTHON_SIM = `
-import random
-import math
-import json
-
-def clamp(v, lo, hi):
-    return max(lo, min(hi, v))
-
-def randn():
-    u, v = 0.0, 0.0
-    while u == 0: u = random.random()
-    while v == 0: v = random.random()
-    return math.sqrt(-2.0 * math.log(u)) * math.cos(2.0 * math.pi * v)
-
-def binomial_sample(n, p):
-    if n <= 0: return 0
-    mean = n * p
-    std = math.sqrt(n * p * (1 - p))
-    sample = round(mean + std * randn())
-    return int(clamp(sample, 0, n))
-
-def update_allele_freq(p, s_bright, s_pred, predator, N, mu, mig_rate, p_mig, w12_het):
-    # Weaker selection coefficients — evolution should be glacially slow
-    sel_scale = 0.3  # dampen all selection by 70%
-    w11 = 1.0 - s_pred * sel_scale if predator else 1.0 + s_bright * sel_scale
-    w12 = w12_het
-    w22 = 1.0 + 0.08 if predator else 1.0 - s_bright * sel_scale * 0.4
-    q = 1.0 - p
-    wbar = p*p*w11 + 2*p*q*w12 + q*q*w22
-    if wbar < 1e-10: wbar = 1e-10
-    dp = (p * q * (p * (w11 - w12) + q * (w12 - w22))) / wbar
-    p_new = p + dp
-    p_new = p_new * (1 - mu) + (1 - p_new) * mu * 0.01
-    p_new = p_new + mig_rate * 0.5 * (p_mig - p_new)
-    # Drift — use larger effective N to dampen stochastic swings
-    eff_N = max(N, 200)  # floor drift at N=200 equivalent
-    succ = binomial_sample(2 * eff_N, clamp(p_new, 0.001, 0.999))
-    return clamp(succ / (2 * eff_N), 0.001, 0.999)
-
-def update_spine(mean, va, N, h2, omega2, theta):
-    Vp = va / h2
-    S = -va * (mean - theta) / (Vp + omega2)
-    R = h2 * S * 0.4  # slower response to selection
-    new_va = clamp(va + 0.02 - va*va/(va + omega2 + Vp), 0.1, 8.0)
-    drift = math.sqrt(max(0, va) / max(N, 200)) * randn() * 0.3
-    return clamp(mean + R + drift, 1.0, 20.0), new_va
-
-def lack_litter(C_opt, predator, food):
-    shift = -0.4 if predator else 0.0
-    food_shift = (food - 0.5) * 0.8
-    return max(1, round(C_opt + shift + food_shift + randn() * 0.2))
-
-def litter_fitness(C, C_opt, k=0.15):
-    return C * math.exp(-k * (C - C_opt)**2)
-
-def update_body(mean, h2, theta, Va, N, omega):
-    S = -h2 * Va * (mean - theta) / (Va / h2 + omega)
-    R = h2 * S * 0.3  # very slow body size evolution
-    drift = math.sqrt(Va / max(N, 200)) * randn() * 0.2
-    return clamp(mean + R + drift, 0.15, 0.8)
-
-def update_pop(N, r, K, predator, disease_rate=0.0, food_base=0.6, pred_strength=0.4, climate_stress=0.0):
-    eff_r = r * 0.85 if predator else r
-    eff_r = eff_r * (1.0 - disease_rate * 0.5)
-    eff_K = K * clamp(food_base + 0.1, 0.2, 1.0)
-    pred_kill = pred_strength * 0.015 * N if predator else 0
-    dN = eff_r * N * (1 - N / eff_K) - pred_kill
-    noise_scale = 0.6 * (1.0 + abs(climate_stress) * 0.15)
-    return max(2, round(N + dN + math.sqrt(max(1,N)) * randn() * noise_scale))
-
-def euler_lotka_r(l1, l2, m1, m2):
-    r = 0.1
-    for _ in range(60):
-        f = math.exp(-r)*l1*m1 + math.exp(-2*r)*l2*m2 - 1
-        df = -math.exp(-r)*l1*m1 - 2*math.exp(-2*r)*l2*m2
-        if abs(df) < 1e-12: break
-        r -= f / df
-    return clamp(r, -0.5, 1.0)
-
-def p_fix(s, N):
-    if abs(s) < 1e-7: return 1.0 / (2 * N)
-    num = 1 - math.exp(-2 * s)
-    den = 1 - math.exp(-4 * N * s)
-    if abs(den) < 1e-12: return 1.0 / (2 * N)
-    return clamp(num / den, 0.0, 1.0)
-
-def run_simulation(cfg_json):
-    if isinstance(cfg_json, str):
-        cfg = json.loads(cfg_json)
-    else:
-        cfg = dict(cfg_json)
-    gens      = int(cfg['gens'])
-    K         = float(cfg['K'])
-    r         = float(cfg['r'])
-    pred_str  = float(cfg['pred_strength'])
-    mig_rate  = float(cfg['mig_rate'])
-    s_bright  = float(cfg['s_bright'])
-    s_pred    = float(cfg['s_pred'])
-    w12       = float(cfg['w12'])
-    mu        = float(cfg['mu'])
-    h2_spine  = float(cfg['h2_spine'])
-    theta_s   = float(cfg['theta_spine'])
-    C_opt     = float(cfg['C_opt'])
-    food_base = float(cfg['food_base'])
-    p_mig     = float(cfg['p_mig'])
-    cycle     = int(cfg['cycle'])
-    disease_rate = float(cfg.get('disease_rate', 0.0))
-    climate_stress = float(cfg.get('climate_stress', 0.0))
-
-    # Initial state — use provided values if continuing from previous epoch
-    N          = int(cfg.get('init_N', cfg['N0']))
-    p          = float(cfg.get('init_p', cfg['p0']))
-    spine_mean = float(cfg.get('init_spine_mean', theta_s + 2.0))
-    spine_va   = float(cfg.get('init_spine_va', 2.0))
-    body_size  = float(cfg.get('init_body_mean', 0.43))
-    gen_offset = int(cfg.get('gen_offset', 0))
-
-    history    = []
-    extinct    = False
-
-    for g in range(gens):
-        phase    = ((gen_offset + g) % cycle) / cycle
-        predator = phase < pred_str
-        food     = food_base + 0.2 * math.sin(2 * math.pi * phase)
-
-        p = update_allele_freq(p, s_bright, s_pred, predator, N, mu, mig_rate, p_mig, w12)
-        spine_mean, spine_va = update_spine(spine_mean, spine_va, N, h2_spine, 3.0, theta_s)
-        body_size = update_body(body_size, 0.55, 0.38, 0.008, N, 0.02)
-
-        litter  = lack_litter(C_opt, predator, food)
-        W_lit   = litter_fitness(litter, C_opt - 1 if predator else C_opt)
-
-        N = update_pop(N, r, K, predator, disease_rate, food_base, pred_str, climate_stress)
-
-        if N <= 5:
-            extinct = True
-
-        l1 = 0.45 if predator else 0.70
-        l2 = 0.25 if predator else 0.50
-        r_el = euler_lotka_r(l1, l2, litter * 0.4, litter * 0.6)
-
-        q = 1.0 - p
-        w11 = 1.0 - s_pred if predator else 1.0 + s_bright
-        w22 = 1.0 + 0.3 if predator else 1.0 - s_bright * 0.4
-        wbar = p*p*w11 + 2*p*q*w12 + q*q*w22
-
-        s_net = -s_pred if predator else s_bright
-
-        history.append({
-            'g': gen_offset + g,
-            'p': round(p, 5),
-            'q': round(1-p, 5),
-            'spine': round(spine_mean, 3),
-            'spine_va': round(spine_va, 4),
-            'body': round(body_size, 4),
-            'litter': litter,
-            'W_lit': round(W_lit, 4),
-            'N': N,
-            'wbar': round(wbar, 5),
-            'r_el': round(r_el, 5),
-            'predator': predator,
-            'drift_var': round(p*q/(2*max(1,N)), 6),
-            'p_fix': round(p_fix(s_net, max(1,N)), 6),
-            'food': round(food, 4),
-            'AA': round(p*p, 5),
-            'Aa': round(2*p*q, 5),
-            'aa': round(q*q, 5),
-        })
-
-        if extinct:
-            break
-
-    end_state = {
-        'N': N, 'p': round(p, 5),
-        'spine_mean': round(spine_mean, 3),
-        'spine_va': round(spine_va, 4),
-        'body_mean': round(body_size, 4),
-        'gen_offset': gen_offset + len(history),
-        'extinct': extinct
-    }
-
-    return json.dumps({'history': history, 'end_state': end_state})
-
-def compute_stats(history):
-    n = len(history)
-    if n == 0: return {}
-
-    def mean(key): return sum(d[key] for d in history) / n
-    def std(key):
-        m = mean(key)
-        return math.sqrt(sum((d[key]-m)**2 for d in history) / n)
-    def corr(k1, k2):
-        m1, m2 = mean(k1), mean(k2)
-        num = sum((d[k1]-m1)*(d[k2]-m2) for d in history)
-        d1 = math.sqrt(sum((d[k1]-m1)**2 for d in history))
-        d2 = math.sqrt(sum((d[k2]-m2)**2 for d in history))
-        return 0 if d1*d2 < 1e-12 else num/(d1*d2)
-
-    return json.dumps([
-        {'label': 'Crest Allele p — Mean',       'value': f'{mean("p"):.4f}',  'unit': ''},
-        {'label': 'Crest Allele p — Std Dev',     'value': f'{std("p"):.4f}',   'unit': ''},
-        {'label': f'Final p (gen {n-1})',          'value': f'{history[-1]["p"]:.4f}', 'unit': ''},
-        {'label': 'Spine Count — Mean',            'value': f'{mean("spine"):.2f}', 'unit': 'spines'},
-        {'label': 'Spine Count — Std Dev',         'value': f'{std("spine"):.2f}',  'unit': 'spines'},
-        {'label': 'Body Size — Mean',              'value': f'{mean("body"):.3f}',  'unit': 'kg'},
-        {'label': 'Litter Size — Mean',            'value': f'{mean("litter"):.2f}','unit': 'pups'},
-        {'label': 'Mean Fitness w̄ — Avg',         'value': f'{mean("wbar"):.4f}',  'unit': ''},
-        {'label': 'Population N — Mean',           'value': str(round(mean("N"))),   'unit': 'indiv.'},
-        {'label': 'Corr(p_crest, wBar)',           'value': f'{corr("p","wbar"):.4f}',    'unit': ''},
-        {'label': 'Corr(spineCount, wBar)',        'value': f'{corr("spine","wbar"):.4f}', 'unit': ''},
-        {'label': 'Corr(litterSize, wBar)',        'value': f'{corr("litter","wbar"):.4f}','unit': ''},
-    ])
-`;
-
-// ─────────────────────────────────────────────────────────
-//  CHART ENGINE (pure Canvas, no dependencies)
-// ─────────────────────────────────────────────────────────
-const C = {
-  accent: '#e8923a', teal: '#3dd9c4', violet: '#b06bcf',
-  blue: '#4d9de0', gold: '#d4b44a', red: '#e05252',
-  dim: '#2a3a4a', text: '#5a7a8a', white: '#dce8f0',
-};
-
-function dpr() { return window.devicePixelRatio || 1; }
-
-function initCanvas(id) {
-  const canvas = document.getElementById(id);
-  if (!canvas) return null;
-  const rect = canvas.parentElement.getBoundingClientRect();
-  const w = rect.width || 600;
-  const h = parseInt(canvas.getAttribute('height')) || 180;
-  const r = dpr();
-  canvas.width = w * r;
-  canvas.height = h * r;
-  canvas.style.width = w + 'px';
-  canvas.style.height = h + 'px';
-  const ctx = canvas.getContext('2d');
-  ctx.scale(r, r);
-  ctx.clearRect(0, 0, w, h);
-  return { ctx, w, h };
-}
-
-const PAD = { l: 42, r: 14, t: 10, b: 28 };
-
-function plotArea(ctx, w, h) {
-  return {
-    x0: PAD.l, y0: PAD.t,
-    x1: w - PAD.r, y1: h - PAD.b,
-    pw: w - PAD.l - PAD.r,
-    ph: h - PAD.t - PAD.b,
-  };
-}
-
-function drawGrid(ctx, a, xMin, xMax, yMin, yMax) {
-  ctx.strokeStyle = '#1a2635';
-  ctx.lineWidth = 1;
-  const xTicks = 6, yTicks = 4;
-  for (let i = 0; i <= xTicks; i++) {
-    const x = a.x0 + (i / xTicks) * a.pw;
-    ctx.beginPath(); ctx.moveTo(x, a.y0); ctx.lineTo(x, a.y1); ctx.stroke();
-    const val = Math.round(xMin + (i / xTicks) * (xMax - xMin));
-    ctx.fillStyle = C.text; ctx.font = '9px Space Mono, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(val, x, a.y1 + 14);
-  }
-  for (let i = 0; i <= yTicks; i++) {
-    const y = a.y1 - (i / yTicks) * a.ph;
-    ctx.beginPath(); ctx.moveTo(a.x0, y); ctx.lineTo(a.x1, y); ctx.stroke();
-    const val = (yMin + (i / yTicks) * (yMax - yMin));
-    const label = Math.abs(val) < 0.01 ? val.toFixed(4) : (Math.abs(val) > 100 ? Math.round(val) : val.toFixed(2));
-    ctx.fillStyle = C.text; ctx.textAlign = 'right';
-    ctx.fillText(label, a.x0 - 4, y + 3);
-  }
-}
-
-function toX(a, v, xMin, xMax) { return a.x0 + ((v - xMin) / (xMax - xMin)) * a.pw; }
-function toY(a, v, yMin, yMax) { return a.y1 - ((v - yMin) / (yMax - yMin)) * a.ph; }
-
-function drawLine(ctx, a, data, key, color, lw, xKey='g') {
-  if (!data.length) return;
-  const xMin = data[0][xKey], xMax = data[data.length-1][xKey];
-  const vals = data.map(d => d[key]).filter(v => isFinite(v));
-  if (!vals.length) return;
-  const yMin = Math.min(...vals), yMax = Math.max(...vals);
-  const pad = (yMax - yMin) * 0.08 || 0.01;
-  return { yMin: yMin - pad, yMax: yMax + pad, xMin, xMax };
-}
-
-function drawLineChart(id, data, series, opts = {}) {
-  const cc = initCanvas(id);
-  if (!cc || !data.length) return;
-  const { ctx, w, h } = cc;
-  const a = plotArea(ctx, w, h);
-  const xKey = opts.xKey || 'g';
-  const xMin = data[0][xKey], xMax = data[data.length-1][xKey];
-
-  // Compute y range across all series
-  let yMin = Infinity, yMax = -Infinity;
-  series.forEach(s => {
-    data.forEach(d => {
-      const v = d[s.key];
-      if (isFinite(v)) { yMin = Math.min(yMin, v); yMax = Math.max(yMax, v); }
-    });
-  });
-  if (opts.yMin !== undefined) yMin = opts.yMin;
-  if (opts.yMax !== undefined) yMax = opts.yMax;
-  const pad = (yMax - yMin) * 0.08 || 0.05;
-  yMin -= pad; yMax += pad;
-
-  // Predator shading
-  if (opts.showPredator) {
-    data.forEach((d, i) => {
-      if (d.predator) {
-        const x0 = toX(a, d.g, xMin, xMax);
-        const x1 = i + 1 < data.length ? toX(a, data[i+1].g, xMin, xMax) : x0 + 2;
-        ctx.fillStyle = 'rgba(224,82,82,0.08)';
-        ctx.fillRect(x0, a.y0, x1 - x0, a.ph);
-      }
-    });
-  }
-
-  drawGrid(ctx, a, xMin, xMax, yMin, yMax);
-
-  // Draw area fills first
-  series.filter(s => s.fill).forEach(s => {
-    ctx.beginPath();
-    ctx.moveTo(toX(a, data[0][xKey], xMin, xMax), a.y1);
-    data.forEach(d => ctx.lineTo(toX(a, d[xKey], xMin, xMax), toY(a, d[s.key], yMin, yMax)));
-    ctx.lineTo(toX(a, data[data.length-1][xKey], xMin, xMax), a.y1);
-    ctx.closePath();
-    const grad = ctx.createLinearGradient(0, a.y0, 0, a.y1);
-    grad.addColorStop(0, s.fill + '55');
-    grad.addColorStop(1, s.fill + '08');
-    ctx.fillStyle = grad;
-    ctx.fill();
-  });
-
-  // Draw lines
-  series.forEach(s => {
-    ctx.beginPath();
-    ctx.strokeStyle = s.color;
-    ctx.lineWidth = s.lw || 1.5;
-    if (s.dash) ctx.setLineDash(s.dash);
-    else ctx.setLineDash([]);
-    data.forEach((d, i) => {
-      const x = toX(a, d[xKey], xMin, xMax);
-      const y = toY(a, d[s.key], yMin, yMax);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-    ctx.setLineDash([]);
-  });
-
-  // Legend
-  let lx = a.x0 + 4;
-  series.forEach(s => {
-    ctx.fillStyle = s.color;
-    ctx.fillRect(lx, a.y0 + 2, 14, 2);
-    ctx.font = '9px Space Mono, monospace';
-    ctx.fillStyle = C.white;
-    ctx.textAlign = 'left';
-    ctx.fillText(s.label || s.key, lx + 18, a.y0 + 8);
-    lx += ctx.measureText(s.label || s.key).width + 36;
-  });
-}
-
-function drawStackedArea(id, data, series) {
-  const cc = initCanvas(id);
-  if (!cc || !data.length) return;
-  const { ctx, w, h } = cc;
-  const a = plotArea(ctx, w, h);
-  const xMin = data[0].g, xMax = data[data.length-1].g;
-  const yMin = 0, yMax = 1;
-  drawGrid(ctx, a, xMin, xMax, yMin, yMax);
-
-  // Stacked proportions
-  series.forEach((s, si) => {
-    ctx.beginPath();
-    data.forEach((d, i) => {
-      let top = 0;
-      for (let j = si; j >= 0; j--) top += d[series[j].key];
-      let bot = top - d[s.key];
-      const x = toX(a, d.g, xMin, xMax);
-      if (i === 0) ctx.moveTo(x, toY(a, top, yMin, yMax));
-      else ctx.lineTo(x, toY(a, top, yMin, yMax));
-    });
-    for (let i = data.length - 1; i >= 0; i--) {
-      let bot = 0;
-      for (let j = si - 1; j >= 0; j--) bot += data[i][series[j].key];
-      ctx.lineTo(toX(a, data[i].g, xMin, xMax), toY(a, bot, yMin, yMax));
-    }
-    ctx.closePath();
-    ctx.fillStyle = s.color + 'bb';
-    ctx.fill();
-    ctx.strokeStyle = s.color;
-    ctx.lineWidth = 0.5;
-    ctx.stroke();
-  });
-
-  let lx = a.x0 + 4;
-  series.forEach(s => {
-    ctx.fillStyle = s.color;
-    ctx.fillRect(lx, a.y0 + 2, 12, 8);
-    ctx.font = '9px Space Mono, monospace';
-    ctx.fillStyle = C.white;
-    ctx.textAlign = 'left';
-    ctx.fillText(s.label, lx + 16, a.y0 + 9);
-    lx += ctx.measureText(s.label).width + 32;
-  });
-}
-
-function drawScatter(id, data, xKey, yKey, color) {
-  const cc = initCanvas(id);
-  if (!cc || !data.length) return;
-  const { ctx, w, h } = cc;
-  const a = plotArea(ctx, w, h);
-  const xs = data.map(d => d[xKey]), ys = data.map(d => d[yKey]);
-  const xMin = Math.min(...xs), xMax = Math.max(...xs);
-  const yMin = Math.min(...ys), yMax = Math.max(...ys);
-  const xp = (xMax - xMin) * 0.05, yp = (yMax - yMin) * 0.05;
-  drawGrid(ctx, a, xMin, xMax, yMin - yp, yMax + yp);
-  ctx.fillStyle = color + '70';
-  data.forEach(d => {
-    const x = toX(a, d[xKey], xMin, xMax);
-    const y = toY(a, d[yKey], yMin - yp, yMax + yp);
-    ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
-  });
-  // Label axes
-  ctx.font = '9px Space Mono, monospace';
-  ctx.fillStyle = C.text; ctx.textAlign = 'center';
-  ctx.fillText(xKey, a.x0 + a.pw / 2, h - 4);
-}
-
-function drawNormalized(id, data, seriesDef) {
-  const cc = initCanvas(id);
-  if (!cc || !data.length) return;
-  const { ctx, w, h } = cc;
-  const a = plotArea(ctx, w, h);
-  const xMin = data[0].g, xMax = data[data.length-1].g;
-  drawGrid(ctx, a, xMin, xMax, 0, 1);
-
-  seriesDef.forEach(s => {
-    const vals = data.map(d => d[s.key]);
-    const mn = Math.min(...vals), mx = Math.max(...vals);
-    const range = mx - mn || 1e-6;
-    ctx.beginPath();
-    ctx.strokeStyle = s.color; ctx.lineWidth = 1.5; ctx.setLineDash([]);
-    data.forEach((d, i) => {
-      const x = toX(a, d.g, xMin, xMax);
-      const y = toY(a, (d[s.key] - mn) / range, 0, 1);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-  });
-
-  let lx = a.x0 + 4;
-  seriesDef.forEach(s => {
-    ctx.fillStyle = s.color; ctx.fillRect(lx, a.y0 + 2, 14, 2);
-    ctx.font = '9px Space Mono, monospace'; ctx.fillStyle = C.white; ctx.textAlign = 'left';
-    ctx.fillText(s.label, lx + 18, a.y0 + 8);
-    lx += ctx.measureText(s.label).width + 36;
-  });
-}
-
-// ─────────────────────────────────────────────────────────
-//  ENVIRONMENTAL STORYTELLING
-// ─────────────────────────────────────────────────────────
-
-// 1a. Atmosphere shifts
-function updateAtmosphere(lastEntry) {
-  if (!lastEntry) return;
-  const body = document.body;
-  const kpiGrid = document.querySelector('.kpi-grid');
-  const K = parseFloat(document.getElementById('K').value) || 800;
-  const food = lastEntry.food;
-  const N = lastEntry.N;
-  const diseaseRate = gameMode === 'strategy'
-    ? parseFloat(document.getElementById('god-disease').value)
-    : 0;
-
-  // Remove previous atmosphere classes
-  body.classList.remove('atmosphere-drought', 'atmosphere-wet', 'atmosphere-disease');
-  if (kpiGrid) kpiGrid.classList.remove('kpi-danger-pulse');
-
-  // Low food → warm drought tint
-  if (food < 0.4) {
-    body.classList.add('atmosphere-drought');
-  }
-  // High food → cool wet tint
-  else if (food > 0.7) {
-    body.classList.add('atmosphere-wet');
-  }
-
-  // Disease haze
-  if (diseaseRate > 0.2) {
-    body.classList.add('atmosphere-disease');
-  }
-
-  // Population crash — pulse KPI grid
-  if (N < 50 && kpiGrid) {
-    kpiGrid.classList.add('kpi-danger-pulse');
-  }
-}
-
-// 1b. Event notification system
-let _prevAnnotationState = { minN: Infinity, pCrossed: null, lastPredGen: -Infinity, lastAnnotationGen: -1 };
-let _notificationQueue = [];
-
-function generateAnnotations(history) {
-  if (history.length < 10) return [];
-  const annotations = [];
-  const recentLen = history.length;
-  const last = history[recentLen - 1];
-
-  // Only check the most recent chunk (last epoch or last run)
-  // Conservative: check last 20 gens only to avoid re-firing old events
-  const checkStart = Math.max(0, recentLen - 22);
-  const recent = history.slice(checkStart);
-
-  // 1. Population drop >40% in 5 gens (scan recent window)
-  for (let i = 5; i < recent.length; i++) {
-    const prev = recent[i - 5];
-    const curr = recent[i];
-    if (prev.N > 0 && (prev.N - curr.N) / prev.N > 0.40 && curr.g > _prevAnnotationState.lastAnnotationGen) {
-      annotations.push({ gen: curr.g, text: `Colony declined sharply \u2014 ${prev.N} to ${curr.N} over 5 generations.` });
-      _prevAnnotationState.lastAnnotationGen = curr.g;
-      break; // one per run
-    }
-  }
-
-  // 2. Allele p crosses 0.5 threshold
-  if (recent.length >= 2) {
-    for (let i = 1; i < recent.length; i++) {
-      const prev = recent[i-1];
-      const curr = recent[i];
-      const crossed = (prev.p < 0.5 && curr.p >= 0.5) ? 'above' : (prev.p >= 0.5 && curr.p < 0.5) ? 'below' : null;
-      if (crossed && _prevAnnotationState.pCrossed !== crossed) {
-        annotations.push({ gen: curr.g, text: `Bright crest allele ${crossed === 'above' ? 'rose above' : 'fell below'} majority.` });
-        _prevAnnotationState.pCrossed = crossed;
-        break;
-      }
-    }
-  }
-
-  // 3. Population hits new all-time low
-  if (last.N < _prevAnnotationState.minN && last.N < 100) {
-    annotations.push({ gen: last.g, text: `Population reached ${last.N} \u2014 lowest recorded.` });
-    _prevAnnotationState.minN = last.N;
-  }
-
-  // 4. Predator phase begins after >10 gens of calm
-  if (recent.length >= 2) {
-    for (let i = 1; i < recent.length; i++) {
-      if (recent[i].predator && !recent[i-1].predator) {
-        // Count how many gens since last predator
-        let calm = 0;
-        for (let j = i - 1; j >= 0 && !recent[j].predator; j--) calm++;
-        // Also check earlier history
-        if (calm < 10 && checkStart > 0) {
-          for (let j = checkStart - 1; j >= Math.max(0, checkStart - 30) && !history[j].predator; j--) calm++;
-        }
-        if (calm > 10) {
-          annotations.push({ gen: recent[i].g, text: `Predator pressure returned after ${calm} generations of calm.` });
-          break;
-        }
-      }
-    }
-  }
-
-  // 5. Food scarcity drops below 0.35
-  if (last.food < 0.35 && recent.length > 1 && recent[recent.length - 2].food >= 0.35) {
-    annotations.push({ gen: last.g, text: `Food scarce \u2014 marshes drying.` });
-  }
-
-  // 6. Disease rate increases (strategy mode)
-  if (gameMode === 'strategy') {
-    const diseaseRate = parseFloat(document.getElementById('god-disease').value);
-    if (diseaseRate > 0.3 && !_prevAnnotationState.diseaseWarned) {
-      annotations.push({ gen: last.g, text: `Disease spreading through the colony.` });
-      _prevAnnotationState.diseaseWarned = true;
-    } else if (diseaseRate <= 0.3) {
-      _prevAnnotationState.diseaseWarned = false;
-    }
-  }
-
-  return annotations;
-}
-
-function showNotification(text, genLabel) {
-  const container = document.getElementById('notification-container');
-  if (!container) return;
-
-  const card = document.createElement('div');
-  card.className = 'event-notification';
-  card.innerHTML = `<div class="notif-gen">${genLabel}</div><div>${text}</div>`;
-  container.appendChild(card);
-
-  // Slide in
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      card.classList.add('visible');
-    });
-  });
-
-  // Fade out after 3s
-  setTimeout(() => {
-    card.classList.remove('visible');
-    card.classList.add('fading');
-    setTimeout(() => card.remove(), 500);
-  }, 3000);
-}
-
-function fireAnnotations(history) {
-  const annotations = generateAnnotations(history);
-  annotations.forEach((ann, i) => {
-    setTimeout(() => {
-      showNotification(ann.text, `Year ${ann.gen}`);
-    }, i * 400); // stagger slightly
-  });
-}
-
-// 1c. Epoch transition cards
-function showEpochTransition(epochNum, prevState, currentState) {
-  return new Promise(resolve => {
-    const overlay = document.getElementById('epoch-transition');
-    if (!overlay) { resolve(); return; }
-
-    const genOffset = currentState.gen_offset || 0;
-    const foodVal = parseFloat(document.getElementById('god-food').value);
-    const food = 1.0 - foodVal; // food_base = 1 - scarcity
-
-    // Food description
-    let foodDesc;
-    if (food > 0.7) foodDesc = 'The rains came early.';
-    else if (food < 0.4) foodDesc = 'Drought deepened.';
-    else foodDesc = 'Conditions held steady.';
-
-    // Population delta
-    const prevN = prevState ? prevState.N : null;
-    const currN = currentState.N;
-    let popDesc;
-    if (prevN && currN > prevN * 1.1) popDesc = `The colony grew to ${currN}.`;
-    else if (prevN && currN < prevN * 0.7) popDesc = `Only ${currN} remain.`;
-    else popDesc = `${currN} individuals persist.`;
-
-    // Crest shift
-    const p = currentState.p;
-    let crestDesc = '';
-    if (p > 0.6) crestDesc = 'Bright crests dominate.';
-    else if (p < 0.4) crestDesc = 'Dull crests spread.';
-
-    overlay.innerHTML = `
-      <div class="epoch-year">Year ${genOffset}</div>
-      <div class="epoch-narrative">${foodDesc} ${popDesc} ${crestDesc}</div>
-    `;
-
-    // Fade in
-    overlay.classList.add('visible');
-
-    // Hold 1.5s, then fade out
-    setTimeout(() => {
-      overlay.classList.remove('visible');
-      setTimeout(resolve, 300); // wait for fade-out transition
-    }, 1500);
-  });
-}
-
-// ─────────────────────────────────────────────────────────
-//  RENDER ALL CHARTS
-// ─────────────────────────────────────────────────────────
-let simData = [];
-
-function renderCharts() {
-  if (!simData.length) return;
-  const d = simData;
-
-  // Update KPIs
-  const last = d[d.length - 1];
-  document.getElementById('kpi-p').textContent = last.p.toFixed(3);
-  document.getElementById('kpi-spine').textContent = last.spine.toFixed(1);
-  document.getElementById('kpi-N').textContent = last.N;
-  document.getElementById('kpi-wbar').textContent = last.wbar.toFixed(3);
-
-  // OVERVIEW
-  drawLineChart('chart-p', d, [
-    { key: 'p', color: C.accent, lw: 2, label: 'p(bright)', fill: C.accent },
-    { key: 'q', color: C.dim,    lw: 1, label: 'q(dull)', dash: [4,3] },
-  ], { yMin: 0, yMax: 1, showPredator: true });
-
-  drawLineChart('chart-wbar', d, [{ key: 'wbar', color: C.gold, lw: 1.5, label: 'w̄', fill: C.gold }]);
-  drawLineChart('chart-N', d, [{ key: 'N', color: C.blue, lw: 1.5, label: 'N', fill: C.blue }]);
-
-  // SELECTION
-  drawStackedArea('chart-hwe', d, [
-    { key: 'AA', color: C.accent, label: 'AA(bright)' },
-    { key: 'Aa', color: C.teal,   label: 'Aa(het)' },
-    { key: 'aa', color: C.violet, label: 'aa(dull)' },
-  ]);
-  drawLineChart('chart-drift', d, [{ key: 'drift_var', color: C.violet, lw: 1.5, label: 'σ²' }]);
-  drawLineChart('chart-pfix', d, [{ key: 'p_fix', color: C.accent, lw: 1.5, label: 'P(fix)' }]);
-  drawLineChart('chart-spine', d, [
-    { key: 'spine',    color: C.teal, lw: 2,   label: 'Mean Spines' },
-    { key: 'spine_va', color: C.dim,  lw: 1,   label: 'V_A', dash: [3,3] },
-  ]);
-  drawLineChart('chart-body', d, [{ key: 'body', color: C.violet, lw: 1.5, label: 'Body (kg)' }]);
-
-  // LIFE HISTORY
-  drawLineChart('chart-litter', d, [
-    { key: 'litter', color: C.gold,  lw: 2,   label: 'Litter Size' },
-    { key: 'W_lit',  color: C.teal,  lw: 1,   label: 'W(litter)', dash: [3,3] },
-  ]);
-  drawLineChart('chart-euler', d, [{ key: 'r_el', color: C.blue, lw: 1.5, label: 'r (Euler-Lotka)', fill: C.blue }]);
-  drawLineChart('chart-env', d, [
-    { key: 'food',    color: C.gold, lw: 1.5, label: 'Food' },
-    { key: (d) => d.predator ? 1 : 0, color: C.red, lw: 1.5, label: 'Predator' },
-  ]);
-  // Fix predator key workaround
-  const envData = d.map(x => ({ ...x, pred_phase: x.predator ? 1 : 0 }));
-  drawLineChart('chart-env', envData, [
-    { key: 'food',       color: C.gold, lw: 1.5, label: 'Food' },
-    { key: 'pred_phase', color: C.red,  lw: 1.5, label: 'Predator Active' },
-  ]);
-
-  // STATS
-  drawScatter('chart-scatter', d, 'p', 'wbar', C.accent);
-  drawNormalized('chart-norm', d, [
-    { key: 'p',     color: C.accent, label: 'p(crest)' },
-    { key: 'spine', color: C.teal,   label: 'spines' },
-    { key: 'body',  color: C.violet, label: 'body size' },
-    { key: 'wbar',  color: C.gold,   label: 'w̄' },
-  ]);
-
-  // Environmental storytelling
-  updateAtmosphere(last);
-}
-
-function renderStats(stats) {
-  const el = document.getElementById('stats-table');
-  el.innerHTML = stats.map(s => `
-    <div class="stat-row">
-      <span class="stat-label">${s.label}</span>
-      <span class="stat-val">${s.value}<span class="stat-unit">${s.unit}</span></span>
-    </div>
-  `).join('');
-}
-
-// ─────────────────────────────────────────────────────────
-//  PYODIDE BOOTSTRAP
-// ─────────────────────────────────────────────────────────
+// ── GLOBALS ──
 let pyodide = null;
-let pyReady = false;
+let playing = false;
+let speed = 1;
+let selectedSpecies = 0; // index into SPECIES
+let panelMode = 'global';
+let selectedTile = null; // {r, c} or null
+let popHistory = []; // [{gen, pops: [5 numbers]}]
+let mapCanvas, mapCtx;
+let popCanvas, popCtx;
+let traitCanvas, traitCtx;
+let animFrame = null;
+let stepsPerFrame = 1;
 
-async function initPyodide() {
+const SPECIES = [
+  { name: 'Velothrix', fullName: 'Velothrix aurantis', color: '#DDC165', trait: 'Crest Brightness' },
+  { name: 'Leviathan', fullName: 'Kelp Leviathan', color: '#C0392B', trait: 'Hunting Range' },
+  { name: 'Crawler', fullName: 'Reed Crawler', color: '#2ECC71', trait: 'Burrowing Depth' },
+  { name: 'Crab', fullName: 'Tidal Crab', color: '#E5591C', trait: 'Shell Thickness' },
+  { name: 'Worm', fullName: 'Bioluminescent Worm', color: '#9B59B6', trait: 'Glow Intensity' }
+];
+
+const MAX_HISTORY = 200;
+
+// ── INIT ──
+async function init() {
   const fill = document.getElementById('loader-fill');
-  const status = document.getElementById('loader-status');
-
-  status.textContent = 'Loading Python runtime (this takes ~10s)...';
   fill.style.width = '20%';
 
   pyodide = await loadPyodide();
-  fill.style.width = '60%';
-  status.textContent = 'Setting up math.pi...';
+  fill.style.width = '50%';
 
-  // Inject math.pi since Python needs it
-  await pyodide.runPythonAsync(`import math`);
-  await pyodide.runPythonAsync(`math.pi = math.pi`);
+  await pyodide.runPythonAsync(SIM_CODE);
   fill.style.width = '80%';
-  status.textContent = 'Running initial simulation...';
 
-  await pyodide.runPythonAsync(PYTHON_SIM);
-  fill.style.width = '95%';
-  pyReady = true;
-
-  await runSim();
+  setupUI();
   fill.style.width = '100%';
-  document.getElementById('loader').style.display = 'none';
+
+  setTimeout(() => {
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('app').style.display = 'grid';
+    resizeCanvases();
+    renderAll();
+  }, 300);
 }
 
-// ─────────────────────────────────────────────────────────
-//  GAME STATE (strategy mode)
-// ─────────────────────────────────────────────────────────
-let gameMode = 'classic'; // 'classic' or 'strategy'
-let epochState = null;    // end_state from last epoch
-let epochNum = 0;
-let totalScore = 0;
-let gameOver = false;
-const EPOCH_GENS = 20;
-const MAX_EPOCHS = 15;
+function setupUI() {
+  // Species tabs
+  const tabsEl = document.getElementById('species-tabs');
+  SPECIES.forEach((sp, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'species-tab' + (i === 0 ? ' active' : '');
+    btn.textContent = sp.name;
+    btn.style.borderColor = i === selectedSpecies ? sp.color : '';
+    btn.onclick = () => selectSpecies(i);
+    tabsEl.appendChild(btn);
+  });
 
-function getConfig() {
-  const cfg = {
-    gens:         gameMode === 'strategy' ? EPOCH_GENS : parseFloat(document.getElementById('gens').value),
-    N0:           parseFloat(document.getElementById('N0').value),
-    K:            parseFloat(document.getElementById('K').value),
-    r:            parseFloat(document.getElementById('r').value),
-    pred_strength: gameMode === 'strategy'
-      ? parseFloat(document.getElementById('god-pred').value)
-      : parseFloat(document.getElementById('pred_strength').value),
-    mig_rate:     parseFloat(document.getElementById('mig_rate').value),
-    p0:           parseFloat(document.getElementById('p0').value),
-    s_bright:     parseFloat(document.getElementById('s_bright').value),
-    s_pred:       parseFloat(document.getElementById('s_pred').value),
-    w12:          parseFloat(document.getElementById('w12').value),
-    mu:           0.001,
-    h2_spine:     parseFloat(document.getElementById('h2_spine').value),
-    theta_spine:  gameMode === 'strategy'
-      ? 9.0 + parseFloat(document.getElementById('god-climate').value)
-      : parseFloat(document.getElementById('theta_spine').value),
-    C_opt:        parseFloat(document.getElementById('C_opt').value),
-    food_base:    gameMode === 'strategy'
-      ? 1.0 - parseFloat(document.getElementById('god-food').value)
-      : 0.6,
-    p_mig:        parseFloat(document.getElementById('p_mig').value),
-    cycle:        parseFloat(document.getElementById('cycle').value),
-    disease_rate: gameMode === 'strategy'
-      ? parseFloat(document.getElementById('god-disease').value)
-      : 0.0,
-    climate_stress: gameMode === 'strategy'
-      ? parseFloat(document.getElementById('god-climate').value)
-      : 0.0,
-  };
+  // Canvases
+  mapCanvas = document.getElementById('map-canvas');
+  mapCtx = mapCanvas.getContext('2d');
+  popCanvas = document.getElementById('pop-chart');
+  popCtx = popCanvas.getContext('2d');
+  traitCanvas = document.getElementById('trait-chart');
+  traitCtx = traitCanvas.getContext('2d');
 
-  // Thread state from previous epoch
-  if (gameMode === 'strategy' && epochState) {
-    cfg.init_N = epochState.N;
-    cfg.init_p = epochState.p;
-    cfg.init_spine_mean = epochState.spine_mean;
-    cfg.init_spine_va = epochState.spine_va;
-    cfg.init_body_mean = epochState.body_mean;
-    cfg.gen_offset = epochState.gen_offset;
+  mapCanvas.addEventListener('click', onMapClick);
+  window.addEventListener('resize', () => { resizeCanvases(); renderAll(); });
+}
+
+function resizeCanvases() {
+  const mapArea = document.getElementById('map-area');
+  mapCanvas.width = mapArea.clientWidth;
+  mapCanvas.height = mapArea.clientHeight;
+
+  const dpr = window.devicePixelRatio || 1;
+  for (const c of [popCanvas, traitCanvas]) {
+    c.width = c.clientWidth * dpr;
+    c.height = c.clientHeight * dpr;
+    c.getContext('2d').scale(dpr, dpr);
+  }
+}
+
+// ── SPECIES SELECTION ──
+function selectSpecies(i) {
+  selectedSpecies = i;
+  document.querySelectorAll('.species-tab').forEach((btn, idx) => {
+    btn.classList.toggle('active', idx === i);
+    btn.style.borderColor = idx === i ? SPECIES[i].color : '';
+  });
+  document.getElementById('trait-title').textContent = SPECIES[i].trait + ' Distribution';
+  renderAll();
+}
+
+// ── PANEL MODE ──
+function setPanelMode(mode) {
+  panelMode = mode;
+  document.querySelectorAll('.panel-toggle button').forEach((btn, idx) => {
+    btn.classList.toggle('active', (mode === 'global' && idx === 0) || (mode === 'tile' && idx === 1));
+  });
+  if (mode === 'global') {
+    selectedTile = null;
+    document.getElementById('panel-title').textContent = 'Global Overview';
+  } else if (!selectedTile) {
+    document.getElementById('panel-title').textContent = 'Click a tile';
+  }
+  renderAll();
+}
+
+// ── MAP CLICK ──
+function onMapClick(e) {
+  const rect = mapCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const gridSize = pyodide.runPython('GRID_SIZE');
+  const tileW = mapCanvas.width / gridSize;
+  const tileH = mapCanvas.height / gridSize;
+
+  const c = Math.floor(x / tileW);
+  const r = Math.floor(y / tileH);
+
+  if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
+    selectedTile = { r, c };
+    panelMode = 'tile';
+    document.querySelectorAll('.panel-toggle button').forEach((btn, idx) => {
+      btn.classList.toggle('active', idx === 1);
+    });
+    document.getElementById('panel-title').textContent = `Tile (${r}, ${c})`;
+    renderAll();
+  }
+}
+
+// ── PLAY / SPEED ──
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('btn-play');
+  btn.textContent = playing ? '⏸ Pause' : '▶ Play';
+  if (playing) tick();
+}
+
+function setSpeed(s) {
+  speed = s;
+  stepsPerFrame = s >= 20 ? s / 5 : 1;
+  document.querySelectorAll('.speed-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.speed) === s);
+  });
+}
+
+// ── SIM TICK ──
+function tick() {
+  if (!playing) return;
+
+  const steps = Math.max(1, Math.floor(stepsPerFrame));
+  for (let i = 0; i < steps; i++) {
+    pyodide.runPython('step()');
   }
 
-  return cfg;
-}
+  // Get state
+  const gen = pyodide.runPython('generation');
+  document.getElementById('gen-num').textContent = gen.toLocaleString();
 
-async function runSim() {
-  if (!pyReady) return;
-  const btn = document.getElementById('run-btn');
-  btn.disabled = true;
-  btn.textContent = 'RUNNING...';
+  // Collect global populations for history
+  const globalPops = [];
+  for (let s = 0; s < 5; s++) {
+    globalPops.push(pyodide.runPython(`get_global_pop(${s})`));
+  }
+  popHistory.push({ gen, pops: globalPops });
+  if (popHistory.length > MAX_HISTORY) popHistory.shift();
 
-  const cfg = getConfig();
+  // Check events
+  const eventsJson = pyodide.runPython('get_and_clear_events()');
+  const events = JSON.parse(eventsJson);
+  if (events.length > 0) {
+    const feed = document.getElementById('event-feed');
+    const log = document.getElementById('event-log');
+    events.forEach(ev => {
+      const feedDiv = document.createElement('div');
+      feedDiv.innerHTML = `<span class="ev-gen">[Gen ${ev.gen}]</span> <span class="ev-text">${ev.text}</span>`;
+      feed.appendChild(feedDiv);
 
-  try {
-    const resultJson = await pyodide.runPythonAsync(`run_simulation('${JSON.stringify(cfg).replace(/'/g, "\\'")}')`);
-    const result = JSON.parse(resultJson);
-    simData = result.history;
-    const histJson = JSON.stringify(result.history);
-    pyodide.globals.set('_hist_json', histJson);
-    const statsJson = await pyodide.runPythonAsync('compute_stats(json.loads(_hist_json))');
-    const stats = JSON.parse(statsJson);
-
-    renderCharts();
-    renderStats(stats);
-    fireAnnotations(simData);
-  } catch(e) {
-    console.error('Simulation error:', e);
-    btn.textContent = 'ERROR — check console';
-    btn.style.background = '#e05252';
-    setTimeout(() => {
-      btn.style.background = '';
-      btn.disabled = false;
-      btn.textContent = '▶ RUN SIMULATION';
-    }, 3000);
-    return;
+      const logDiv = document.createElement('div');
+      logDiv.className = 'log-entry';
+      logDiv.innerHTML = feedDiv.innerHTML;
+      log.appendChild(logDiv);
+    });
+    // Keep feed short
+    while (feed.children.length > 20) feed.removeChild(feed.firstChild);
+    log.scrollTop = log.scrollHeight;
+    feed.scrollTop = feed.scrollHeight;
   }
 
-  btn.disabled = false;
-  btn.textContent = '▶ RUN SIMULATION';
-}
+  renderAll();
 
-// ─────────────────────────────────────────────────────────
-//  STRATEGY MODE — EPOCH RUNNER
-// ─────────────────────────────────────────────────────────
-function setMode(mode) {
-  gameMode = mode;
-  document.getElementById('mode-classic').classList.toggle('active', mode === 'classic');
-  document.getElementById('mode-strategy').classList.toggle('active', mode === 'strategy');
-  document.getElementById('god-panel').classList.toggle('visible', mode === 'strategy');
-  document.querySelector('.layout').classList.toggle('strategy-mode', mode === 'strategy');
-
-  if (mode === 'strategy') {
-    newGame();
+  if (speed <= 5) {
+    animFrame = requestAnimationFrame(tick);
   } else {
-    // Reset to classic
-    epochState = null;
-    epochNum = 0;
-    totalScore = 0;
-    gameOver = false;
-    document.getElementById('epoch-summary').classList.remove('visible');
-    document.getElementById('new-game-btn').style.display = 'none';
-    document.getElementById('extinct-overlay').classList.remove('visible');
-    document.getElementById('victory-overlay').classList.remove('visible');
+    animFrame = setTimeout(tick, 16);
   }
 }
 
-function newGame() {
-  epochState = null;
-  epochNum = 0;
-  totalScore = 0;
-  gameOver = false;
-  simData = [];
-  _prevAnnotationState = { minN: Infinity, pCrossed: null, lastPredGen: -Infinity, lastAnnotationGen: -1 };
-
-  // Clear atmosphere
-  document.body.classList.remove('atmosphere-drought', 'atmosphere-wet', 'atmosphere-disease');
-  const kpiGrid = document.querySelector('.kpi-grid');
-  if (kpiGrid) kpiGrid.classList.remove('kpi-danger-pulse');
-
-  // Clear any lingering notifications
-  const nc = document.getElementById('notification-container');
-  if (nc) nc.innerHTML = '';
-
-  // Reset God Panel to defaults
-  document.getElementById('god-food').value = 0.3;
-  document.getElementById('god-pred').value = 0.3;
-  document.getElementById('god-climate').value = 0;
-  document.getElementById('god-disease').value = 0;
-  updateGodLabels();
-
-  const btn = document.getElementById('epoch-btn');
-  btn.disabled = false;
-  btn.textContent = 'ADVANCE EPOCH';
-  btn.classList.remove('extinct');
-  document.getElementById('new-game-btn').style.display = 'none';
-  document.getElementById('epoch-summary').classList.remove('visible');
-  document.getElementById('extinct-overlay').classList.remove('visible');
-  document.getElementById('victory-overlay').classList.remove('visible');
-
-  // Clear preset highlight
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-
-  // Initialize danger zones
-  updateDangerZones();
-
-  // Clear charts
-  renderCharts();
+// ── RENDER ALL ──
+function renderAll() {
+  renderMap();
+  renderSpeciesList();
+  renderPopChart();
+  renderTraitChart();
 }
 
-function updateGodLabels() {
-  document.getElementById('v-god-food').textContent = parseFloat(document.getElementById('god-food').value).toFixed(2);
-  document.getElementById('v-god-pred').textContent = parseFloat(document.getElementById('god-pred').value).toFixed(2);
-  document.getElementById('v-god-climate').textContent = parseFloat(document.getElementById('god-climate').value).toFixed(1);
-  document.getElementById('v-god-disease').textContent = parseFloat(document.getElementById('god-disease').value).toFixed(2);
-  updateDangerZones();
-}
+// ── RENDER MAP ──
+function renderMap() {
+  const gs = pyodide.runPython('GRID_SIZE');
+  const w = mapCanvas.width;
+  const h = mapCanvas.height;
+  const tw = w / gs;
+  const th = h / gs;
 
-// ── DANGER ZONE COLORS ──
-function updateDangerZones() {
-  const thresholds = [
-    { id: 'god-food', lo: 0.3, hi: 0.65 },
-    { id: 'god-pred', lo: 0.5, hi: 0.75 },
-    { id: 'god-climate', lo: 1.5, hi: 3.0, abs: true },
-    { id: 'god-disease', lo: 0.3, hi: 0.55 },
-  ];
-  thresholds.forEach(t => {
-    const el = document.getElementById(t.id);
-    const row = el.closest('.god-slider-row');
-    const val = t.abs ? Math.abs(parseFloat(el.value)) : parseFloat(el.value);
-    row.classList.remove('danger-low', 'danger-mid', 'danger-high');
-    if (val >= t.hi) row.classList.add('danger-high');
-    else if (val >= t.lo) row.classList.add('danger-mid');
-    else row.classList.add('danger-low');
-  });
-}
+  mapCtx.fillStyle = '#1A0D00';
+  mapCtx.fillRect(0, 0, w, h);
 
-// ── SCENARIO PRESETS ──
-const PRESETS = {
-  easy:   { food: 0.15, pred: 0.15, climate: 0,   disease: 0 },
-  normal: { food: 0.3,  pred: 0.3,  climate: 0,   disease: 0.05 },
-  hard:   { food: 0.5,  pred: 0.5,  climate: 1.0, disease: 0.15 },
-};
+  const si = selectedSpecies;
+  const color = SPECIES[si].color;
 
-function loadPreset(name) {
-  const p = PRESETS[name];
-  if (!p) return;
-  document.getElementById('god-food').value = p.food;
-  document.getElementById('god-pred').value = p.pred;
-  document.getElementById('god-climate').value = p.climate;
-  document.getElementById('god-disease').value = p.disease;
-  updateGodLabels();
+  // Get density data
+  const dataJson = pyodide.runPython(`get_map_data(${si})`);
+  const data = JSON.parse(dataJson);
 
-  // Highlight active preset button
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`.preset-btn[data-preset="${name}"]`).classList.add('active');
-}
+  for (let r = 0; r < gs; r++) {
+    for (let c = 0; c < gs; c++) {
+      const pop = data.pops[r][c];
+      const elev = data.elevations[r][c];
+      const maxPop = data.max_pop || 1;
 
-async function advanceEpoch() {
-  if (!pyReady || gameOver) return;
+      // Base tile color from elevation
+      const baseR = 26 + elev * 20;
+      const baseG = 13 + elev * 15;
+      const baseB = 0 + elev * 8;
 
-  const btn = document.getElementById('epoch-btn');
-  btn.disabled = true;
-  btn.textContent = 'SIMULATING...';
+      const x = c * tw;
+      const y = r * th;
 
-  epochNum++;
-  const cfg = getConfig();
+      // Draw base
+      mapCtx.fillStyle = `rgb(${baseR|0},${baseG|0},${baseB|0})`;
+      mapCtx.fillRect(x, y, tw - 1, th - 1);
 
-  try {
-    const resultJson = await pyodide.runPythonAsync(`run_simulation('${JSON.stringify(cfg).replace(/'/g, "\\'")}')`);
-    const result = JSON.parse(resultJson);
-    epochState = result.end_state;
+      // Draw species density overlay
+      if (pop > 0) {
+        const intensity = Math.min(1, pop / (maxPop * 0.7));
+        const rgb = hexToRgb(color);
+        mapCtx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${intensity * 0.8})`;
+        mapCtx.fillRect(x, y, tw - 1, th - 1);
+      }
 
-    // Append epoch history to cumulative simData
-    const prevEpochState = epochNum > 1 ? { N: simData.length ? simData[simData.length - 1].N : null, p: simData.length ? simData[simData.length - 1].p : null } : null;
-    simData = simData.concat(result.history);
-
-    // Compute epoch stats
-    const epochHistory = result.history;
-    const lastEntry = epochHistory[epochHistory.length - 1];
-    const epochMeanWbar = epochHistory.reduce((s, d) => s + d.wbar, 0) / epochHistory.length;
-    const epochScore = Math.round(epochMeanWbar * lastEntry.N);
-    totalScore += epochScore;
-
-    // Show epoch transition card
-    await showEpochTransition(epochNum, prevEpochState, epochState);
-
-    // Update epoch summary
-    document.getElementById('epoch-summary-title').textContent = `EPOCH ${epochNum} / ${MAX_EPOCHS}`;
-    const popEl = document.getElementById('es-pop');
-    popEl.textContent = `${lastEntry.N} / ${Math.round(cfg.K)}`;
-    popEl.className = 'epoch-stat-val' + (lastEntry.N < 50 ? ' danger' : lastEntry.N > cfg.K * 0.7 ? ' good' : '');
-    document.getElementById('es-crest').textContent = lastEntry.p > 0.5 ? `Bright (${(lastEntry.p*100).toFixed(0)}%)` : `Dull (${((1-lastEntry.p)*100).toFixed(0)}%)`;
-    document.getElementById('es-spine').textContent = lastEntry.spine.toFixed(1);
-    document.getElementById('es-wbar').textContent = epochMeanWbar.toFixed(3);
-    document.getElementById('es-score').textContent = totalScore;
-    document.getElementById('epoch-summary').classList.add('visible');
-
-    // Render
-    renderCharts();
-    fireAnnotations(simData);
-    const histJson = JSON.stringify(simData);
-    pyodide.globals.set('_hist_json', histJson);
-    const statsJson = await pyodide.runPythonAsync('compute_stats(json.loads(_hist_json))');
-    renderStats(JSON.parse(statsJson));
-
-    // Check extinction
-    if (epochState.extinct) {
-      gameOver = true;
-      btn.textContent = 'EXTINCT';
-      btn.classList.add('extinct');
-      document.getElementById('new-game-btn').style.display = 'block';
-      document.getElementById('extinct-score').textContent = totalScore;
-      document.getElementById('extinct-epochs').textContent = epochNum;
-      document.getElementById('extinct-overlay').classList.add('visible');
-      return;
+      // Selected tile highlight
+      if (selectedTile && selectedTile.r === r && selectedTile.c === c) {
+        mapCtx.strokeStyle = '#FFE9A3';
+        mapCtx.lineWidth = 2;
+        mapCtx.strokeRect(x + 1, y + 1, tw - 3, th - 3);
+      }
     }
+  }
 
-    // Epoch transition animation
-    const summary = document.getElementById('epoch-summary');
-    summary.classList.remove('epoch-enter');
-    void summary.offsetWidth; // force reflow
-    summary.classList.add('epoch-enter');
-    // Flash the main content area
-    const mainEl = document.querySelector('main');
-    mainEl.classList.remove('epoch-flash');
-    void mainEl.offsetWidth;
-    mainEl.classList.add('epoch-flash');
-
-    // Check max epochs
-    if (epochNum >= MAX_EPOCHS) {
-      gameOver = true;
-      btn.textContent = `SURVIVED — SCORE: ${totalScore}`;
-      btn.disabled = true;
-      document.getElementById('new-game-btn').style.display = 'block';
-      document.getElementById('victory-score').textContent = totalScore;
-      document.getElementById('victory-epochs').textContent = epochNum;
-      document.getElementById('victory-pop').textContent = lastEntry.N;
-      document.getElementById('victory-overlay').classList.add('visible');
-      return;
-    }
-
-    btn.disabled = false;
-    btn.textContent = 'ADVANCE EPOCH';
-  } catch(e) {
-    console.error('Epoch error:', e);
-    btn.textContent = 'ERROR — check console';
-    btn.disabled = false;
+  // Draw grid lines (very subtle)
+  mapCtx.strokeStyle = 'rgba(61,42,16,0.3)';
+  mapCtx.lineWidth = 0.5;
+  for (let i = 0; i <= gs; i++) {
+    mapCtx.beginPath();
+    mapCtx.moveTo(i * tw, 0);
+    mapCtx.lineTo(i * tw, h);
+    mapCtx.stroke();
+    mapCtx.beginPath();
+    mapCtx.moveTo(0, i * th);
+    mapCtx.lineTo(w, i * th);
+    mapCtx.stroke();
   }
 }
 
-// ─────────────────────────────────────────────────────────
-//  UI WIRING
-// ─────────────────────────────────────────────────────────
+// ── RENDER SPECIES LIST ──
+function renderSpeciesList() {
+  const listEl = document.getElementById('species-list');
+  let html = '';
 
-// Slider live labels (scientist params)
-document.querySelectorAll('.scientist-params input[type=range]').forEach(el => {
-  el.addEventListener('input', () => {
-    const val = parseFloat(el.value);
-    document.getElementById('v-' + el.id).textContent =
-      Number.isInteger(val) ? val : val.toFixed(val < 0.1 ? 3 : 2);
-  });
-});
+  if (panelMode === 'global') {
+    for (let s = 0; s < 5; s++) {
+      const pop = pyodide.runPython(`get_global_pop(${s})`);
+      const trait = pyodide.runPython(`get_global_trait(${s})`);
+      html += `<div class="species-row">
+        <div class="sp-dot" style="background:${SPECIES[s].color}"></div>
+        <div class="sp-name">${SPECIES[s].fullName}</div>
+        <div class="sp-pop">${pop}</div>
+        <div class="sp-trait">${trait.toFixed(3)}</div>
+      </div>`;
+    }
+  } else if (selectedTile) {
+    for (let s = 0; s < 5; s++) {
+      const pop = pyodide.runPython(`get_tile_pop(${selectedTile.r},${selectedTile.c},${s})`);
+      const trait = pyodide.runPython(`get_tile_trait(${selectedTile.r},${selectedTile.c},${s})`);
+      html += `<div class="species-row">
+        <div class="sp-dot" style="background:${SPECIES[s].color}"></div>
+        <div class="sp-name">${SPECIES[s].name}</div>
+        <div class="sp-pop">${pop}</div>
+        <div class="sp-trait">${trait.toFixed(3)}</div>
+      </div>`;
+    }
+  } else {
+    html = '<div style="color:var(--dim);font-size:10px;">Click a tile on the map</div>';
+  }
 
-// God Panel slider labels
-document.querySelectorAll('.god-panel input[type=range]').forEach(el => {
-  el.addEventListener('input', updateGodLabels);
-});
-
-// Run button
-document.getElementById('run-btn').addEventListener('click', runSim);
-
-// Tabs
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
-    // Re-render charts when switching tabs (canvases need resize)
-    setTimeout(renderCharts, 50);
-  });
-});
-
-// Resize
-let resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(renderCharts, 150);
-});
-
-// Mobile
-function toggleMobileParams() {
-  const s = document.getElementById('sidebar');
-  s.classList.toggle('mobile-open');
+  listEl.innerHTML = html;
 }
 
-// Boot
-initPyodide();
+// ── RENDER POP CHART ──
+function renderPopChart() {
+  const ctx = popCtx;
+  const w = popCanvas.clientWidth;
+  const h = popCanvas.clientHeight;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#1A0D00';
+  ctx.fillRect(0, 0, w, h);
+
+  if (popHistory.length < 2) return;
+
+  // Find max for scaling
+  let maxPop = 1;
+  popHistory.forEach(entry => {
+    entry.pops.forEach(p => { if (p > maxPop) maxPop = p; });
+  });
+
+  const padL = 35;
+  const padR = 5;
+  const padT = 5;
+  const padB = 15;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  // Y axis labels
+  ctx.fillStyle = '#5a6a50';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(maxPop.toString(), padL - 4, padT + 9);
+  ctx.fillText('0', padL - 4, h - padB);
+
+  // X axis
+  ctx.strokeStyle = '#3d2a10';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(padL, h - padB);
+  ctx.lineTo(w - padR, h - padB);
+  ctx.stroke();
+
+  // Draw lines for each species
+  for (let s = 0; s < 5; s++) {
+    ctx.strokeStyle = SPECIES[s].color;
+    ctx.lineWidth = s === selectedSpecies ? 2 : 1;
+    ctx.globalAlpha = s === selectedSpecies ? 1 : 0.4;
+    ctx.beginPath();
+
+    for (let i = 0; i < popHistory.length; i++) {
+      const x = padL + (i / (popHistory.length - 1)) * plotW;
+      const y = padT + plotH - (popHistory[i].pops[s] / maxPop) * plotH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── RENDER TRAIT CHART ──
+function renderTraitChart() {
+  const ctx = traitCtx;
+  const w = traitCanvas.clientWidth;
+  const h = traitCanvas.clientHeight;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#1A0D00';
+  ctx.fillRect(0, 0, w, h);
+
+  // Get histogram data from Python
+  const histJson = pyodide.runPython(`get_trait_histogram(${selectedSpecies})`);
+  const hist = JSON.parse(histJson);
+
+  if (!hist || hist.length === 0) return;
+
+  const padL = 25;
+  const padR = 5;
+  const padT = 5;
+  const padB = 18;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  const maxCount = Math.max(...hist.map(b => b.count), 1);
+  const barW = plotW / hist.length;
+
+  const rgb = hexToRgb(SPECIES[selectedSpecies].color);
+
+  for (let i = 0; i < hist.length; i++) {
+    const barH = (hist[i].count / maxCount) * plotH;
+    const x = padL + i * barW;
+    const y = padT + plotH - barH;
+
+    ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.7)`;
+    ctx.fillRect(x + 1, y, barW - 2, barH);
+  }
+
+  // X axis labels
+  ctx.fillStyle = '#8a7560';
+  ctx.font = '8px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('0.0', padL, h - 2);
+  ctx.fillText('0.5', padL + plotW / 2, h - 2);
+  ctx.fillText('1.0', padL + plotW, h - 2);
+}
+
+// ── UTIL ──
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { r, g, b };
+}
+
+// ── PYTHON SIM CODE ──
+const SIM_CODE = `
+import json
+import math
+import random
+
+# ── CONFIG ──
+GRID_SIZE = 8
+NUM_SPECIES = 5
+
+# Species indices
+VELOTHRIX = 0
+LEVIATHAN = 1
+CRAWLER = 2
+CRAB = 3
+WORM = 4
+
+# Carrying capacities per tile
+BASE_K = [60, 15, 40, 35, 80]  # Velothrix, Leviathan, Crawler, Crab, Worm
+
+# Growth rates (per generation, logistic)
+GROWTH_RATES = [0.03, 0.015, 0.025, 0.02, 0.04]
+
+# Mutation rate and step
+MUTATION_RATE = 0.002
+MUTATION_STEP = 0.01
+
+# Drift strength (lower = less drift)
+DRIFT_STRENGTH = 0.005
+
+# Selection strength (how much trait affects fitness)
+SELECTION_STRENGTH = 0.02
+
+# Predation rates (fraction of prey eaten per predator per gen)
+PREDATION_LEVIATHAN_VELOTHRIX = 0.003
+PREDATION_LEVIATHAN_WORM = 0.002
+PREDATION_VELOTHRIX_WORM = 0.001
+
+# Competition coefficients
+COMPETITION_VELOTHRIX_CRAWLER = 0.001
+COMPETITION_CRAB_SPACE = 0.0005
+
+# Migration rate (fraction that migrates per gen)
+MIGRATION_RATE = 0.01
+
+# Event probabilities per gen (very rare)
+DROUGHT_PROB = 0.002
+FLOOD_PROB = 0.002
+DISEASE_PROB = 0.001
+
+# Season cycle length
+SEASON_LENGTH = 100
+
+# Speciation tracking
+SPECIATION_THRESHOLD = 0.3
+SPECIATION_GENS = 100
+
+# ── STATE ──
+generation = 0
+events_buffer = []
+
+# Grid state: [row][col] -> tile
+# Each tile: {
+#   elevation: float 0-1,
+#   food: float 0-1,
+#   water: float 0-1,
+#   temp: float 0-1,
+#   pops: [5 ints],         # population per species
+#   traits: [5 floats],     # mean trait per species (0-1)
+#   trait_var: [5 floats],  # trait variance per species
+# }
+
+grid = []
+
+def generate_elevation():
+    """Simple value noise for terrain."""
+    elev = [[0.0]*GRID_SIZE for _ in range(GRID_SIZE)]
+    # Use midpoint displacement-like approach
+    random.seed(42)  # Reproducible
+    # Place some random control points
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            # Distance from center creates a basin (marsh in center, shores at edges)
+            cx, cy = GRID_SIZE/2, GRID_SIZE/2
+            dist = math.sqrt((r-cx)**2 + (c-cy)**2) / (GRID_SIZE * 0.7)
+            base = 0.3 + dist * 0.5
+            noise = random.uniform(-0.15, 0.15)
+            elev[r][c] = max(0.0, min(1.0, base + noise))
+    random.seed()  # Unseed
+    return elev
+
+def init_grid():
+    global grid
+    elevations = generate_elevation()
+    grid = []
+    for r in range(GRID_SIZE):
+        row = []
+        for c in range(GRID_SIZE):
+            elev = elevations[r][c]
+            # Habitat suitability based on elevation
+            # Low elevation = deep water (leviathans), mid = marsh (velothrix), high = shore (crabs)
+            tile = {
+                'elevation': elev,
+                'food': 0.7 + random.uniform(-0.1, 0.1),
+                'water': max(0, 1.0 - elev + random.uniform(-0.1, 0.1)),
+                'temp': 0.5 + random.uniform(-0.1, 0.1),
+                'pops': [0]*NUM_SPECIES,
+                'traits': [0.5]*NUM_SPECIES,
+                'trait_var': [0.01]*NUM_SPECIES,
+            }
+
+            # Set initial populations based on habitat
+            # Velothrix: prefer mid elevation (0.3-0.7)
+            if 0.2 < elev < 0.8:
+                tile['pops'][VELOTHRIX] = int(BASE_K[VELOTHRIX] * random.uniform(0.4, 0.7))
+            else:
+                tile['pops'][VELOTHRIX] = int(BASE_K[VELOTHRIX] * random.uniform(0.05, 0.2))
+
+            # Leviathan: prefer low elevation (deep water)
+            if elev < 0.5:
+                tile['pops'][LEVIATHAN] = int(BASE_K[LEVIATHAN] * random.uniform(0.3, 0.6))
+            else:
+                tile['pops'][LEVIATHAN] = int(BASE_K[LEVIATHAN] * random.uniform(0.0, 0.1))
+
+            # Crawler: prefer mid-low (reeds)
+            if 0.25 < elev < 0.65:
+                tile['pops'][CRAWLER] = int(BASE_K[CRAWLER] * random.uniform(0.3, 0.6))
+            else:
+                tile['pops'][CRAWLER] = int(BASE_K[CRAWLER] * random.uniform(0.05, 0.15))
+
+            # Crab: prefer high elevation (shores)
+            if elev > 0.5:
+                tile['pops'][CRAB] = int(BASE_K[CRAB] * random.uniform(0.3, 0.6))
+            else:
+                tile['pops'][CRAB] = int(BASE_K[CRAB] * random.uniform(0.0, 0.1))
+
+            # Worm: everywhere, prefer wet
+            water_factor = tile['water']
+            tile['pops'][WORM] = int(BASE_K[WORM] * water_factor * random.uniform(0.3, 0.7))
+
+            # Initial trait values with slight spatial variation
+            for s in range(NUM_SPECIES):
+                tile['traits'][s] = 0.5 + random.uniform(-0.05, 0.05)
+                tile['trait_var'][s] = 0.01
+
+            row.append(tile)
+        grid.append(row)
+
+init_grid()
+
+def habitat_suitability(elev, species_idx):
+    """Returns 0-1 suitability for species at given elevation."""
+    if species_idx == VELOTHRIX:
+        # Peak at 0.5
+        return max(0, 1.0 - abs(elev - 0.5) * 2.5)
+    elif species_idx == LEVIATHAN:
+        # Prefer low (deep water)
+        return max(0, 1.0 - elev * 1.8)
+    elif species_idx == CRAWLER:
+        # Peak at 0.4
+        return max(0, 1.0 - abs(elev - 0.4) * 2.5)
+    elif species_idx == CRAB:
+        # Prefer high (shores)
+        return max(0, elev * 1.5 - 0.2)
+    elif species_idx == WORM:
+        # Everywhere but slightly prefer wet
+        return max(0.2, 1.0 - elev * 0.5)
+    return 0.5
+
+def get_season():
+    """Returns season factor 0-1 (0=harsh winter, 1=peak summer)."""
+    return 0.5 + 0.5 * math.sin(2 * math.pi * generation / SEASON_LENGTH)
+
+def step():
+    """Advance one generation."""
+    global generation
+    generation += 1
+    season = get_season()
+
+    # 1. Environment update
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            tile = grid[r][c]
+            # Food regrows
+            tile['food'] = min(1.0, tile['food'] + 0.01 * season)
+            # Temperature seasonal
+            tile['temp'] = 0.4 + 0.2 * season + random.uniform(-0.02, 0.02)
+
+    # 2. Random events (very rare)
+    _check_events(season)
+
+    # 3. Per-tile, per-species dynamics
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            _update_tile(r, c, season)
+
+    # 4. Migration
+    _migrate()
+
+    # 5. Speciation check (every 50 gens to save compute)
+    if generation % 50 == 0:
+        _check_speciation()
+
+def _check_events(season):
+    """Check for random environmental events."""
+    if random.random() < DROUGHT_PROB:
+        # Drought affects a region
+        cr = random.randint(0, GRID_SIZE-1)
+        cc = random.randint(0, GRID_SIZE-1)
+        radius = random.randint(1, 2)
+        for r in range(max(0,cr-radius), min(GRID_SIZE,cr+radius+1)):
+            for c in range(max(0,cc-radius), min(GRID_SIZE,cc+radius+1)):
+                grid[r][c]['food'] *= 0.4
+                grid[r][c]['water'] *= 0.5
+        region = "eastern" if cc > GRID_SIZE//2 else "western"
+        events_buffer.append({
+            'gen': generation,
+            'text': f'Drought in {region} marsh — food and water levels dropping'
+        })
+
+    if random.random() < FLOOD_PROB:
+        cr = random.randint(0, GRID_SIZE-1)
+        cc = random.randint(0, GRID_SIZE-1)
+        radius = random.randint(1, 2)
+        for r in range(max(0,cr-radius), min(GRID_SIZE,cr+radius+1)):
+            for c in range(max(0,cc-radius), min(GRID_SIZE,cc+radius+1)):
+                grid[r][c]['water'] = min(1.0, grid[r][c]['water'] + 0.3)
+                # Flooding hurts land species
+                grid[r][c]['pops'][CRAB] = int(grid[r][c]['pops'][CRAB] * 0.7)
+                grid[r][c]['pops'][CRAWLER] = int(grid[r][c]['pops'][CRAWLER] * 0.8)
+        region = "northern" if cr < GRID_SIZE//2 else "southern"
+        events_buffer.append({
+            'gen': generation,
+            'text': f'Flooding in {region} tidal flats — water levels surging'
+        })
+
+    if random.random() < DISEASE_PROB:
+        target = random.randint(0, NUM_SPECIES-1)
+        names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
+        # Disease affects all tiles but mildly
+        for r in range(GRID_SIZE):
+            for c in range(GRID_SIZE):
+                grid[r][c]['pops'][target] = int(grid[r][c]['pops'][target] * 0.85)
+        events_buffer.append({
+            'gen': generation,
+            'text': f'Disease outbreak affecting {names[target]} population'
+        })
+
+def _update_tile(r, c, season):
+    """Update populations and traits for one tile."""
+    tile = grid[r][c]
+    elev = tile['elevation']
+
+    for s in range(NUM_SPECIES):
+        pop = tile['pops'][s]
+        if pop <= 0:
+            # Small chance of recolonization
+            if random.random() < 0.001 * habitat_suitability(elev, s):
+                tile['pops'][s] = 1
+                tile['traits'][s] = 0.5 + random.uniform(-0.1, 0.1)
+            continue
+
+        trait = tile['traits'][s]
+        trait_v = tile['trait_var'][s]
+
+        # Effective carrying capacity depends on habitat and food
+        suit = habitat_suitability(elev, s)
+        k = BASE_K[s] * suit * tile['food'] * (0.7 + 0.3 * season)
+
+        # ── SPECIES INTERACTIONS ──
+        if s == VELOTHRIX:
+            # Predation by Leviathans (brighter = more visible)
+            lev_pop = tile['pops'][LEVIATHAN]
+            predation_loss = lev_pop * PREDATION_LEVIATHAN_VELOTHRIX * (0.5 + trait * 0.5)
+            # Competition with crawlers
+            craw_pop = tile['pops'][CRAWLER]
+            comp_loss = craw_pop * COMPETITION_VELOTHRIX_CRAWLER
+            k = max(1, k - comp_loss * 10)
+            # Sexual selection: brighter = more mates (increases effective growth)
+            sex_sel_bonus = trait * 0.01
+            growth = GROWTH_RATES[s] + sex_sel_bonus
+            # Net selection pressure on trait: sexual sel pushes UP, predation pushes DOWN
+            sel_pressure = SELECTION_STRENGTH * (0.5 - trait) * 0.1  # mild stabilizing
+            sel_pressure += SELECTION_STRENGTH * 0.3  # sexual selection pushes up
+            if lev_pop > 0:
+                sel_pressure -= SELECTION_STRENGTH * 0.5 * (lev_pop / max(1, BASE_K[LEVIATHAN]))
+        elif s == LEVIATHAN:
+            # Energy from prey
+            vel_pop = tile['pops'][VELOTHRIX]
+            worm_pop = tile['pops'][WORM]
+            prey_available = vel_pop + worm_pop * 0.5
+            # Hunting range: wider = more prey but more energy cost
+            hunt_bonus = trait * 0.005 * prey_available / max(1, BASE_K[VELOTHRIX])
+            energy_cost = trait * trait * 0.01
+            growth = GROWTH_RATES[s] + hunt_bonus - energy_cost
+            k = max(1, k * (0.5 + prey_available / max(1, BASE_K[VELOTHRIX] + BASE_K[WORM])))
+            sel_pressure = 0
+            if prey_available > BASE_K[VELOTHRIX] * 0.3:
+                sel_pressure = SELECTION_STRENGTH * 0.2  # push range up when prey abundant
+            else:
+                sel_pressure = -SELECTION_STRENGTH * 0.2  # push range down when prey scarce
+            predation_loss = 0
+        elif s == CRAWLER:
+            # Burrowing depth: deeper = safer but less food
+            safety = trait * 0.8
+            food_access = 1.0 - trait * 0.4
+            lev_pop = tile['pops'][LEVIATHAN]
+            predation_loss = lev_pop * 0.001 * (1 - safety)
+            growth = GROWTH_RATES[s] * food_access
+            vel_pop = tile['pops'][VELOTHRIX]
+            comp_loss = vel_pop * COMPETITION_VELOTHRIX_CRAWLER
+            k = max(1, k * food_access - comp_loss * 5)
+            sel_pressure = 0
+            if lev_pop > BASE_K[LEVIATHAN] * 0.3:
+                sel_pressure = SELECTION_STRENGTH * 0.2  # burrow deeper when predators present
+            else:
+                sel_pressure = -SELECTION_STRENGTH * 0.1  # come up for food when safe
+        elif s == CRAB:
+            # Shell thickness: thicker = armor but slow
+            armor = trait * 0.7
+            mobility = 1.0 - trait * 0.3
+            growth = GROWTH_RATES[s] * mobility
+            # Space competition
+            total_pop = sum(tile['pops'])
+            space_pressure = total_pop * COMPETITION_CRAB_SPACE
+            k = max(1, k - space_pressure * 5)
+            predation_loss = 0
+            sel_pressure = SELECTION_STRENGTH * (0.5 - trait) * 0.1  # stabilizing
+            if total_pop > sum(BASE_K) * 0.5:
+                sel_pressure += SELECTION_STRENGTH * 0.15  # thicker shells when crowded
+        elif s == WORM:
+            # Glow: brighter = more mates but more predators
+            vel_pop = tile['pops'][VELOTHRIX]
+            lev_pop = tile['pops'][LEVIATHAN]
+            predation_loss = (vel_pop * PREDATION_VELOTHRIX_WORM + lev_pop * PREDATION_LEVIATHAN_WORM) * (0.3 + trait * 0.7)
+            # Sexual selection for brightness
+            sex_sel_bonus = trait * 0.01
+            growth = GROWTH_RATES[s] + sex_sel_bonus
+            sel_pressure = SELECTION_STRENGTH * 0.2  # sexual sel pushes up
+            predator_count = vel_pop + lev_pop
+            if predator_count > 10:
+                sel_pressure -= SELECTION_STRENGTH * 0.3 * (predator_count / max(1, BASE_K[VELOTHRIX] + BASE_K[LEVIATHAN]))
+
+        # ── POPULATION DYNAMICS (logistic) ──
+        if s != LEVIATHAN:
+            # Apply predation
+            pop = max(0, pop - int(predation_loss * pop))
+
+        if k <= 0:
+            k = 1
+        dpop = growth * pop * (1.0 - pop / k)
+        new_pop = max(0, int(pop + dpop + random.uniform(-0.5, 0.5)))
+
+        # Stochastic extinction for very small populations
+        if 0 < new_pop <= 2 and random.random() < 0.05:
+            new_pop = 0
+
+        tile['pops'][s] = min(new_pop, int(k * 1.5))  # hard cap
+
+        # ── TRAIT EVOLUTION ──
+        if tile['pops'][s] > 0:
+            # Selection
+            new_trait = trait + sel_pressure
+
+            # Drift (inversely proportional to sqrt(pop))
+            if tile['pops'][s] > 0:
+                drift = random.gauss(0, DRIFT_STRENGTH / math.sqrt(max(1, tile['pops'][s])))
+                new_trait += drift
+
+            # Mutation
+            if random.random() < MUTATION_RATE * tile['pops'][s]:
+                new_trait += random.gauss(0, MUTATION_STEP)
+
+            # Clamp to 0-1
+            tile['traits'][s] = max(0.0, min(1.0, new_trait))
+
+            # Update variance (simplified)
+            tile['trait_var'][s] = max(0.001, tile['trait_var'][s] * 0.99 + MUTATION_RATE * 0.01)
+
+def _migrate():
+    """Species migrate between adjacent tiles."""
+    # Build migration deltas first, apply after
+    deltas = [[{s: 0 for s in range(NUM_SPECIES)} for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            tile = grid[r][c]
+            neighbors = []
+            for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
+                nr, nc = r+dr, c+dc
+                if 0 <= nr < GRID_SIZE and 0 <= nc < GRID_SIZE:
+                    neighbors.append((nr, nc))
+
+            if not neighbors:
+                continue
+
+            for s in range(NUM_SPECIES):
+                pop = tile['pops'][s]
+                if pop < 3:
+                    continue
+
+                k = BASE_K[s] * habitat_suitability(tile['elevation'], s)
+                if k <= 0:
+                    continue
+
+                # Migrate when over capacity
+                pressure = pop / k
+                if pressure < 0.7:
+                    continue
+
+                migrants = max(0, int(pop * MIGRATION_RATE * (pressure - 0.5)))
+                if migrants <= 0:
+                    continue
+
+                # Distribute among neighbors based on suitability
+                suits = []
+                for nr, nc in neighbors:
+                    ns = habitat_suitability(grid[nr][nc]['elevation'], s)
+                    npop = grid[nr][nc]['pops'][s]
+                    nk = BASE_K[s] * ns
+                    if nk > 0 and npop < nk:
+                        suits.append((nr, nc, ns * (1 - npop/nk)))
+                    else:
+                        suits.append((nr, nc, 0))
+
+                total_suit = sum(x[2] for x in suits)
+                if total_suit <= 0:
+                    continue
+
+                actual_migrants = min(migrants, pop // 4)  # Never migrate more than 25%
+                deltas[r][c][s] -= actual_migrants
+
+                for nr, nc, su in suits:
+                    share = int(actual_migrants * su / total_suit)
+                    deltas[nr][nc][s] += share
+
+    # Apply deltas
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            for s in range(NUM_SPECIES):
+                grid[r][c]['pops'][s] = max(0, grid[r][c]['pops'][s] + deltas[r][c][s])
+
+# Track trait divergence for speciation
+trait_divergence_counter = {}
+
+def _check_speciation():
+    """Check if any species has diverged enough to speciate."""
+    for s in range(NUM_SPECIES):
+        # Collect traits across all tiles with population
+        traits_by_tile = []
+        for r in range(GRID_SIZE):
+            for c in range(GRID_SIZE):
+                if grid[r][c]['pops'][s] > 5:
+                    traits_by_tile.append((r, c, grid[r][c]['traits'][s]))
+
+        if len(traits_by_tile) < 4:
+            continue
+
+        # Find max trait difference
+        trait_vals = [t[2] for t in traits_by_tile]
+        max_diff = max(trait_vals) - min(trait_vals)
+
+        key = f"species_{s}"
+        if max_diff > SPECIATION_THRESHOLD:
+            trait_divergence_counter[key] = trait_divergence_counter.get(key, 0) + 50  # we check every 50 gens
+            if trait_divergence_counter[key] >= SPECIATION_GENS:
+                names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
+                trait_names = ['crest brightness', 'hunting range', 'burrowing depth', 'shell thickness', 'glow intensity']
+                # Find where the split is
+                sorted_traits = sorted(traits_by_tile, key=lambda x: x[2])
+                low_region = sorted_traits[0]
+                high_region = sorted_traits[-1]
+                events_buffer.append({
+                    'gen': generation,
+                    'text': f'{names[s]} population split detected — variant near ({low_region[0]},{low_region[1]}) has {trait_names[s]} {low_region[2]:.2f} vs ({high_region[0]},{high_region[1]}) at {high_region[2]:.2f}'
+                })
+                trait_divergence_counter[key] = 0  # Reset to avoid spam
+        else:
+            trait_divergence_counter[key] = 0
+
+    # Also check for population surges/crashes
+    for s in range(NUM_SPECIES):
+        total = sum(grid[r][c]['pops'][s] for r in range(GRID_SIZE) for c in range(GRID_SIZE))
+        expected = sum(BASE_K[s] * habitat_suitability(grid[r][c]['elevation'], s) * 0.5
+                      for r in range(GRID_SIZE) for c in range(GRID_SIZE))
+        names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
+        if expected > 0:
+            ratio = total / expected
+            if ratio > 2.0:
+                events_buffer.append({
+                    'gen': generation,
+                    'text': f'{names[s]} population surge — {total} individuals ({ratio:.1f}x expected)'
+                })
+            elif ratio < 0.2 and total > 0:
+                events_buffer.append({
+                    'gen': generation,
+                    'text': f'{names[s]} population critically low — only {total} individuals remain'
+                })
+
+# ── API FUNCTIONS (called from JS) ──
+
+def get_global_pop(species_idx):
+    total = 0
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            total += grid[r][c]['pops'][species_idx]
+    return total
+
+def get_global_trait(species_idx):
+    total_trait = 0.0
+    total_pop = 0
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            p = grid[r][c]['pops'][species_idx]
+            if p > 0:
+                total_trait += grid[r][c]['traits'][species_idx] * p
+                total_pop += p
+    if total_pop == 0:
+        return 0.5
+    return total_trait / total_pop
+
+def get_tile_pop(r, c, species_idx):
+    return grid[r][c]['pops'][species_idx]
+
+def get_tile_trait(r, c, species_idx):
+    return grid[r][c]['traits'][species_idx]
+
+def get_map_data(species_idx):
+    pops = []
+    elevations = []
+    max_pop = 1
+    for r in range(GRID_SIZE):
+        pop_row = []
+        elev_row = []
+        for c in range(GRID_SIZE):
+            p = grid[r][c]['pops'][species_idx]
+            pop_row.append(p)
+            elev_row.append(grid[r][c]['elevation'])
+            if p > max_pop:
+                max_pop = p
+        pops.append(pop_row)
+        elevations.append(elev_row)
+    return json.dumps({'pops': pops, 'elevations': elevations, 'max_pop': max_pop})
+
+def get_trait_histogram(species_idx):
+    """Return histogram of trait values across all tiles (weighted by pop)."""
+    num_bins = 20
+    bins = [0] * num_bins
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            p = grid[r][c]['pops'][species_idx]
+            if p > 0:
+                t = grid[r][c]['traits'][species_idx]
+                bin_idx = min(num_bins - 1, int(t * num_bins))
+                bins[bin_idx] += p
+    result = []
+    for i in range(num_bins):
+        result.append({'low': i/num_bins, 'high': (i+1)/num_bins, 'count': bins[i]})
+    return json.dumps(result)
+
+def get_and_clear_events():
+    global events_buffer
+    out = json.dumps(events_buffer)
+    events_buffer = []
+    return out
+`;
+
+// ── BOOT ──
+init();
 </script>
 </body>
 </html>
