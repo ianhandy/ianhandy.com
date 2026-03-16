@@ -400,30 +400,30 @@ let dragLastX = 0;
 let dragLastY = 0;
 
 // === Generate Heightmap ===
+// Always generates at full mapSize resolution, then downsamples based on detail level.
+// Same seed produces the same map at every detail level.
 function generateHeightmap() {
   mapSize = parseInt(document.getElementById('mapSizeSlider').value) || 256;
   const seed = parseInt(document.getElementById('seedInput').value) || 0;
   const octaves = parseInt(document.getElementById('octaves').value);
-  const scale = parseInt(document.getElementById('scale').value);
+  const detailLevel = parseInt(document.getElementById('scale').value); // 20=coarse, 200=full detail
   const persistence = parseInt(document.getElementById('persistence').value) / 100;
   const lacunarity = parseInt(document.getElementById('lacunarity').value) / 10;
+  const fixedScale = 80; // Fixed noise scale — never changes, ensures same map per seed
 
   const noise = new SeededNoise(seed);
-  const noise2 = new SeededNoise(seed + 31337); // Second noise for variety
+  const noise2 = new SeededNoise(seed + 31337);
 
-  const map = new Float32Array(mapSize * mapSize);
+  // Always generate at full resolution
+  const fullMap = new Float32Array(mapSize * mapSize);
   let min = Infinity, max = -Infinity;
 
   for (let y = 0; y < mapSize; y++) {
     for (let x = 0; x < mapSize; x++) {
-      // Primary terrain shape
-      let h = fbm(noise, x, y, octaves, scale, persistence, lacunarity);
-
-      // Add ridged noise for mountain detail
-      const ridge = 1 - Math.abs(fbm(noise2, x + 1000, y + 1000, Math.max(octaves - 2, 1), scale * 0.7, persistence * 0.8, lacunarity));
+      let h = fbm(noise, x, y, octaves, fixedScale, persistence, lacunarity);
+      const ridge = 1 - Math.abs(fbm(noise2, x + 1000, y + 1000, Math.max(octaves - 2, 1), fixedScale * 0.7, persistence * 0.8, lacunarity));
       h = h * 0.7 + ridge * ridge * 0.3;
 
-      // Circular island mask (optional, based on water level)
       const waterLevel = parseInt(document.getElementById('waterLevel').value);
       if (waterLevel > 10) {
         const cx = (x / mapSize - 0.5) * 2;
@@ -433,7 +433,7 @@ function generateHeightmap() {
         h *= falloff;
       }
 
-      map[y * mapSize + x] = h;
+      fullMap[y * mapSize + x] = h;
       if (h < min) min = h;
       if (h > max) max = h;
     }
@@ -441,8 +441,49 @@ function generateHeightmap() {
 
   // Normalize to 0..1
   const range = max - min || 1;
-  for (let i = 0; i < map.length; i++) {
-    map[i] = (map[i] - min) / range;
+  for (let i = 0; i < fullMap.length; i++) {
+    fullMap[i] = (fullMap[i] - min) / range;
+  }
+
+  // Downsample based on detail level: 200=1:1 (full), 20=average 10x10 blocks
+  // blockSize: 1 at max detail (200), up to 10 at min detail (20)
+  const blockSize = Math.max(1, Math.round((200 - detailLevel) / 18));
+  let map;
+
+  if (blockSize <= 1) {
+    map = fullMap;
+  } else {
+    // Downsample by averaging blocks, then expand back to mapSize
+    const reduced = Math.ceil(mapSize / blockSize);
+    map = new Float32Array(mapSize * mapSize);
+
+    for (let ry = 0; ry < reduced; ry++) {
+      for (let rx = 0; rx < reduced; rx++) {
+        // Average the block
+        let sum = 0, count = 0;
+        for (let by = 0; by < blockSize; by++) {
+          for (let bx = 0; bx < blockSize; bx++) {
+            const sx = rx * blockSize + bx;
+            const sy = ry * blockSize + by;
+            if (sx < mapSize && sy < mapSize) {
+              sum += fullMap[sy * mapSize + sx];
+              count++;
+            }
+          }
+        }
+        const avg = sum / count;
+        // Fill the block with the average
+        for (let by = 0; by < blockSize; by++) {
+          for (let bx = 0; bx < blockSize; bx++) {
+            const sx = rx * blockSize + bx;
+            const sy = ry * blockSize + by;
+            if (sx < mapSize && sy < mapSize) {
+              map[sy * mapSize + sx] = avg;
+            }
+          }
+        }
+      }
+    }
   }
 
   // Apply elevation curve
