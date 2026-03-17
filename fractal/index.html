@@ -384,7 +384,7 @@ function renderAtScale(gen, scale, done) {
       if (r.scale === 1) {
         ctx.putImageData(imgData, 0, yStart);
       } else {
-        const tmp = new OffscreenCanvas ? new OffscreenCanvas(r.w, r.h) : document.createElement('canvas');
+        const tmp = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(r.w, r.h) : document.createElement('canvas');
         if (!tmp.width) { tmp.width = r.w; tmp.height = r.h; }
         const tc = tmp.getContext('2d');
         tc.putImageData(imgData, 0, 0);
