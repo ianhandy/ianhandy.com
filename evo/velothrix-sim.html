@@ -158,6 +158,46 @@ body {
   height: 100%;
 }
 
+/* ── ACTIVE EVENTS BAR ── */
+#active-events-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  padding: 0 16px;
+  min-height: 0;
+  overflow-x: auto;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border);
+  transition: min-height 0.2s, padding 0.2s;
+}
+#active-events-bar:empty {
+  padding: 0 16px;
+  border-bottom: none;
+}
+#active-events-bar:not(:empty) {
+  min-height: 24px;
+  padding: 4px 16px;
+}
+.active-event-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.active-event-pill.bloom { background: rgba(46, 204, 113, 0.15); border-color: rgba(46, 204, 113, 0.3); }
+.active-event-pill.surge { background: rgba(52, 152, 219, 0.15); border-color: rgba(52, 152, 219, 0.3); }
+.active-event-pill.corridor { background: rgba(155, 89, 182, 0.15); border-color: rgba(155, 89, 182, 0.3); }
+.active-event-pill.reef { background: rgba(229, 89, 28, 0.15); border-color: rgba(229, 89, 28, 0.3); }
+.active-event-pill .pill-timer {
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── EVENT FEED OVERLAY ── */
 #event-feed {
   position: absolute;
@@ -233,6 +273,12 @@ body {
   border-bottom: 1px solid var(--border);
 }
 .species-row:last-child { border-bottom: none; }
+.species-variant {
+  padding-left: 16px;
+  border-bottom: none;
+}
+.species-variant + .species-variant { padding-top: 0; }
+.sp-variant-name { font-style: italic; font-size: 9px; }
 .sp-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
@@ -269,6 +315,57 @@ body {
   height: 160px;
 }
 
+/* ── SCATTER CONTROLS ── */
+.scatter-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.scatter-mode-toggle {
+  display: flex;
+  gap: 2px;
+}
+.scatter-mode-toggle button {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 0;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.scatter-mode-toggle button.active {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: var(--bg-dark);
+}
+.scatter-axes {
+  display: flex;
+  gap: 8px;
+}
+.scatter-axes label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--dim);
+  flex: 1;
+}
+.scatter-axes select {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  min-width: 0;
+}
+
 /* ── EVENT LOG ── */
 #event-log {
   grid-column: 1 / -1;
@@ -285,12 +382,171 @@ body {
 }
 #event-log .log-entry .ev-gen { color: var(--gold); }
 #event-log .log-entry .ev-text { color: var(--text); }
+#event-log .log-entry.speciation-event {
+  background: rgba(221,193,101,0.1);
+  border-left: 3px solid var(--gold);
+  padding: 4px 8px;
+  margin: 4px 0;
+  font-size: 11px;
+}
+#event-log .log-entry.speciation-event .ev-gen { color: #FFE9A3; font-weight: 700; }
+#event-log .log-entry.speciation-event .ev-text { color: var(--gold-light); }
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-dark); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+/* ── FOLDER TAB (hidden on desktop) ── */
+.tray-tab { display: none; }
+
+/* ── MOBILE LAYOUT ── */
+@media (max-width: 768px) {
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+  }
+
+  #header {
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  #header h1 {
+    font-size: 16px;
+  }
+
+  .species-tabs {
+    order: 3;
+    margin-left: 0;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .species-tabs::-webkit-scrollbar { display: none; }
+
+  .header-controls {
+    margin-left: auto;
+  }
+
+  #gen-counter {
+    order: 2;
+    margin-left: 0;
+  }
+
+  #map-area {
+    min-height: 0;
+  }
+
+  /* Panel becomes a bottom tray */
+  #panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 100;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 60vh;
+    overflow-y: auto;
+    background: rgba(26,13,0,0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+  }
+  #panel.tray-open {
+    transform: translateY(0);
+  }
+
+  .chart-canvas {
+    height: 100px;
+  }
+  .chart-canvas.tall {
+    height: 130px;
+  }
+
+  #event-log {
+    grid-column: 1;
+    max-height: 100px;
+  }
+
+  #event-feed {
+    max-height: 80px;
+  }
+
+  /* Folder tab */
+  .tray-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 101;
+    background: rgba(26,13,0,0.95);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    padding: 10px 24px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: bottom 0.3s ease, background 0.2s;
+    font-family: var(--mono);
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.4);
+    min-width: 120px;
+  }
+  .tray-tab:active {
+    background: rgba(229,89,28,0.2);
+  }
+  .tray-tab-label {
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .tray-tab-chevron {
+    font-size: 12px;
+    color: var(--dim);
+    transition: transform 0.3s ease;
+    line-height: 1;
+  }
+  .tray-tab.tab-active .tray-tab-chevron {
+    transform: rotate(180deg);
+  }
+}
+
+@media (max-width: 420px) {
+  body { font-size: 11px; }
+
+  #header h1 { font-size: 14px; }
+
+  .header-controls button {
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+
+  .species-tab {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+
+  .panel-section {
+    padding: 8px;
+  }
+
+  .panel-section h3 {
+    font-size: 11px;
+  }
+}
 </style>
 </head>
 <body>
@@ -300,7 +556,9 @@ body {
   <h1>VELOTHRIX</h1>
   <p>Loading Pyodide runtime...</p>
   <div class="loader-bar"><div class="loader-bar-fill" id="loader-fill"></div></div>
+  <p id="loader-hint" style="color:#5a4a30;font-size:11px;margin-top:8px;display:none">First load downloads ~10 MB — may take a moment on mobile</p>
 </div>
+<script>setTimeout(function(){ var h = document.getElementById('loader-hint'); if (h) h.style.display = 'block'; }, 3000);</script>
 
 <!-- APP -->
 <div id="app">
@@ -317,6 +575,9 @@ body {
     </div>
     <div id="gen-counter">Gen <span id="gen-num">0</span></div>
   </div>
+
+  <!-- ACTIVE EVENTS BAR -->
+  <div id="active-events-bar"></div>
 
   <!-- MAP -->
   <div id="map-area">
@@ -344,6 +605,21 @@ body {
       <h3 id="trait-title">Trait Distribution</h3>
       <canvas class="chart-canvas" id="trait-chart"></canvas>
     </div>
+
+    <div class="panel-section">
+      <h3>Scatter Plot</h3>
+      <div class="scatter-controls">
+        <div class="scatter-mode-toggle">
+          <button class="active" onclick="setScatterMode('spatial')">Spatial</button>
+          <button onclick="setScatterMode('temporal')">Temporal</button>
+        </div>
+        <div class="scatter-axes">
+          <label>X <select id="scatter-x"></select></label>
+          <label>Y <select id="scatter-y"></select></label>
+        </div>
+      </div>
+      <canvas class="chart-canvas tall" id="scatter-chart"></canvas>
+    </div>
   </div>
 
   <!-- EVENT LOG -->
@@ -364,15 +640,26 @@ let popHistory = []; // [{gen, pops: [5 numbers]}]
 let mapCanvas, mapCtx;
 let popCanvas, popCtx;
 let traitCanvas, traitCtx;
+let scatterCanvas, scatterCtx;
+let scatterMode = 'spatial'; // 'spatial' or 'temporal'
 let animFrame = null;
 let stepsPerFrame = 1;
 
+// ── ISOMETRIC CAMERA ──
+let camTilt = 0.5;    // 0.25 = nearly flat, 0.75 = steep
+let camZoom = 1.0;
+let camPanX = 0;
+let camPanY = 0;
+let isDragging = false;
+let dragLastX = 0;
+let dragLastY = 0;
+
 const SPECIES = [
-  { name: 'Velothrix', fullName: 'Velothrix aurantis', color: '#DDC165', trait: 'Crest Brightness' },
-  { name: 'Leviathan', fullName: 'Kelp Leviathan', color: '#C0392B', trait: 'Hunting Range' },
-  { name: 'Crawler', fullName: 'Reed Crawler', color: '#2ECC71', trait: 'Burrowing Depth' },
-  { name: 'Crab', fullName: 'Tidal Crab', color: '#E5591C', trait: 'Shell Thickness' },
-  { name: 'Worm', fullName: 'Bioluminescent Worm', color: '#9B59B6', trait: 'Glow Intensity' }
+  { name: 'Velothrix', fullName: 'Velothrix aurantis', color: '#DDC165', trait: 'Crest Brightness', variantColor: '#CC8833' },
+  { name: 'Leviathan', fullName: 'Kelp Leviathan', color: '#C0392B', trait: 'Hunting Range', variantColor: '#E06040' },
+  { name: 'Crawler', fullName: 'Reed Crawler', color: '#2ECC71', trait: 'Burrowing Depth', variantColor: '#1A9050' },
+  { name: 'Crab', fullName: 'Tidal Crab', color: '#E5591C', trait: 'Shell Thickness', variantColor: '#CC9944' },
+  { name: 'Worm', fullName: 'Bioluminescent Worm', color: '#9B59B6', trait: 'Glow Intensity', variantColor: '#6E3FA0' }
 ];
 
 const MAX_HISTORY = 200;
@@ -380,23 +667,35 @@ const MAX_HISTORY = 200;
 // ── INIT ──
 async function init() {
   const fill = document.getElementById('loader-fill');
+  const loaderMsg = document.querySelector('#loader p');
   fill.style.width = '20%';
 
-  pyodide = await loadPyodide();
-  fill.style.width = '50%';
+  try {
+    loaderMsg.textContent = 'Downloading Pyodide runtime (~10 MB)...';
+    pyodide = await loadPyodide();
+    fill.style.width = '50%';
 
-  await pyodide.runPythonAsync(SIM_CODE);
-  fill.style.width = '80%';
+    loaderMsg.textContent = 'Initializing ecosystem simulation...';
+    await pyodide.runPythonAsync(SIM_CODE);
+    fill.style.width = '80%';
 
-  setupUI();
-  fill.style.width = '100%';
+    loaderMsg.textContent = 'Setting up interface...';
+    setupUI();
+    fill.style.width = '100%';
 
-  setTimeout(() => {
-    document.getElementById('loader').style.display = 'none';
-    document.getElementById('app').style.display = 'grid';
-    resizeCanvases();
-    renderAll();
-  }, 300);
+    setTimeout(() => {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('app').style.display = 'grid';
+      resizeCanvases();
+      renderAll();
+    }, 300);
+  } catch (err) {
+    console.error('Init failed:', err);
+    loaderMsg.textContent = 'Failed to load: ' + (err.message || err);
+    loaderMsg.style.color = '#E5591C';
+    fill.style.width = '100%';
+    fill.style.background = '#E5591C';
+  }
 }
 
 function setupUI() {
@@ -418,8 +717,107 @@ function setupUI() {
   popCtx = popCanvas.getContext('2d');
   traitCanvas = document.getElementById('trait-chart');
   traitCtx = traitCanvas.getContext('2d');
+  scatterCanvas = document.getElementById('scatter-chart');
+  scatterCtx = scatterCanvas.getContext('2d');
 
-  mapCanvas.addEventListener('click', onMapClick);
+  // Populate scatter dropdowns
+  populateScatterDropdowns();
+
+  // ── Map camera controls ──
+  // Click to select tile (only if not dragging)
+  let clickStartX = 0, clickStartY = 0;
+  mapCanvas.addEventListener('pointerdown', (e) => {
+    clickStartX = e.clientX;
+    clickStartY = e.clientY;
+    isDragging = true;
+    dragLastX = e.clientX;
+    dragLastY = e.clientY;
+    mapCanvas.style.cursor = 'grabbing';
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragLastX;
+    const dy = e.clientY - dragLastY;
+    dragLastX = e.clientX;
+    dragLastY = e.clientY;
+    if (e.shiftKey) {
+      camTilt = Math.max(0.2, Math.min(0.8, camTilt + dy * 0.004));
+    } else {
+      camPanX += dx;
+      camPanY += dy;
+    }
+    renderMap();
+  });
+  window.addEventListener('pointerup', (e) => {
+    if (isDragging) {
+      const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
+      if (dist < 6) onMapClick(e); // click, not drag
+    }
+    isDragging = false;
+    mapCanvas.style.cursor = 'grab';
+  });
+  // Scroll to zoom
+  mapCanvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    camZoom = Math.max(0.4, Math.min(3.0, camZoom + (e.deltaY > 0 ? -0.1 : 0.1)));
+    renderMap();
+  }, { passive: false });
+  // Touch: one-finger pan, two-finger zoom
+  let lastTouchDist = 0;
+  mapCanvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      clickStartX = dragLastX = e.touches[0].clientX;
+      clickStartY = dragLastY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      lastTouchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  }, { passive: true });
+  mapCanvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && isDragging) {
+      const dx = e.touches[0].clientX - dragLastX;
+      const dy = e.touches[0].clientY - dragLastY;
+      dragLastX = e.touches[0].clientX;
+      dragLastY = e.touches[0].clientY;
+      camPanX += dx;
+      camPanY += dy;
+      renderMap();
+    } else if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (lastTouchDist > 0) {
+        const scale = dist / lastTouchDist;
+        camZoom = Math.max(0.4, Math.min(3.0, camZoom * scale));
+        renderMap();
+      }
+      lastTouchDist = dist;
+    }
+  }, { passive: false });
+  mapCanvas.addEventListener('touchend', (e) => {
+    if (e.touches.length === 0 && isDragging) {
+      const dist = Math.hypot(
+        e.changedTouches[0].clientX - clickStartX,
+        e.changedTouches[0].clientY - clickStartY
+      );
+      if (dist < 10) onMapClick(e.changedTouches[0]);
+      isDragging = false;
+    }
+    lastTouchDist = 0;
+  });
+  // Double-click/tap to reset camera
+  mapCanvas.addEventListener('dblclick', () => {
+    camTilt = 0.5; camZoom = 1.0; camPanX = 0; camPanY = 0;
+    renderMap();
+  });
+  mapCanvas.style.cursor = 'grab';
+
   window.addEventListener('resize', () => { resizeCanvases(); renderAll(); });
 }
 
@@ -429,7 +827,7 @@ function resizeCanvases() {
   mapCanvas.height = mapArea.clientHeight;
 
   const dpr = window.devicePixelRatio || 1;
-  for (const c of [popCanvas, traitCanvas]) {
+  for (const c of [popCanvas, traitCanvas, scatterCanvas]) {
     c.width = c.clientWidth * dpr;
     c.height = c.clientHeight * dpr;
     c.getContext('2d').scale(dpr, dpr);
@@ -462,26 +860,53 @@ function setPanelMode(mode) {
   renderAll();
 }
 
-// ── MAP CLICK ──
+// ── MAP CLICK (isometric reverse projection) ──
 function onMapClick(e) {
   const rect = mapCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
 
-  const gridSize = pyodide.runPython('GRID_SIZE');
-  const tileW = mapCanvas.width / gridSize;
-  const tileH = mapCanvas.height / gridSize;
+  const gs = pyodide.runPython('GRID_SIZE');
+  const w = mapCanvas.width;
+  const h = mapCanvas.height;
+  const baseTileW = (w / gs) * 0.9 * camZoom;
+  const tileW = baseTileW;
+  const tileH = tileW * camTilt;
+  const heightScale = 80 * camZoom;
+  const totalIsoH = gs * tileH * 0.5;
+  const offsetX = w / 2 + camPanX;
+  const offsetY = (h - totalIsoH + heightScale) / 2 + camPanY;
 
-  const c = Math.floor(x / tileW);
-  const r = Math.floor(y / tileH);
+  // Brute force: find which tile's diamond contains the click point
+  // Check front-to-back so topmost tile wins
+  let bestR = -1, bestC = -1, bestSy = -Infinity;
+  for (let r = 0; r < gs; r++) {
+    for (let c = 0; c < gs; c++) {
+      const ix = (c - r) * (tileW * 0.5);
+      const iy = (c + r) * (tileH * 0.5);
+      const cx = offsetX + ix;
+      const cy = offsetY + iy;
+      // Diamond hit test
+      const dx = Math.abs(sx - cx) / (tileW * 0.5);
+      const dy = Math.abs(sy - cy) / (tileH * 0.5);
+      if (dx + dy <= 1.0) {
+        // Frontmost tile (highest iy) wins
+        if (iy > bestSy) {
+          bestSy = iy;
+          bestR = r;
+          bestC = c;
+        }
+      }
+    }
+  }
 
-  if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
-    selectedTile = { r, c };
+  if (bestR >= 0 && bestC >= 0) {
+    selectedTile = { r: bestR, c: bestC };
     panelMode = 'tile';
     document.querySelectorAll('.panel-toggle button').forEach((btn, idx) => {
       btn.classList.toggle('active', idx === 1);
     });
-    document.getElementById('panel-title').textContent = `Tile (${r}, ${c})`;
+    document.getElementById('panel-title').textContent = `Tile (${bestR}, ${bestC})`;
     renderAll();
   }
 }
@@ -520,8 +945,30 @@ function tick() {
   for (let s = 0; s < 5; s++) {
     globalPops.push(pyodide.runPython(`get_global_pop(${s})`));
   }
-  popHistory.push({ gen, pops: globalPops });
+  // Collect global traits and season for scatter temporal mode
+  const globalTraits = [];
+  for (let s = 0; s < 5; s++) {
+    globalTraits.push(pyodide.runPython(`get_global_trait(${s})`));
+  }
+  const season = pyodide.runPython('get_season()');
+  popHistory.push({ gen, pops: globalPops, traits: globalTraits, season });
   if (popHistory.length > MAX_HISTORY) popHistory.shift();
+
+  // Update active events bar
+  const activeEvJson = pyodide.runPython('get_active_events_info()');
+  const activeEvs = JSON.parse(activeEvJson);
+  const evBar = document.getElementById('active-events-bar');
+  evBar.innerHTML = '';
+  const evIcons = { algal_bloom: '🌿', tidal_surge: '🌊', migration_corridor: '🔀', reef_formation: '🪸' };
+  const evLabels = { algal_bloom: 'Algal Bloom', tidal_surge: 'Tidal Surge', migration_corridor: 'Migration', reef_formation: 'Reef' };
+  const evClasses = { algal_bloom: 'bloom', tidal_surge: 'surge', migration_corridor: 'corridor', reef_formation: 'reef' };
+  activeEvs.forEach(ev => {
+    const pill = document.createElement('span');
+    pill.className = 'active-event-pill ' + (evClasses[ev.type] || '');
+    const pct = ev.type === 'reef_formation' ? ` ${Math.round((ev.progress || 0) * 100)}%` : '';
+    pill.innerHTML = `${evIcons[ev.type] || '⚡'} ${evLabels[ev.type] || ev.type}${pct} <span class="pill-timer">${ev.remaining}g</span>`;
+    evBar.appendChild(pill);
+  });
 
   // Check events
   const eventsJson = pyodide.runPython('get_and_clear_events()');
@@ -530,12 +977,14 @@ function tick() {
     const feed = document.getElementById('event-feed');
     const log = document.getElementById('event-log');
     events.forEach(ev => {
+      const isSpeciation = ev.speciation === true;
       const feedDiv = document.createElement('div');
       feedDiv.innerHTML = `<span class="ev-gen">[Gen ${ev.gen}]</span> <span class="ev-text">${ev.text}</span>`;
+      if (isSpeciation) feedDiv.style.color = 'var(--gold-light)';
       feed.appendChild(feedDiv);
 
       const logDiv = document.createElement('div');
-      logDiv.className = 'log-entry';
+      logDiv.className = 'log-entry' + (isSpeciation ? ' speciation-event' : '');
       logDiv.innerHTML = feedDiv.innerHTML;
       log.appendChild(logDiv);
     });
@@ -560,18 +1009,18 @@ function renderAll() {
   renderSpeciesList();
   renderPopChart();
   renderTraitChart();
+  renderScatterPlot();
 }
 
-// ── RENDER MAP ──
+// ── RENDER MAP (Isometric 3D) ──
 function renderMap() {
   const gs = pyodide.runPython('GRID_SIZE');
   const w = mapCanvas.width;
   const h = mapCanvas.height;
-  const tw = w / gs;
-  const th = h / gs;
+  const ctx = mapCtx;
 
-  mapCtx.fillStyle = '#1A0D00';
-  mapCtx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#1A0D00';
+  ctx.fillRect(0, 0, w, h);
 
   const si = selectedSpecies;
   const color = SPECIES[si].color;
@@ -580,54 +1029,145 @@ function renderMap() {
   const dataJson = pyodide.runPython(`get_map_data(${si})`);
   const data = JSON.parse(dataJson);
 
+  // Biome base colors: [r, g, b]
+  const BIOME_COLORS = {
+    deep_water:    [15, 30, 60],
+    shallow_marsh: [30, 55, 40],
+    reed_beds:     [45, 60, 30],
+    tidal_flats:   [60, 50, 35],
+    rocky_shore:   [75, 58, 45],
+  };
+
+  // Isometric projection params
+  const baseTileW = (w / gs) * 0.9 * camZoom;
+  const tileW = baseTileW;
+  const tileH = tileW * camTilt;
+  const heightScale = 80 * camZoom;
+
+  const totalIsoH = gs * tileH * 0.5;
+  const offsetX = w / 2 + camPanX;
+  const offsetY = (h - totalIsoH + heightScale) / 2 + camPanY;
+
+  // Draw back-to-front for proper occlusion
   for (let r = 0; r < gs; r++) {
     for (let c = 0; c < gs; c++) {
       const pop = data.pops[r][c];
       const elev = data.elevations[r][c];
+      const biome = data.biomes[r][c];
       const maxPop = data.max_pop || 1;
 
-      // Base tile color from elevation
-      const baseR = 26 + elev * 20;
-      const baseG = 13 + elev * 15;
-      const baseB = 0 + elev * 8;
+      // Base color from biome
+      const bc = BIOME_COLORS[biome] || [30, 20, 10];
+      let tr = bc[0] + elev * 25;
+      let tg = bc[1] + elev * 18;
+      let tb = bc[2] + elev * 12;
 
-      const x = c * tw;
-      const y = r * th;
-
-      // Draw base
-      mapCtx.fillStyle = `rgb(${baseR|0},${baseG|0},${baseB|0})`;
-      mapCtx.fillRect(x, y, tw - 1, th - 1);
-
-      // Draw species density overlay
+      // Species density overlay — blend into tile color
       if (pop > 0) {
         const intensity = Math.min(1, pop / (maxPop * 0.7));
-        const rgb = hexToRgb(color);
-        mapCtx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${intensity * 0.8})`;
-        mapCtx.fillRect(x, y, tw - 1, th - 1);
+        const tileColor = (data.speciated && data.variants[r][c] === 1)
+          ? SPECIES[si].variantColor : color;
+        const rgb = hexToRgb(tileColor);
+        const a = intensity * 0.7;
+        tr = tr * (1 - a) + rgb.r * a;
+        tg = tg * (1 - a) + rgb.g * a;
+        tb = tb * (1 - a) + rgb.b * a;
       }
 
-      // Selected tile highlight
+      // Shading: basic directional light
+      let shade = 0.7;
+      if (r > 0 && c > 0) {
+        const hLeft = data.elevations[r][c - 1] || elev;
+        const hUp = data.elevations[r - 1][c] || elev;
+        shade = 0.55 + 0.45 * Math.max(0, Math.min(1, 0.5 + (elev - hLeft) * 2 + (elev - hUp) * 1.5));
+      }
+
+      // Isometric transform
+      const ix = (c - r) * (tileW * 0.5);
+      const iy = (c + r) * (tileH * 0.5);
+      const iz = elev * heightScale;
+      const sx = offsetX + ix;
+      const sy = offsetY + iy - iz;
+
+      // Pillar height — taller columns for higher elevation
+      const pillarH = Math.max(3, iz * 0.2 * (camTilt / 0.5) + 3);
+
+      // Right side face (darker)
+      ctx.fillStyle = `rgb(${tr * shade * 0.45 | 0},${tg * shade * 0.45 | 0},${tb * shade * 0.45 | 0})`;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + tileW * 0.5, sy + tileH * 0.5);
+      ctx.lineTo(sx + tileW * 0.5, sy + tileH * 0.5 + pillarH);
+      ctx.lineTo(sx, sy + pillarH);
+      ctx.fill();
+
+      // Left side face (darkest)
+      ctx.fillStyle = `rgb(${tr * shade * 0.3 | 0},${tg * shade * 0.3 | 0},${tb * shade * 0.3 | 0})`;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - tileW * 0.5, sy + tileH * 0.5);
+      ctx.lineTo(sx - tileW * 0.5, sy + tileH * 0.5 + pillarH);
+      ctx.lineTo(sx, sy + pillarH);
+      ctx.fill();
+
+      // Top face
+      ctx.fillStyle = `rgb(${tr * shade | 0},${tg * shade | 0},${tb * shade | 0})`;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - tileH * 0.5);
+      ctx.lineTo(sx + tileW * 0.5, sy);
+      ctx.lineTo(sx, sy + tileH * 0.5);
+      ctx.lineTo(sx - tileW * 0.5, sy);
+      ctx.closePath();
+      ctx.fill();
+
+      // Water shimmer for deep/shallow tiles
+      if (biome === 'deep_water' || biome === 'shallow_marsh') {
+        const shimmer = biome === 'deep_water' ? 0.2 : 0.1;
+        ctx.fillStyle = `rgba(20, 50, 80, ${shimmer})`;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - tileH * 0.5);
+        ctx.lineTo(sx + tileW * 0.5, sy);
+        ctx.lineTo(sx, sy + tileH * 0.5);
+        ctx.lineTo(sx - tileW * 0.5, sy);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Grid lines on top face
+      ctx.strokeStyle = 'rgba(221,193,101,0.08)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - tileH * 0.5);
+      ctx.lineTo(sx + tileW * 0.5, sy);
+      ctx.lineTo(sx, sy + tileH * 0.5);
+      ctx.lineTo(sx - tileW * 0.5, sy);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Selected tile glow
       if (selectedTile && selectedTile.r === r && selectedTile.c === c) {
-        mapCtx.strokeStyle = '#FFE9A3';
-        mapCtx.lineWidth = 2;
-        mapCtx.strokeRect(x + 1, y + 1, tw - 3, th - 3);
+        ctx.strokeStyle = '#FFE9A3';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - tileH * 0.5);
+        ctx.lineTo(sx + tileW * 0.5, sy);
+        ctx.lineTo(sx, sy + tileH * 0.5);
+        ctx.lineTo(sx - tileW * 0.5, sy);
+        ctx.closePath();
+        ctx.stroke();
+        // Glow overlay
+        ctx.fillStyle = 'rgba(255,233,163,0.15)';
+        ctx.fill();
       }
     }
   }
 
-  // Draw grid lines (very subtle)
-  mapCtx.strokeStyle = 'rgba(61,42,16,0.3)';
-  mapCtx.lineWidth = 0.5;
-  for (let i = 0; i <= gs; i++) {
-    mapCtx.beginPath();
-    mapCtx.moveTo(i * tw, 0);
-    mapCtx.lineTo(i * tw, h);
-    mapCtx.stroke();
-    mapCtx.beginPath();
-    mapCtx.moveTo(0, i * th);
-    mapCtx.lineTo(w, i * th);
-    mapCtx.stroke();
-  }
+  // Vignette
+  const grad = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.min(w, h) * 0.7);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(26,13,0,0.5)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
 }
 
 // ── RENDER SPECIES LIST ──
@@ -635,24 +1175,67 @@ function renderSpeciesList() {
   const listEl = document.getElementById('species-list');
   let html = '';
 
+  // Fetch speciation info once
+  const specInfoJson = pyodide.runPython('get_speciation_info()');
+  const specInfo = JSON.parse(specInfoJson);
+
   if (panelMode === 'global') {
     for (let s = 0; s < 5; s++) {
       const pop = pyodide.runPython(`get_global_pop(${s})`);
       const trait = pyodide.runPython(`get_global_trait(${s})`);
-      html += `<div class="species-row">
-        <div class="sp-dot" style="background:${SPECIES[s].color}"></div>
-        <div class="sp-name">${SPECIES[s].fullName}</div>
-        <div class="sp-pop">${pop}</div>
-        <div class="sp-trait">${trait.toFixed(3)}</div>
-      </div>`;
+      const info = specInfo[String(s)];
+
+      if (info) {
+        // Show parent species row
+        html += `<div class="species-row">
+          <div class="sp-dot" style="background:${SPECIES[s].color}"></div>
+          <div class="sp-name">${SPECIES[s].fullName}</div>
+          <div class="sp-pop">${pop}</div>
+          <div class="sp-trait">${trait.toFixed(3)}</div>
+        </div>`;
+        // Variant sub-entries
+        html += `<div class="species-row species-variant">
+          <div class="sp-dot" style="background:${SPECIES[s].color}; width:6px; height:6px;"></div>
+          <div class="sp-name sp-variant-name">${info.parent_name}</div>
+          <div class="sp-pop">${info.parent_pop}</div>
+          <div class="sp-trait">${info.parent_trait.toFixed(3)}</div>
+        </div>`;
+        html += `<div class="species-row species-variant">
+          <div class="sp-dot" style="background:${SPECIES[s].variantColor}; width:6px; height:6px;"></div>
+          <div class="sp-name sp-variant-name">${info.variant_name}</div>
+          <div class="sp-pop">${info.variant_pop}</div>
+          <div class="sp-trait">${info.variant_trait.toFixed(3)}</div>
+        </div>`;
+      } else {
+        html += `<div class="species-row">
+          <div class="sp-dot" style="background:${SPECIES[s].color}"></div>
+          <div class="sp-name">${SPECIES[s].fullName}</div>
+          <div class="sp-pop">${pop}</div>
+          <div class="sp-trait">${trait.toFixed(3)}</div>
+        </div>`;
+      }
     }
   } else if (selectedTile) {
     for (let s = 0; s < 5; s++) {
       const pop = pyodide.runPython(`get_tile_pop(${selectedTile.r},${selectedTile.c},${s})`);
       const trait = pyodide.runPython(`get_tile_trait(${selectedTile.r},${selectedTile.c},${s})`);
+      const info = specInfo[String(s)];
+
+      // Determine variant color for this tile
+      let dotColor = SPECIES[s].color;
+      let tileName = SPECIES[s].name;
+      if (info && pop > 0) {
+        if (trait > info.split_trait) {
+          dotColor = SPECIES[s].variantColor;
+          tileName = info.variant_name;
+        } else {
+          tileName = info.parent_name;
+        }
+      }
+
       html += `<div class="species-row">
-        <div class="sp-dot" style="background:${SPECIES[s].color}"></div>
-        <div class="sp-name">${SPECIES[s].name}</div>
+        <div class="sp-dot" style="background:${dotColor}"></div>
+        <div class="sp-name">${tileName}</div>
         <div class="sp-pop">${pop}</div>
         <div class="sp-trait">${trait.toFixed(3)}</div>
       </div>`;
@@ -777,6 +1360,215 @@ function hexToRgb(hex) {
   return { r, g, b };
 }
 
+// ── SCATTER PLOT ──
+function populateScatterDropdowns() {
+  const xSel = document.getElementById('scatter-x');
+  const ySel = document.getElementById('scatter-y');
+
+  function buildOptions(mode) {
+    const opts = [];
+    if (mode === 'spatial') {
+      for (let s = 0; s < 5; s++) {
+        opts.push({ value: `pop_${s}`, label: `${SPECIES[s].name} Pop` });
+        opts.push({ value: `trait_${s}`, label: `${SPECIES[s].name} ${SPECIES[s].trait}` });
+      }
+      opts.push({ value: 'elevation', label: 'Elevation' });
+      opts.push({ value: 'food', label: 'Food Level' });
+      opts.push({ value: 'water', label: 'Water Level' });
+      opts.push({ value: 'temp', label: 'Temperature' });
+    } else {
+      for (let s = 0; s < 5; s++) {
+        opts.push({ value: `pop_${s}`, label: `${SPECIES[s].name} Pop` });
+        opts.push({ value: `trait_${s}`, label: `${SPECIES[s].name} ${SPECIES[s].trait}` });
+      }
+      opts.push({ value: 'season', label: 'Season Factor' });
+    }
+    return opts;
+  }
+
+  function fill(sel, opts, defaultIdx) {
+    sel.innerHTML = '';
+    opts.forEach((o, i) => {
+      const opt = document.createElement('option');
+      opt.value = o.value;
+      opt.textContent = o.label;
+      if (i === defaultIdx) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  const opts = buildOptions(scatterMode);
+  // Default: X = Velothrix Pop, Y = Leviathan Pop
+  fill(xSel, opts, 0);
+  fill(ySel, opts, 2);
+
+  xSel.onchange = () => renderScatterPlot();
+  ySel.onchange = () => renderScatterPlot();
+}
+
+function setScatterMode(mode) {
+  scatterMode = mode;
+  document.querySelectorAll('.scatter-mode-toggle button').forEach((btn, idx) => {
+    btn.classList.toggle('active', (mode === 'spatial' && idx === 0) || (mode === 'temporal' && idx === 1));
+  });
+  populateScatterDropdowns();
+  renderScatterPlot();
+}
+
+function getScatterValue(entry, varKey) {
+  // entry is either a tile object (spatial) or a popHistory entry (temporal)
+  if (varKey.startsWith('pop_')) {
+    const s = parseInt(varKey.split('_')[1]);
+    return entry.pops[s];
+  }
+  if (varKey.startsWith('trait_')) {
+    const s = parseInt(varKey.split('_')[1]);
+    return entry.traits[s];
+  }
+  if (varKey === 'elevation') return entry.elev;
+  if (varKey === 'food') return entry.food;
+  if (varKey === 'water') return entry.water;
+  if (varKey === 'temp') return entry.temp;
+  if (varKey === 'season') return entry.season;
+  return 0;
+}
+
+function getVarLabel(varKey) {
+  if (varKey.startsWith('pop_')) {
+    const s = parseInt(varKey.split('_')[1]);
+    return SPECIES[s].name + ' Pop';
+  }
+  if (varKey.startsWith('trait_')) {
+    const s = parseInt(varKey.split('_')[1]);
+    return SPECIES[s].trait;
+  }
+  const labels = { elevation: 'Elevation', food: 'Food', water: 'Water', temp: 'Temp', season: 'Season' };
+  return labels[varKey] || varKey;
+}
+
+function renderScatterPlot() {
+  const ctx = scatterCtx;
+  const w = scatterCanvas.clientWidth;
+  const h = scatterCanvas.clientHeight;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#1A0D00';
+  ctx.fillRect(0, 0, w, h);
+
+  const xVar = document.getElementById('scatter-x').value;
+  const yVar = document.getElementById('scatter-y').value;
+
+  const padL = 40;
+  const padR = 10;
+  const padT = 10;
+  const padB = 22;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  let points = [];
+
+  if (scatterMode === 'spatial') {
+    // Get all tile data from Python
+    const tilesJson = pyodide.runPython('get_scatter_spatial()');
+    const tiles = JSON.parse(tilesJson);
+    let maxElev = 0;
+    tiles.forEach(t => { if (t.elev > maxElev) maxElev = t.elev; });
+
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
+      const xVal = getScatterValue(tile, xVar);
+      const yVal = getScatterValue(tile, yVar);
+      // Color by elevation
+      const elevNorm = maxElev > 0 ? tile.elev / maxElev : 0;
+      const r = Math.round(60 + 160 * elevNorm);
+      const g = Math.round(40 + 120 * (1 - elevNorm));
+      const b = Math.round(20 + 80 * (1 - elevNorm));
+      points.push({ x: xVal, y: yVal, color: `rgb(${r},${g},${b})`, alpha: 0.85 });
+    }
+  } else {
+    // Temporal mode: each dot is one generation from popHistory
+    if (popHistory.length < 2) return;
+    const total = popHistory.length;
+    for (let i = 0; i < total; i++) {
+      const entry = popHistory[i];
+      const xVal = getScatterValue(entry, xVar);
+      const yVal = getScatterValue(entry, yVar);
+      // Color by recency (older = dimmer)
+      const recency = (i + 1) / total;
+      const rgb = hexToRgb(SPECIES[selectedSpecies].color);
+      points.push({
+        x: xVal, y: yVal,
+        color: `rgb(${rgb.r},${rgb.g},${rgb.b})`,
+        alpha: 0.15 + 0.85 * recency
+      });
+    }
+  }
+
+  if (points.length === 0) return;
+
+  // Compute ranges
+  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+  points.forEach(p => {
+    if (p.x < xMin) xMin = p.x;
+    if (p.x > xMax) xMax = p.x;
+    if (p.y < yMin) yMin = p.y;
+    if (p.y > yMax) yMax = p.y;
+  });
+  // Prevent zero-range
+  if (xMax === xMin) { xMin -= 0.5; xMax += 0.5; }
+  if (yMax === yMin) { yMin -= 0.5; yMax += 0.5; }
+  const xRange = xMax - xMin;
+  const yRange = yMax - yMin;
+
+  // Draw grid lines
+  ctx.strokeStyle = '#3d2a10';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const gx = padL + (i / 4) * plotW;
+    const gy = padT + (i / 4) * plotH;
+    ctx.beginPath(); ctx.moveTo(gx, padT); ctx.lineTo(gx, padT + plotH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + plotW, gy); ctx.stroke();
+  }
+
+  // Draw points
+  points.forEach(p => {
+    const px = padL + ((p.x - xMin) / xRange) * plotW;
+    const py = padT + plotH - ((p.y - yMin) / yRange) * plotH;
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // Axis labels
+  ctx.fillStyle = '#8a7560';
+  ctx.font = '8px monospace';
+  ctx.textAlign = 'center';
+
+  // X axis
+  ctx.fillText(formatAxisVal(xMin), padL, h - 2);
+  ctx.fillText(formatAxisVal(xMax), padL + plotW, h - 2);
+  ctx.fillText(getVarLabel(xVar), padL + plotW / 2, h - 2);
+
+  // Y axis
+  ctx.textAlign = 'right';
+  ctx.fillText(formatAxisVal(yMax), padL - 4, padT + 9);
+  ctx.fillText(formatAxisVal(yMin), padL - 4, padT + plotH);
+  ctx.save();
+  ctx.translate(8, padT + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText(getVarLabel(yVar), 0, 0);
+  ctx.restore();
+}
+
+function formatAxisVal(v) {
+  if (Number.isInteger(v) || Math.abs(v) >= 100) return Math.round(v).toString();
+  return v.toFixed(2);
+}
+
 // ── PYTHON SIM CODE ──
 const SIM_CODE = `
 import json
@@ -784,7 +1576,7 @@ import math
 import random
 
 # ── CONFIG ──
-GRID_SIZE = 8
+GRID_SIZE = 12
 NUM_SPECIES = 5
 
 # Species indices
@@ -795,40 +1587,57 @@ CRAB = 3
 WORM = 4
 
 # Carrying capacities per tile
-BASE_K = [60, 15, 40, 35, 80]  # Velothrix, Leviathan, Crawler, Crab, Worm
+BASE_K = [60, 45, 55, 50, 52]  # Velothrix, Leviathan, Crawler, Crab, Worm
+
+# Minimum effective K on any suitable tile (prevents stochastic extinction spirals)
+MIN_K = 15
 
 # Growth rates (per generation, logistic)
-GROWTH_RATES = [0.03, 0.015, 0.025, 0.02, 0.04]
+GROWTH_RATES = [0.08, 0.06, 0.07, 0.065, 0.07]
 
 # Mutation rate and step
-MUTATION_RATE = 0.002
-MUTATION_STEP = 0.01
+MUTATION_RATE = 0.003
+MUTATION_STEP = 0.012
 
 # Drift strength (lower = less drift)
 DRIFT_STRENGTH = 0.005
 
 # Selection strength (how much trait affects fitness)
-SELECTION_STRENGTH = 0.02
+SELECTION_STRENGTH = 0.01
 
 # Predation rates (fraction of prey eaten per predator per gen)
-PREDATION_LEVIATHAN_VELOTHRIX = 0.003
-PREDATION_LEVIATHAN_WORM = 0.002
-PREDATION_VELOTHRIX_WORM = 0.001
+PREDATION_LEVIATHAN_VELOTHRIX = 0.008
+PREDATION_LEVIATHAN_WORM = 0.006
+PREDATION_VELOTHRIX_WORM = 0.003
 
 # Competition coefficients
-COMPETITION_VELOTHRIX_CRAWLER = 0.001
-COMPETITION_CRAB_SPACE = 0.0005
+COMPETITION_VELOTHRIX_CRAWLER = 0.0002
+COMPETITION_CRAB_SPACE = 0.0002
 
 # Migration rate (fraction that migrates per gen)
-MIGRATION_RATE = 0.01
+MIGRATION_RATE = 0.03
 
-# Event probabilities per gen (very rare)
+# Recolonization base rate (chance per gen per empty suitable tile)
+RECOLONIZATION_BASE = 0.05
+
+# Event probabilities per gen
 DROUGHT_PROB = 0.002
 FLOOD_PROB = 0.002
 DISEASE_PROB = 0.001
+ALGAL_BLOOM_PROB = 0.003
+TIDAL_SURGE_PROB = 0.002
+MIGRATION_CORRIDOR_PROB = 0.0015
+REEF_FORMATION_PROB = 0.001
 
 # Season cycle length
-SEASON_LENGTH = 100
+SEASON_LENGTH = 120
+
+# Environmental event state
+active_events = []  # list of {type, start_gen, duration, data}
+
+# Per-step event flags (set by _check_events, read by _update_tile)
+_bloom_active = False
+_surge_tiles = set()  # set of (r,c) tuples for tiles affected by tidal surge
 
 # Speciation tracking
 SPECIATION_THRESHOLD = 0.3
@@ -837,6 +1646,16 @@ SPECIATION_GENS = 100
 # ── STATE ──
 generation = 0
 events_buffer = []
+
+# Persistent speciation state: species_idx -> {
+#   'split_trait': float,       # trait value where the split occurred
+#   'gen': int,                 # generation when speciation was detected
+#   'variant_name': str,        # name for the new variant
+#   'parent_name': str,         # name for the original variant
+#   'variant_color': str,       # hex color for the new variant
+#   'parent_color': str,        # hex color for the parent
+# }
+speciation_events = {}
 
 # Grid state: [row][col] -> tile
 # Each tile: {
@@ -851,22 +1670,128 @@ events_buffer = []
 
 grid = []
 
+TERRAIN_SEED = None  # Set to an int for reproducible maps, None for random
+
+# Biome thresholds
+BIOME_DEEP_WATER = 0.2
+BIOME_SHALLOW_MARSH = 0.4
+BIOME_REED_BEDS = 0.5
+BIOME_TIDAL_FLATS = 0.7
+
+def _hash_noise(ix, iy, seed):
+    """Integer hash-based pseudo-random for value noise."""
+    n = ix * 374761393 + iy * 668265263 + seed * 1274126177
+    n = (n ^ (n >> 13)) * 1274126177
+    n = n ^ (n >> 16)
+    return (n & 0x7fffffff) / 0x7fffffff
+
+def _value_noise(x, y, seed):
+    """Smoothed value noise with bicubic-ish interpolation."""
+    ix = int(math.floor(x))
+    iy = int(math.floor(y))
+    fx = x - ix
+    fy = y - iy
+    # Smoothstep
+    fx = fx * fx * (3 - 2 * fx)
+    fy = fy * fy * (3 - 2 * fy)
+    n00 = _hash_noise(ix, iy, seed)
+    n10 = _hash_noise(ix + 1, iy, seed)
+    n01 = _hash_noise(ix, iy + 1, seed)
+    n11 = _hash_noise(ix + 1, iy + 1, seed)
+    nx0 = n00 * (1 - fx) + n10 * fx
+    nx1 = n01 * (1 - fx) + n11 * fx
+    return nx0 * (1 - fy) + nx1 * fy
+
+def _octave_noise(x, y, seed, octaves=4, lacunarity=2.0, persistence=0.5):
+    """Multi-octave value noise returning 0-1."""
+    total = 0.0
+    amplitude = 1.0
+    frequency = 1.0
+    max_val = 0.0
+    for i in range(octaves):
+        total += _value_noise(x * frequency, y * frequency, seed + i * 31) * amplitude
+        max_val += amplitude
+        amplitude *= persistence
+        frequency *= lacunarity
+    return total / max_val
+
 def generate_elevation():
-    """Simple value noise for terrain."""
+    """Multi-octave value noise terrain with water bodies and ridges."""
+    seed = TERRAIN_SEED if TERRAIN_SEED is not None else random.randint(0, 999999)
     elev = [[0.0]*GRID_SIZE for _ in range(GRID_SIZE)]
-    # Use midpoint displacement-like approach
-    random.seed(42)  # Reproducible
-    # Place some random control points
+    scale = 0.35  # Controls feature size relative to grid
+
+    # Generate raw noise
     for r in range(GRID_SIZE):
         for c in range(GRID_SIZE):
-            # Distance from center creates a basin (marsh in center, shores at edges)
-            cx, cy = GRID_SIZE/2, GRID_SIZE/2
-            dist = math.sqrt((r-cx)**2 + (c-cy)**2) / (GRID_SIZE * 0.7)
-            base = 0.3 + dist * 0.5
-            noise = random.uniform(-0.15, 0.15)
-            elev[r][c] = max(0.0, min(1.0, base + noise))
-    random.seed()  # Unseed
+            nx = c * scale
+            ny = r * scale
+            # Base terrain: multi-octave noise
+            base = _octave_noise(nx, ny, seed, octaves=4, persistence=0.45)
+            # Ridge layer: fold noise to create ridge lines
+            ridge = _octave_noise(nx + 50, ny + 50, seed + 100, octaves=3, persistence=0.5)
+            ridge = 1.0 - abs(ridge * 2 - 1)  # Fold into ridges
+            ridge = ridge * ridge  # Sharpen ridges
+            # Combine: base terrain + subtle ridge influence
+            combined = base * 0.7 + ridge * 0.3
+            # Basin effect: lower center to create water body
+            cx, cy = GRID_SIZE / 2.0, GRID_SIZE / 2.0
+            dist = math.sqrt((r - cy)**2 + (c - cx)**2) / (GRID_SIZE * 0.6)
+            basin = max(0, 1.0 - dist * dist) * 0.25
+            combined = combined - basin
+            elev[r][c] = combined
+
+    # Normalize to 0-1
+    flat = [elev[r][c] for r in range(GRID_SIZE) for c in range(GRID_SIZE)]
+    lo, hi = min(flat), max(flat)
+    span = hi - lo if hi > lo else 1.0
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            elev[r][c] = (elev[r][c] - lo) / span
+
+    # Flood-fill to connect low regions into water bodies
+    # Push lowest 20% of tiles further down to form coherent water
+    threshold = sorted(flat)[max(1, len(flat) // 5)]
+    threshold_norm = (threshold - lo) / span
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            if elev[r][c] < threshold_norm:
+                elev[r][c] = elev[r][c] * 0.7  # Deepen low areas
+
+    # Re-normalize after deepening
+    flat2 = [elev[r][c] for r in range(GRID_SIZE) for c in range(GRID_SIZE)]
+    lo2, hi2 = min(flat2), max(flat2)
+    span2 = hi2 - lo2 if hi2 > lo2 else 1.0
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            elev[r][c] = (elev[r][c] - lo2) / span2
+
     return elev
+
+def get_biome(elev):
+    """Classify elevation into biome type."""
+    if elev < BIOME_DEEP_WATER:
+        return 'deep_water'
+    elif elev < BIOME_SHALLOW_MARSH:
+        return 'shallow_marsh'
+    elif elev < BIOME_REED_BEDS:
+        return 'reed_beds'
+    elif elev < BIOME_TIDAL_FLATS:
+        return 'tidal_flats'
+    else:
+        return 'rocky_shore'
+
+def habitat_suitability(elev, species_idx):
+    """Returns 0-1 suitability for species at given elevation/biome."""
+    biome = get_biome(elev)
+    suits = {
+        VELOTHRIX: {'shallow_marsh': 1.0, 'reed_beds': 0.7, 'tidal_flats': 0.4, 'deep_water': 0.25, 'rocky_shore': 0.15},
+        LEVIATHAN: {'deep_water': 1.0, 'shallow_marsh': 0.7, 'reed_beds': 0.35, 'tidal_flats': 0.1, 'rocky_shore': 0.0},
+        CRAWLER: {'reed_beds': 1.0, 'shallow_marsh': 0.75, 'tidal_flats': 0.55, 'deep_water': 0.2, 'rocky_shore': 0.35},
+        CRAB: {'rocky_shore': 1.0, 'tidal_flats': 0.75, 'reed_beds': 0.35, 'shallow_marsh': 0.15, 'deep_water': 0.05},
+        WORM: {'deep_water': 0.75, 'shallow_marsh': 0.9, 'reed_beds': 0.6, 'tidal_flats': 0.3, 'rocky_shore': 0.1},
+    }
+    return suits.get(species_idx, {}).get(biome, 0.5)
 
 def init_grid():
     global grid
@@ -876,8 +1801,6 @@ def init_grid():
         row = []
         for c in range(GRID_SIZE):
             elev = elevations[r][c]
-            # Habitat suitability based on elevation
-            # Low elevation = deep water (leviathans), mid = marsh (velothrix), high = shore (crabs)
             tile = {
                 'elevation': elev,
                 'food': 0.7 + random.uniform(-0.1, 0.1),
@@ -888,34 +1811,15 @@ def init_grid():
                 'trait_var': [0.01]*NUM_SPECIES,
             }
 
-            # Set initial populations based on habitat
-            # Velothrix: prefer mid elevation (0.3-0.7)
-            if 0.2 < elev < 0.8:
-                tile['pops'][VELOTHRIX] = int(BASE_K[VELOTHRIX] * random.uniform(0.4, 0.7))
-            else:
-                tile['pops'][VELOTHRIX] = int(BASE_K[VELOTHRIX] * random.uniform(0.05, 0.2))
-
-            # Leviathan: prefer low elevation (deep water)
-            if elev < 0.5:
-                tile['pops'][LEVIATHAN] = int(BASE_K[LEVIATHAN] * random.uniform(0.3, 0.6))
-            else:
-                tile['pops'][LEVIATHAN] = int(BASE_K[LEVIATHAN] * random.uniform(0.0, 0.1))
-
-            # Crawler: prefer mid-low (reeds)
-            if 0.25 < elev < 0.65:
-                tile['pops'][CRAWLER] = int(BASE_K[CRAWLER] * random.uniform(0.3, 0.6))
-            else:
-                tile['pops'][CRAWLER] = int(BASE_K[CRAWLER] * random.uniform(0.05, 0.15))
-
-            # Crab: prefer high elevation (shores)
-            if elev > 0.5:
-                tile['pops'][CRAB] = int(BASE_K[CRAB] * random.uniform(0.3, 0.6))
-            else:
-                tile['pops'][CRAB] = int(BASE_K[CRAB] * random.uniform(0.0, 0.1))
-
-            # Worm: everywhere, prefer wet
-            water_factor = tile['water']
-            tile['pops'][WORM] = int(BASE_K[WORM] * water_factor * random.uniform(0.3, 0.7))
+            # Set initial populations based on biome suitability
+            for s in range(NUM_SPECIES):
+                suit = habitat_suitability(elev, s)
+                if suit > 0.4:
+                    tile['pops'][s] = int(BASE_K[s] * suit * random.uniform(0.4, 0.7))
+                elif suit > 0.1:
+                    tile['pops'][s] = int(BASE_K[s] * suit * random.uniform(0.15, 0.35))
+                else:
+                    tile['pops'][s] = int(BASE_K[s] * suit * random.uniform(0.0, 0.1))
 
             # Initial trait values with slight spatial variation
             for s in range(NUM_SPECIES):
@@ -926,25 +1830,6 @@ def init_grid():
         grid.append(row)
 
 init_grid()
-
-def habitat_suitability(elev, species_idx):
-    """Returns 0-1 suitability for species at given elevation."""
-    if species_idx == VELOTHRIX:
-        # Peak at 0.5
-        return max(0, 1.0 - abs(elev - 0.5) * 2.5)
-    elif species_idx == LEVIATHAN:
-        # Prefer low (deep water)
-        return max(0, 1.0 - elev * 1.8)
-    elif species_idx == CRAWLER:
-        # Peak at 0.4
-        return max(0, 1.0 - abs(elev - 0.4) * 2.5)
-    elif species_idx == CRAB:
-        # Prefer high (shores)
-        return max(0, elev * 1.5 - 0.2)
-    elif species_idx == WORM:
-        # Everywhere but slightly prefer wet
-        return max(0.2, 1.0 - elev * 0.5)
-    return 0.5
 
 def get_season():
     """Returns season factor 0-1 (0=harsh winter, 1=peak summer)."""
@@ -981,49 +1866,269 @@ def step():
         _check_speciation()
 
 def _check_events(season):
-    """Check for random environmental events."""
+    """Check for random environmental events and manage active persistent events."""
+    global active_events, _bloom_active, _surge_tiles
+    names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
+
+    # Reset per-step flags
+    _bloom_active = False
+    _surge_tiles = set()
+
+    # ── Process active persistent events ──
+    still_active = []
+    for ev in active_events:
+        remaining = ev['start_gen'] + ev['duration'] - generation
+        if remaining <= 0:
+            # Event ending
+            if ev['type'] == 'algal_bloom':
+                events_buffer.append({'gen': generation, 'text': f'Algal bloom subsiding — visibility returning to normal'})
+            elif ev['type'] == 'tidal_surge':
+                # Restore original elevations
+                for pos, orig_elev in ev['data']['original_elevations']:
+                    r, c = pos
+                    if 0 <= r < GRID_SIZE and 0 <= c < GRID_SIZE:
+                        grid[r][c]['elevation'] = orig_elev
+                events_buffer.append({'gen': generation, 'text': f'Tidal surge receding — deep water boundaries contracting'})
+            elif ev['type'] == 'migration_corridor':
+                events_buffer.append({'gen': generation, 'text': f'Migration corridor closing as seasonal currents shift'})
+            elif ev['type'] == 'reef_formation':
+                r, c = ev['data']['tile']
+                final_elev = ev['data']['target_elevation']
+                if 0 <= r < GRID_SIZE and 0 <= c < GRID_SIZE:
+                    grid[r][c]['elevation'] = final_elev
+                    biome = get_biome(final_elev)
+                    events_buffer.append({'gen': generation, 'text': f'🪸 Reef at ({r},{c}) fully formed — tile is now {biome.replace("_"," ")}'})
+            continue
+        still_active.append(ev)
+
+        if ev['type'] == 'algal_bloom':
+            _bloom_active = True
+            # Boost food in wet biomes
+            for r in range(GRID_SIZE):
+                for c in range(GRID_SIZE):
+                    biome = get_biome(grid[r][c]['elevation'])
+                    if biome in ('deep_water', 'shallow_marsh', 'reed_beds'):
+                        grid[r][c]['food'] = min(1.0, grid[r][c]['food'] + 0.015)
+
+        elif ev['type'] == 'tidal_surge':
+            # Track affected tiles so _update_tile can boost Leviathan/Worm K
+            for pos, _ in ev['data']['original_elevations']:
+                _surge_tiles.add(pos)
+
+        elif ev['type'] == 'migration_corridor':
+            # Enhanced bidirectional migration along corridor
+            path = ev['data']['path']
+            for i in range(len(path) - 1):
+                r1, c1 = path[i]
+                r2, c2 = path[i + 1]
+                if not (0 <= r1 < GRID_SIZE and 0 <= c1 < GRID_SIZE): continue
+                if not (0 <= r2 < GRID_SIZE and 0 <= c2 < GRID_SIZE): continue
+                for s in range(NUM_SPECIES):
+                    pop1 = grid[r1][c1]['pops'][s]
+                    pop2 = grid[r2][c2]['pops'][s]
+                    diff = pop1 - pop2
+                    # Flow from high to low, proportional to difference
+                    if abs(diff) > 3:
+                        transfer = max(1, int(abs(diff) * 0.1))
+                        if diff > 0:
+                            grid[r1][c1]['pops'][s] = max(0, pop1 - transfer)
+                            grid[r2][c2]['pops'][s] += transfer
+                        else:
+                            grid[r2][c2]['pops'][s] = max(0, pop2 - transfer)
+                            grid[r1][c1]['pops'][s] += transfer
+
+        elif ev['type'] == 'reef_formation':
+            # Gradually shift elevation toward rocky_shore
+            r, c = ev['data']['tile']
+            if 0 <= r < GRID_SIZE and 0 <= c < GRID_SIZE:
+                progress = (generation - ev['start_gen']) / ev['duration']
+                orig = ev['data']['original_elevation']
+                target = ev['data']['target_elevation']
+                grid[r][c]['elevation'] = orig + (target - orig) * progress
+
+    active_events = still_active
+
+    # ── Instantaneous events ──
     if random.random() < DROUGHT_PROB:
-        # Drought affects a region
         cr = random.randint(0, GRID_SIZE-1)
         cc = random.randint(0, GRID_SIZE-1)
-        radius = random.randint(1, 2)
+        radius = random.randint(1, 3)
+        affected_count = 0
         for r in range(max(0,cr-radius), min(GRID_SIZE,cr+radius+1)):
             for c in range(max(0,cc-radius), min(GRID_SIZE,cc+radius+1)):
-                grid[r][c]['food'] *= 0.4
-                grid[r][c]['water'] *= 0.5
+                grid[r][c]['food'] *= 0.5
+                grid[r][c]['water'] *= 0.6
+                affected_count += 1
         region = "eastern" if cc > GRID_SIZE//2 else "western"
         events_buffer.append({
             'gen': generation,
-            'text': f'Drought in {region} marsh — food and water levels dropping'
+            'text': f'☀️ Drought in {region} marsh — {affected_count} tiles affected, food and water dropping'
         })
 
     if random.random() < FLOOD_PROB:
         cr = random.randint(0, GRID_SIZE-1)
         cc = random.randint(0, GRID_SIZE-1)
-        radius = random.randint(1, 2)
+        radius = random.randint(1, 3)
+        affected_count = 0
         for r in range(max(0,cr-radius), min(GRID_SIZE,cr+radius+1)):
             for c in range(max(0,cc-radius), min(GRID_SIZE,cc+radius+1)):
                 grid[r][c]['water'] = min(1.0, grid[r][c]['water'] + 0.3)
-                # Flooding hurts land species
-                grid[r][c]['pops'][CRAB] = int(grid[r][c]['pops'][CRAB] * 0.7)
-                grid[r][c]['pops'][CRAWLER] = int(grid[r][c]['pops'][CRAWLER] * 0.8)
+                grid[r][c]['pops'][CRAB] = int(grid[r][c]['pops'][CRAB] * 0.75)
+                grid[r][c]['pops'][CRAWLER] = int(grid[r][c]['pops'][CRAWLER] * 0.85)
+                affected_count += 1
         region = "northern" if cr < GRID_SIZE//2 else "southern"
         events_buffer.append({
             'gen': generation,
-            'text': f'Flooding in {region} tidal flats — water levels surging'
+            'text': f'🌧️ Flooding in {region} tidal flats — {affected_count} tiles submerged'
         })
 
+    # ── Density-dependent disease ──
     if random.random() < DISEASE_PROB:
-        target = random.randint(0, NUM_SPECIES-1)
-        names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
-        # Disease affects all tiles but mildly
+        # Target the currently most populous species (density-dependent)
+        global_pops = [0] * NUM_SPECIES
         for r in range(GRID_SIZE):
             for c in range(GRID_SIZE):
-                grid[r][c]['pops'][target] = int(grid[r][c]['pops'][target] * 0.85)
-        events_buffer.append({
-            'gen': generation,
-            'text': f'Disease outbreak affecting {names[target]} population'
-        })
+                for s in range(NUM_SPECIES):
+                    global_pops[s] += grid[r][c]['pops'][s]
+        total_all = sum(global_pops)
+        if total_all > 0:
+            # Weight selection toward dominant species
+            weights = [p * p for p in global_pops]  # square for stronger density bias
+            total_w = sum(weights)
+            if total_w > 0:
+                roll = random.random() * total_w
+                target = 0
+                cumulative = 0
+                for s in range(NUM_SPECIES):
+                    cumulative += weights[s]
+                    if roll < cumulative:
+                        target = s
+                        break
+            else:
+                target = random.randint(0, NUM_SPECIES - 1)
+            # Severity: dominant species hit harder (lower survival)
+            dominance = global_pops[target] / max(1, total_all)
+            severity = 0.75 + 0.2 * (1.0 - dominance)  # 0.75-0.95 survival
+            # Disease spreads from epicenter — tiles near center hit harder
+            epicenter_r = random.randint(0, GRID_SIZE - 1)
+            epicenter_c = random.randint(0, GRID_SIZE - 1)
+            for r in range(GRID_SIZE):
+                for c in range(GRID_SIZE):
+                    dist = abs(r - epicenter_r) + abs(c - epicenter_c)
+                    local_severity = severity + 0.1 * min(1.0, dist / GRID_SIZE)  # farther = milder
+                    local_severity = min(1.0, local_severity)
+                    grid[r][c]['pops'][target] = int(grid[r][c]['pops'][target] * local_severity)
+            mortality_pct = int((1 - severity) * 100)
+            events_buffer.append({
+                'gen': generation,
+                'text': f'🦠 Disease outbreak targeting {names[target]} — epicenter ({epicenter_r},{epicenter_c}), ~{mortality_pct}% peak mortality'
+            })
+
+    # ── Algal bloom (persistent: 40-100 gens) ──
+    if random.random() < ALGAL_BLOOM_PROB:
+        if not any(e['type'] == 'algal_bloom' for e in active_events):
+            duration = random.randint(40, 100)
+            active_events.append({
+                'type': 'algal_bloom',
+                'start_gen': generation,
+                'duration': duration,
+                'data': {}
+            })
+            events_buffer.append({
+                'gen': generation,
+                'text': f'🌿 Algal bloom spreading across wetlands — Worm/Velothrix food surging, Leviathan hunting impaired (duration: {duration} gens)'
+            })
+
+    # ── Tidal surge (persistent: 25-60 gens) ──
+    if random.random() < TIDAL_SURGE_PROB:
+        if not any(e['type'] == 'tidal_surge' for e in active_events):
+            # Temporarily lower elevation of tiles adjacent to deep water
+            affected = []
+            for r in range(GRID_SIZE):
+                for c in range(GRID_SIZE):
+                    elev = grid[r][c]['elevation']
+                    if get_biome(elev) in ('shallow_marsh', 'reed_beds'):
+                        for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
+                            nr, nc = r+dr, c+dc
+                            if 0 <= nr < GRID_SIZE and 0 <= nc < GRID_SIZE:
+                                if get_biome(grid[nr][nc]['elevation']) == 'deep_water':
+                                    # Lower elevation to push tile toward deep water biome
+                                    new_elev = max(0.05, elev - 0.15)
+                                    affected.append(((r, c), elev))
+                                    grid[r][c]['elevation'] = new_elev
+                                    break
+            duration = random.randint(25, 60)
+            active_events.append({
+                'type': 'tidal_surge',
+                'start_gen': generation,
+                'duration': duration,
+                'data': {'original_elevations': affected}
+            })
+            events_buffer.append({
+                'gen': generation,
+                'text': f'🌊 Tidal surge — deep water expanding into {len(affected)} coastal tiles (duration: {duration} gens)'
+            })
+
+    # ── Migration corridor (persistent: 20-50 gens) ──
+    if random.random() < MIGRATION_CORRIDOR_PROB:
+        if not any(e['type'] == 'migration_corridor' for e in active_events):
+            # Create a winding path connecting two edges
+            if random.random() < 0.5:
+                row = random.randint(1, GRID_SIZE - 2)
+                path = []
+                for c in range(GRID_SIZE):
+                    # Slight wander for organic feel
+                    r_offset = random.choice([-1, 0, 0, 0, 1])
+                    actual_r = max(0, min(GRID_SIZE - 1, row + r_offset))
+                    path.append((actual_r, c))
+                direction = "east-west"
+            else:
+                col = random.randint(1, GRID_SIZE - 2)
+                path = []
+                for r in range(GRID_SIZE):
+                    c_offset = random.choice([-1, 0, 0, 0, 1])
+                    actual_c = max(0, min(GRID_SIZE - 1, col + c_offset))
+                    path.append((r, actual_c))
+                direction = "north-south"
+            duration = random.randint(20, 50)
+            active_events.append({
+                'type': 'migration_corridor',
+                'start_gen': generation,
+                'duration': duration,
+                'data': {'path': path}
+            })
+            events_buffer.append({
+                'gen': generation,
+                'text': f'🔀 Seasonal migration corridor opening {direction} — species flowing between isolated biomes (duration: {duration} gens)'
+            })
+
+    # ── Reef formation (persistent: 150-300 gens, permanent terrain change) ──
+    if random.random() < REEF_FORMATION_PROB:
+        if not any(e['type'] == 'reef_formation' for e in active_events):
+            # Pick a tidal_flats or shallow_marsh tile to develop into rocky_shore
+            candidates = []
+            for r in range(GRID_SIZE):
+                for c in range(GRID_SIZE):
+                    biome = get_biome(grid[r][c]['elevation'])
+                    if biome in ('tidal_flats', 'shallow_marsh'):
+                        candidates.append((r, c))
+            if candidates:
+                tile_pos = random.choice(candidates)
+                r, c = tile_pos
+                orig_elev = grid[r][c]['elevation']
+                # Target elevation in rocky_shore range (0.75-0.85)
+                target_elev = 0.75 + random.random() * 0.1
+                duration = random.randint(150, 300)
+                active_events.append({
+                    'type': 'reef_formation',
+                    'start_gen': generation,
+                    'duration': duration,
+                    'data': {'tile': tile_pos, 'original_elevation': orig_elev, 'target_elevation': target_elev}
+                })
+                events_buffer.append({
+                    'gen': generation,
+                    'text': f'🪸 Reef forming at ({r},{c}) — elevation rising, new Crab habitat developing over {duration} generations'
+                })
 
 def _update_tile(r, c, season):
     """Update populations and traits for one tile."""
@@ -1033,10 +2138,24 @@ def _update_tile(r, c, season):
     for s in range(NUM_SPECIES):
         pop = tile['pops'][s]
         if pop <= 0:
-            # Small chance of recolonization
-            if random.random() < 0.001 * habitat_suitability(elev, s):
-                tile['pops'][s] = 1
-                tile['traits'][s] = 0.5 + random.uniform(-0.1, 0.1)
+            # Recolonization from nearby populations or seed bank
+            suit = habitat_suitability(elev, s)
+            if suit > 0.05 and random.random() < RECOLONIZATION_BASE * suit:
+                # Check if species exists on any adjacent tile (local dispersal)
+                has_neighbor = False
+                for dr, dc in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]:
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < GRID_SIZE and 0 <= nc < GRID_SIZE:
+                        if grid[nr][nc]['pops'][s] > 3:
+                            has_neighbor = True
+                            break
+                if has_neighbor:
+                    tile['pops'][s] = max(2, int(MIN_K * suit * 0.3))
+                    tile['traits'][s] = 0.5 + random.uniform(-0.1, 0.1)
+                elif random.random() < 0.005 * suit:
+                    # Rare long-distance dispersal / seed bank
+                    tile['pops'][s] = 1
+                    tile['traits'][s] = 0.5 + random.uniform(-0.1, 0.1)
             continue
 
         trait = tile['traits'][s]
@@ -1044,13 +2163,26 @@ def _update_tile(r, c, season):
 
         # Effective carrying capacity depends on habitat and food
         suit = habitat_suitability(elev, s)
-        k = BASE_K[s] * suit * tile['food'] * (0.7 + 0.3 * season)
+        k = BASE_K[s] * suit * (0.7 + 0.3 * tile['food']) * (0.85 + 0.15 * season)
+        # Tidal surge: boost K for water species on affected tiles
+        if (r, c) in _surge_tiles and s in (LEVIATHAN, WORM):
+            k *= 1.3
+        # Algal bloom: boost K for Worm and Velothrix (food abundance)
+        if _bloom_active and s in (WORM, VELOTHRIX):
+            k *= 1.15
+        # Enforce minimum K on suitable tiles to prevent stochastic extinction spirals
+        if suit > 0.15:
+            k = max(MIN_K, k)
 
         # ── SPECIES INTERACTIONS ──
         if s == VELOTHRIX:
             # Predation by Leviathans (brighter = more visible)
             lev_pop = tile['pops'][LEVIATHAN]
-            predation_loss = lev_pop * PREDATION_LEVIATHAN_VELOTHRIX * (0.5 + trait * 0.5)
+            pred_rate = PREDATION_LEVIATHAN_VELOTHRIX
+            # Algal bloom reduces Leviathan hunting efficiency
+            if _bloom_active:
+                pred_rate *= 0.5
+            predation_loss = lev_pop * pred_rate * (0.5 + trait * 0.5)
             # Competition with crawlers
             craw_pop = tile['pops'][CRAWLER]
             comp_loss = craw_pop * COMPETITION_VELOTHRIX_CRAWLER
@@ -1071,8 +2203,12 @@ def _update_tile(r, c, season):
             # Hunting range: wider = more prey but more energy cost
             hunt_bonus = trait * 0.005 * prey_available / max(1, BASE_K[VELOTHRIX])
             energy_cost = trait * trait * 0.01
+            # Algal bloom impairs hunting — energy cost increases
+            if _bloom_active:
+                energy_cost *= 1.5
+                hunt_bonus *= 0.6
             growth = GROWTH_RATES[s] + hunt_bonus - energy_cost
-            k = max(1, k * (0.5 + prey_available / max(1, BASE_K[VELOTHRIX] + BASE_K[WORM])))
+            k = max(1, k * (0.6 + 0.4 * prey_available / max(1, BASE_K[VELOTHRIX] + BASE_K[WORM])))
             sel_pressure = 0
             if prey_available > BASE_K[VELOTHRIX] * 0.3:
                 sel_pressure = SELECTION_STRENGTH * 0.2  # push range up when prey abundant
@@ -1082,7 +2218,7 @@ def _update_tile(r, c, season):
         elif s == CRAWLER:
             # Burrowing depth: deeper = safer but less food
             safety = trait * 0.8
-            food_access = 1.0 - trait * 0.4
+            food_access = 1.0 - trait * 0.3
             lev_pop = tile['pops'][LEVIATHAN]
             predation_loss = lev_pop * 0.001 * (1 - safety)
             growth = GROWTH_RATES[s] * food_access
@@ -1111,7 +2247,9 @@ def _update_tile(r, c, season):
             # Glow: brighter = more mates but more predators
             vel_pop = tile['pops'][VELOTHRIX]
             lev_pop = tile['pops'][LEVIATHAN]
-            predation_loss = (vel_pop * PREDATION_VELOTHRIX_WORM + lev_pop * PREDATION_LEVIATHAN_WORM) * (0.3 + trait * 0.7)
+            # Algal bloom reduces predation on worms (predators can't see through algae)
+            bloom_pred_mod = 0.5 if _bloom_active else 1.0
+            predation_loss = (vel_pop * PREDATION_VELOTHRIX_WORM + lev_pop * PREDATION_LEVIATHAN_WORM) * (0.3 + trait * 0.7) * bloom_pred_mod
             # Sexual selection for brightness
             sex_sel_bonus = trait * 0.01
             growth = GROWTH_RATES[s] + sex_sel_bonus
@@ -1121,17 +2259,28 @@ def _update_tile(r, c, season):
                 sel_pressure -= SELECTION_STRENGTH * 0.3 * (predator_count / max(1, BASE_K[VELOTHRIX] + BASE_K[LEVIATHAN]))
 
         # ── POPULATION DYNAMICS (logistic) ──
-        if s != LEVIATHAN:
-            # Apply predation
-            pop = max(0, pop - int(predation_loss * pop))
-
         if k <= 0:
             k = 1
-        dpop = growth * pop * (1.0 - pop / k)
-        new_pop = max(0, int(pop + dpop + random.uniform(-0.5, 0.5)))
 
-        # Stochastic extinction for very small populations
-        if 0 < new_pop <= 2 and random.random() < 0.05:
+        # Apply predation as survival fraction (not before growth)
+        if s != LEVIATHAN:
+            survival = max(0.0, 1.0 - predation_loss)
+            pop_after_pred = pop * survival
+        else:
+            pop_after_pred = float(pop)
+
+        # Logistic growth on surviving population
+        dpop = growth * pop_after_pred * (1.0 - pop_after_pred / k)
+        raw_pop = pop_after_pred + dpop
+
+        # Probabilistic rounding: preserves fractional growth
+        floor_pop = int(raw_pop)
+        frac = raw_pop - floor_pop
+        new_pop = floor_pop + (1 if random.random() < frac else 0)
+        new_pop = max(0, new_pop)
+
+        # Stochastic extinction only for truly tiny isolated populations
+        if new_pop == 1 and random.random() < 0.02:
             new_pop = 0
 
         tile['pops'][s] = min(new_pop, int(k * 1.5))  # hard cap
@@ -1224,7 +2373,22 @@ trait_divergence_counter = {}
 
 def _check_speciation():
     """Check if any species has diverged enough to speciate."""
+    global speciation_events
+    names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
+    trait_names = ['crest brightness', 'hunting range', 'burrowing depth', 'shell thickness', 'glow intensity']
+    variant_suffixes = [
+        ('aurantis', 'amberi'),
+        ('major', 'minor'),
+        ('viridis', 'pallida'),
+        ('robusta', 'gracilis'),
+        ('lucens', 'obscura'),
+    ]
+
     for s in range(NUM_SPECIES):
+        # Skip species that have already speciated
+        if s in speciation_events:
+            continue
+
         # Collect traits across all tiles with population
         traits_by_tile = []
         for r in range(GRID_SIZE):
@@ -1243,17 +2407,37 @@ def _check_speciation():
         if max_diff > SPECIATION_THRESHOLD:
             trait_divergence_counter[key] = trait_divergence_counter.get(key, 0) + 50  # we check every 50 gens
             if trait_divergence_counter[key] >= SPECIATION_GENS:
-                names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
-                trait_names = ['crest brightness', 'hunting range', 'burrowing depth', 'shell thickness', 'glow intensity']
-                # Find where the split is
+                # Find the median trait to determine the split point
                 sorted_traits = sorted(traits_by_tile, key=lambda x: x[2])
+                mid = len(sorted_traits) // 2
+                split_trait = (sorted_traits[mid-1][2] + sorted_traits[mid][2]) / 2.0
+
                 low_region = sorted_traits[0]
                 high_region = sorted_traits[-1]
+
+                # Compute geographic centers for each variant
+                low_tiles = [(r, c) for r, c, t in sorted_traits if t <= split_trait]
+                high_tiles = [(r, c) for r, c, t in sorted_traits if t > split_trait]
+                low_center = f"({sum(r for r,c in low_tiles)//max(1,len(low_tiles))},{sum(c for r,c in low_tiles)//max(1,len(low_tiles))})"
+                high_center = f"({sum(r for r,c in high_tiles)//max(1,len(high_tiles))},{sum(c for r,c in high_tiles)//max(1,len(high_tiles))})"
+
+                parent_suffix, variant_suffix = variant_suffixes[s]
+
+                # Store permanent speciation state
+                speciation_events[s] = {
+                    'split_trait': split_trait,
+                    'gen': generation,
+                    'parent_name': f'{names[s]} {parent_suffix}',
+                    'variant_name': f'{names[s]} {variant_suffix}',
+                }
+
+                # Fire prominent speciation event
                 events_buffer.append({
                     'gen': generation,
-                    'text': f'{names[s]} population split detected — variant near ({low_region[0]},{low_region[1]}) has {trait_names[s]} {low_region[2]:.2f} vs ({high_region[0]},{high_region[1]}) at {high_region[2]:.2f}'
+                    'text': f'⚡ SPECIATION: {names[s]} has split into two species! {names[s]} {parent_suffix} ({trait_names[s]} ≤{split_trait:.2f}, centered {low_center}, {len(low_tiles)} tiles) vs {names[s]} {variant_suffix} ({trait_names[s]} >{split_trait:.2f}, centered {high_center}, {len(high_tiles)} tiles). Divergence sustained for {SPECIATION_GENS}+ generations.',
+                    'speciation': True
                 })
-                trait_divergence_counter[key] = 0  # Reset to avoid spam
+                trait_divergence_counter[key] = 0
         else:
             trait_divergence_counter[key] = 0
 
@@ -1307,19 +2491,73 @@ def get_tile_trait(r, c, species_idx):
 def get_map_data(species_idx):
     pops = []
     elevations = []
+    biomes = []
+    variants = []  # 0 = no speciation or parent, 1 = variant
     max_pop = 1
+    has_speciation = species_idx in speciation_events
+    split_trait = speciation_events[species_idx]['split_trait'] if has_speciation else 0
+
     for r in range(GRID_SIZE):
         pop_row = []
         elev_row = []
+        biome_row = []
+        var_row = []
         for c in range(GRID_SIZE):
             p = grid[r][c]['pops'][species_idx]
+            e = grid[r][c]['elevation']
             pop_row.append(p)
-            elev_row.append(grid[r][c]['elevation'])
+            elev_row.append(e)
+            biome_row.append(get_biome(e))
+            if has_speciation and p > 0:
+                var_row.append(1 if grid[r][c]['traits'][species_idx] > split_trait else 0)
+            else:
+                var_row.append(0)
             if p > max_pop:
                 max_pop = p
         pops.append(pop_row)
         elevations.append(elev_row)
-    return json.dumps({'pops': pops, 'elevations': elevations, 'max_pop': max_pop})
+        biomes.append(biome_row)
+        variants.append(var_row)
+    return json.dumps({'pops': pops, 'elevations': elevations, 'biomes': biomes, 'max_pop': max_pop, 'variants': variants, 'speciated': has_speciation})
+
+def get_speciation_info():
+    """Return all speciation events for JS."""
+    result = {}
+    names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
+    for s, info in speciation_events.items():
+        # Compute per-variant stats
+        parent_pop = 0
+        parent_trait_sum = 0.0
+        parent_tiles = []
+        variant_pop = 0
+        variant_trait_sum = 0.0
+        variant_tiles = []
+        for r in range(GRID_SIZE):
+            for c in range(GRID_SIZE):
+                p = grid[r][c]['pops'][s]
+                if p > 0:
+                    t = grid[r][c]['traits'][s]
+                    if t > info['split_trait']:
+                        variant_pop += p
+                        variant_trait_sum += t * p
+                        variant_tiles.append(f'{r},{c}')
+                    else:
+                        parent_pop += p
+                        parent_trait_sum += t * p
+                        parent_tiles.append(f'{r},{c}')
+        result[str(s)] = {
+            'parent_name': info['parent_name'],
+            'variant_name': info['variant_name'],
+            'split_trait': info['split_trait'],
+            'gen': info['gen'],
+            'parent_pop': parent_pop,
+            'parent_trait': parent_trait_sum / max(1, parent_pop),
+            'parent_tiles': len(parent_tiles),
+            'variant_pop': variant_pop,
+            'variant_trait': variant_trait_sum / max(1, variant_pop),
+            'variant_tiles': len(variant_tiles),
+        }
+    return json.dumps(result)
 
 def get_trait_histogram(species_idx):
     """Return histogram of trait values across all tiles (weighted by pop)."""
@@ -1337,6 +2575,39 @@ def get_trait_histogram(species_idx):
         result.append({'low': i/num_bins, 'high': (i+1)/num_bins, 'count': bins[i]})
     return json.dumps(result)
 
+def get_scatter_spatial():
+    """Return per-tile data for spatial scatter plot."""
+    tiles = []
+    season = get_season()
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            t = grid[r][c]
+            tiles.append({
+                'pops': t['pops'][:],
+                'traits': [round(v, 4) for v in t['traits']],
+                'elev': round(t['elevation'], 4),
+                'food': round(t['food'], 4),
+                'water': round(t['water'], 4),
+                'temp': round(t['temp'], 4),
+            })
+    return json.dumps(tiles)
+
+def get_active_events_info():
+    """Return info about currently active persistent events."""
+    result = []
+    for ev in active_events:
+        remaining = ev['start_gen'] + ev['duration'] - generation
+        info = {'type': ev['type'], 'remaining': remaining, 'duration': ev['duration']}
+        if ev['type'] == 'tidal_surge':
+            info['affected_count'] = len(ev['data']['original_elevations'])
+        elif ev['type'] == 'reef_formation':
+            info['tile'] = list(ev['data']['tile'])
+            info['progress'] = (generation - ev['start_gen']) / ev['duration']
+        elif ev['type'] == 'migration_corridor':
+            info['path_length'] = len(ev['data']['path'])
+        result.append(info)
+    return json.dumps(result)
+
 def get_and_clear_events():
     global events_buffer
     out = json.dumps(events_buffer)
@@ -1346,6 +2617,52 @@ def get_and_clear_events():
 
 // ── BOOT ──
 init();
+</script>
+<script>
+// Mobile tool tray — folder tab for #panel
+(function() {
+  var panel = document.getElementById('panel');
+  if (!panel) return;
+
+  var tab = document.createElement('div');
+  tab.className = 'tray-tab';
+  tab.setAttribute('role', 'button');
+  tab.innerHTML = '<span class="tray-tab-label">Data</span><span class="tray-tab-chevron">&#9650;</span>';
+  document.body.appendChild(tab);
+
+  var isOpen = false;
+
+  function toggle(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    isOpen = !isOpen;
+    panel.classList.toggle('tray-open', isOpen);
+    tab.classList.toggle('tab-active', isOpen);
+    requestAnimationFrame(function() {
+      tab.style.bottom = isOpen ? panel.offsetHeight + 'px' : '0';
+    });
+  }
+
+  tab.addEventListener('click', toggle);
+  tab.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    toggle(e);
+  });
+
+  document.addEventListener('touchend', function(e) {
+    if (isOpen && !panel.contains(e.target) && !tab.contains(e.target)) toggle();
+  });
+  document.addEventListener('click', function(e) {
+    if (isOpen && !panel.contains(e.target) && !tab.contains(e.target)) toggle();
+  });
+
+  var startY = 0;
+  panel.addEventListener('touchstart', function(e) {
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  panel.addEventListener('touchend', function(e) {
+    if (e.changedTouches[0].clientY - startY > 60 && isOpen) toggle();
+  }, { passive: true });
+})();
 </script>
 </body>
 </html>
