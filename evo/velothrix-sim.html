@@ -822,11 +822,13 @@ function setupUI() {
 }
 
 function resizeCanvases() {
-  const mapArea = document.getElementById('map-area');
-  mapCanvas.width = mapArea.clientWidth;
-  mapCanvas.height = mapArea.clientHeight;
-
   const dpr = window.devicePixelRatio || 1;
+
+  const mapArea = document.getElementById('map-area');
+  mapCanvas.width = mapArea.clientWidth * dpr;
+  mapCanvas.height = mapArea.clientHeight * dpr;
+  mapCtx.scale(dpr, dpr);
+
   for (const c of [popCanvas, traitCanvas, scatterCanvas]) {
     c.width = c.clientWidth * dpr;
     c.height = c.clientHeight * dpr;
@@ -867,8 +869,9 @@ function onMapClick(e) {
   const sy = e.clientY - rect.top;
 
   const gs = pyodide.runPython('GRID_SIZE');
-  const w = mapCanvas.width;
-  const h = mapCanvas.height;
+  const dpr = window.devicePixelRatio || 1;
+  const w = mapCanvas.width / dpr;
+  const h = mapCanvas.height / dpr;
   const baseTileW = (w / gs) * 0.9 * camZoom;
   const tileW = baseTileW;
   const tileH = tileW * camTilt;
@@ -1015,8 +1018,9 @@ function renderAll() {
 // ── RENDER MAP (Isometric 3D) ──
 function renderMap() {
   const gs = pyodide.runPython('GRID_SIZE');
-  const w = mapCanvas.width;
-  const h = mapCanvas.height;
+  const dpr = window.devicePixelRatio || 1;
+  const w = mapCanvas.width / dpr;
+  const h = mapCanvas.height / dpr;
   const ctx = mapCtx;
 
   ctx.fillStyle = '#1A0D00';
@@ -1587,7 +1591,7 @@ CRAB = 3
 WORM = 4
 
 # Carrying capacities per tile
-BASE_K = [60, 45, 55, 50, 52]  # Velothrix, Leviathan, Crawler, Crab, Worm
+BASE_K = [60, 45, 55, 50, 58]  # Velothrix, Leviathan, Crawler, Crab, Worm
 
 # Minimum effective K on any suitable tile (prevents stochastic extinction spirals)
 MIN_K = 15
@@ -1789,7 +1793,7 @@ def habitat_suitability(elev, species_idx):
         LEVIATHAN: {'deep_water': 1.0, 'shallow_marsh': 0.7, 'reed_beds': 0.35, 'tidal_flats': 0.1, 'rocky_shore': 0.0},
         CRAWLER: {'reed_beds': 1.0, 'shallow_marsh': 0.75, 'tidal_flats': 0.55, 'deep_water': 0.2, 'rocky_shore': 0.35},
         CRAB: {'rocky_shore': 1.0, 'tidal_flats': 0.75, 'reed_beds': 0.35, 'shallow_marsh': 0.15, 'deep_water': 0.05},
-        WORM: {'deep_water': 0.75, 'shallow_marsh': 0.9, 'reed_beds': 0.6, 'tidal_flats': 0.3, 'rocky_shore': 0.1},
+        WORM: {'deep_water': 0.75, 'shallow_marsh': 0.9, 'reed_beds': 0.7, 'tidal_flats': 0.4, 'rocky_shore': 0.1},
     }
     return suits.get(species_idx, {}).get(biome, 0.5)
 
@@ -2103,7 +2107,9 @@ def _check_events(season):
             })
 
     # ── Reef formation (persistent: 150-300 gens, permanent terrain change) ──
-    if random.random() < REEF_FORMATION_PROB:
+    # Cap total reefs at 10 tiles (~7% of grid) to prevent long-run biome erasure
+    total_rocky = sum(1 for r in range(GRID_SIZE) for c in range(GRID_SIZE) if get_biome(grid[r][c]['elevation']) == 'rocky_shore')
+    if random.random() < REEF_FORMATION_PROB and total_rocky < GRID_SIZE * GRID_SIZE * 0.25:
         if not any(e['type'] == 'reef_formation' for e in active_events):
             # Pick a tidal_flats or shallow_marsh tile to develop into rocky_shore
             candidates = []
@@ -2289,6 +2295,11 @@ def _update_tile(r, c, season):
         if tile['pops'][s] > 0:
             # Selection
             new_trait = trait + sel_pressure
+
+            # Soft boundaries: extreme phenotypes face increasing physiological resistance
+            # Cubic pull prevents permanent pinning at 0 or 1
+            boundary_pressure = -0.005 * (2 * trait - 1) ** 3
+            new_trait += boundary_pressure
 
             # Drift (inversely proportional to sqrt(pop))
             if tile['pops'][s] > 0:

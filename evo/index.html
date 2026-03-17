@@ -3,845 +3,2677 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EvoSim — Ian Handy</title>
-<link rel="stylesheet" href="../styles.css">
+<title>Velothrix aurantis — Ecosystem Observation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+<style>
+:root {
+  --bg: #241200;
+  --bg-dark: #1A0D00;
+  --gold: #DDC165;
+  --gold-light: #FFE9A3;
+  --orange: #E5591C;
+  --text: #e8d5c0;
+  --dim: #8a7560;
+  --card: #2a1800;
+  --card-hover: #331e00;
+  --border: #3d2a10;
+  --velothrix: #DDC165;
+  --leviathan: #C0392B;
+  --crawler: #2ECC71;
+  --crab: #E5591C;
+  --worm: #9B59B6;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── LOADING SCREEN ── */
+#loader {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 1000;
+  gap: 20px;
+}
+#loader h1 {
+  font-family: var(--sans);
+  font-size: 28px; font-weight: 800;
+  color: var(--gold);
+}
+#loader p {
+  color: var(--dim);
+  font-size: 13px;
+}
+.loader-bar {
+  width: 200px; height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.loader-bar-fill {
+  height: 100%; width: 0%;
+  background: var(--gold);
+  transition: width 0.3s;
+}
+
+/* ── LAYOUT ── */
+#app {
+  display: none;
+  height: 100vh;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto 1fr auto;
+}
+
+/* ── HEADER ── */
+#header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+}
+#header h1 {
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header-controls button {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.header-controls button:hover { background: var(--card-hover); }
+.header-controls button.active {
+  background: var(--gold);
+  color: var(--bg);
+  border-color: var(--gold);
+}
+#gen-counter {
+  color: var(--dim);
+  font-size: 11px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+#gen-counter span { color: var(--gold-light); }
+
+/* ── SPECIES TABS ── */
+.species-tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: 16px;
+}
+.species-tab {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.species-tab:hover { color: var(--text); }
+.species-tab.active {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ── MAP AREA ── */
+#map-area {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-dark);
+}
+#map-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── ACTIVE EVENTS BAR ── */
+#active-events-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  padding: 0 16px;
+  min-height: 0;
+  overflow-x: auto;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border);
+  transition: min-height 0.2s, padding 0.2s;
+}
+#active-events-bar:empty {
+  padding: 0 16px;
+  border-bottom: none;
+}
+#active-events-bar:not(:empty) {
+  min-height: 24px;
+  padding: 4px 16px;
+}
+.active-event-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.active-event-pill.bloom { background: rgba(46, 204, 113, 0.15); border-color: rgba(46, 204, 113, 0.3); }
+.active-event-pill.surge { background: rgba(52, 152, 219, 0.15); border-color: rgba(52, 152, 219, 0.3); }
+.active-event-pill.corridor { background: rgba(155, 89, 182, 0.15); border-color: rgba(155, 89, 182, 0.3); }
+.active-event-pill.reef { background: rgba(229, 89, 28, 0.15); border-color: rgba(229, 89, 28, 0.3); }
+.active-event-pill .pill-timer {
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── EVENT FEED OVERLAY ── */
+#event-feed {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  max-height: 120px;
+  overflow-y: auto;
+  background: linear-gradient(transparent, rgba(26,13,0,0.95));
+  padding: 40px 12px 8px;
+  pointer-events: none;
+}
+#event-feed div {
+  font-size: 10px;
+  color: var(--dim);
+  padding: 2px 0;
+  pointer-events: auto;
+}
+#event-feed div .ev-gen { color: var(--gold); }
+#event-feed div .ev-text { color: var(--text); }
+
+/* ── RIGHT PANEL ── */
+#panel {
+  background: var(--bg-dark);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.panel-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px;
+}
+.panel-section h3 {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.panel-toggle {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.panel-toggle button {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 6px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.panel-toggle button.active {
+  background: var(--card-hover);
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+/* ── SPECIES ROWS ── */
+.species-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.species-row:last-child { border-bottom: none; }
+.species-variant {
+  padding-left: 16px;
+  border-bottom: none;
+}
+.species-variant + .species-variant { padding-top: 0; }
+.sp-variant-name { font-style: italic; font-size: 9px; }
+.sp-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sp-name {
+  flex: 1;
+  font-size: 10px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-pop {
+  font-size: 10px;
+  color: var(--dim);
+  text-align: right;
+  min-width: 40px;
+}
+.sp-trait {
+  font-size: 10px;
+  color: var(--gold);
+  text-align: right;
+  min-width: 40px;
+}
+
+/* ── CHART CANVASES ── */
+.chart-canvas {
+  width: 100%;
+  height: 120px;
+  display: block;
+}
+.chart-canvas.tall {
+  height: 160px;
+}
+
+/* ── SCATTER CONTROLS ── */
+.scatter-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.scatter-mode-toggle {
+  display: flex;
+  gap: 2px;
+}
+.scatter-mode-toggle button {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 0;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.scatter-mode-toggle button.active {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: var(--bg-dark);
+}
+.scatter-axes {
+  display: flex;
+  gap: 8px;
+}
+.scatter-axes label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--dim);
+  flex: 1;
+}
+.scatter-axes select {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  min-width: 0;
+}
+
+/* ── EVENT LOG ── */
+#event-log {
+  grid-column: 1 / -1;
+  background: var(--bg-dark);
+  border-top: 1px solid var(--border);
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 6px 12px;
+}
+#event-log .log-entry {
+  font-size: 10px;
+  color: var(--dim);
+  padding: 2px 0;
+}
+#event-log .log-entry .ev-gen { color: var(--gold); }
+#event-log .log-entry .ev-text { color: var(--text); }
+#event-log .log-entry.speciation-event {
+  background: rgba(221,193,101,0.1);
+  border-left: 3px solid var(--gold);
+  padding: 4px 8px;
+  margin: 4px 0;
+  font-size: 11px;
+}
+#event-log .log-entry.speciation-event .ev-gen { color: #FFE9A3; font-weight: 700; }
+#event-log .log-entry.speciation-event .ev-text { color: var(--gold-light); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-dark); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+/* ── FOLDER TAB (hidden on desktop) ── */
+.tray-tab { display: none; }
+
+/* ── MOBILE LAYOUT ── */
+@media (max-width: 768px) {
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+  }
+
+  #header {
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  #header h1 {
+    font-size: 16px;
+  }
+
+  .species-tabs {
+    order: 3;
+    margin-left: 0;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .species-tabs::-webkit-scrollbar { display: none; }
+
+  .header-controls {
+    margin-left: auto;
+  }
+
+  #gen-counter {
+    order: 2;
+    margin-left: 0;
+  }
+
+  #map-area {
+    min-height: 0;
+  }
+
+  /* Panel becomes a bottom tray */
+  #panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 100;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 60vh;
+    overflow-y: auto;
+    background: rgba(26,13,0,0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+  }
+  #panel.tray-open {
+    transform: translateY(0);
+  }
+
+  .chart-canvas {
+    height: 100px;
+  }
+  .chart-canvas.tall {
+    height: 130px;
+  }
+
+  #event-log {
+    grid-column: 1;
+    max-height: 100px;
+  }
+
+  #event-feed {
+    max-height: 80px;
+  }
+
+  /* Folder tab */
+  .tray-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 101;
+    background: rgba(26,13,0,0.95);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    padding: 10px 24px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: bottom 0.3s ease, background 0.2s;
+    font-family: var(--mono);
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.4);
+    min-width: 120px;
+  }
+  .tray-tab:active {
+    background: rgba(229,89,28,0.2);
+  }
+  .tray-tab-label {
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .tray-tab-chevron {
+    font-size: 12px;
+    color: var(--dim);
+    transition: transform 0.3s ease;
+    line-height: 1;
+  }
+  .tray-tab.tab-active .tray-tab-chevron {
+    transform: rotate(180deg);
+  }
+}
+
+@media (max-width: 420px) {
+  body { font-size: 11px; }
+
+  #header h1 { font-size: 14px; }
+
+  .header-controls button {
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+
+  .species-tab {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+
+  .panel-section {
+    padding: 8px;
+  }
+
+  .panel-section h3 {
+    font-size: 11px;
+  }
+}
+</style>
 </head>
 <body>
 
-<nav>
-  <a href="../" class="nav-logo">IH</a>
-  <ul class="nav-links">
-    <li><a href="../">Portfolio</a></li>
-    <li><a href="../#coding">Code</a></li>
-    <li><a href="../#about">About</a></li>
-  </ul>
-</nav>
-
-<!-- HERO -->
-<div class="evo-hero">
-  <div class="evo-hero-grid-bg"></div>
-  <div class="evo-hero-content">
-    <h1 class="evo-title">Evo<span>Sim</span></h1>
-    <p class="evo-subtitle">
-      A natural selection simulator built on real biological data —
-      keep your species alive as long as possible, or explore how
-      real populations actually evolved.
-    </p>
-    <div class="evo-mode-tabs">
-      <button class="mode-tab active" onclick="setMode('simulate')">▶ Simulate</button>
-      <button class="mode-tab" onclick="setMode('realdata')">◈ Real Data</button>
-    </div>
-  </div>
+<!-- LOADER -->
+<div id="loader">
+  <h1>VELOTHRIX</h1>
+  <p>Loading Pyodide runtime...</p>
+  <div class="loader-bar"><div class="loader-bar-fill" id="loader-fill"></div></div>
+  <p id="loader-hint" style="color:#5a4a30;font-size:11px;margin-top:8px;display:none">First load downloads ~10 MB — may take a moment on mobile</p>
 </div>
+<script>setTimeout(function(){ var h = document.getElementById('loader-hint'); if (h) h.style.display = 'block'; }, 3000);</script>
 
 <!-- APP -->
-<div class="evo-app">
-
-  <!-- SIDEBAR -->
-  <aside class="evo-sidebar">
-    <div>
-      <div class="sidebar-section-title">Species</div>
-      <div class="species-grid">
-        <button class="species-btn active" onclick="selectSpecies('fortis')">
-          <span class="species-name">G. fortis</span>
-          Darwin's Finch
-        </button>
-        <button class="species-btn" onclick="selectSpecies('aculeatus')">
-          <span class="species-name">G. aculeatus</span>
-          Stickleback
-        </button>
-        <button class="species-btn" onclick="selectSpecies('melanogaster')">
-          <span class="species-name">D. melanogaster</span>
-          Fruit Fly
-        </button>
-        <button class="species-btn" onclick="selectSpecies('reticulata')">
-          <span class="species-name">P. reticulata</span>
-          Guppy
-        </button>
-        <button class="species-btn" onclick="selectSpecies('major')">
-          <span class="species-name">P. major</span>
-          Great Tit
-        </button>
-      </div>
+<div id="app">
+  <!-- HEADER -->
+  <div id="header">
+    <h1>VELOTHRIX</h1>
+    <div class="species-tabs" id="species-tabs"></div>
+    <div class="header-controls">
+      <button id="btn-play" onclick="togglePlay()">&#9654; Play</button>
+      <button onclick="setSpeed(1)" class="speed-btn active" data-speed="1">1x</button>
+      <button onclick="setSpeed(5)" class="speed-btn" data-speed="5">5x</button>
+      <button onclick="setSpeed(20)" class="speed-btn" data-speed="20">20x</button>
+      <button onclick="setSpeed(100)" class="speed-btn" data-speed="100">100x</button>
     </div>
-
-    <!-- Simulate controls -->
-    <div id="sim-controls">
-      <div class="sidebar-section-title">Environment</div>
-      <div class="param-block">
-        <div class="param-row">
-          <div class="param-label">Selection Pressure <span id="val-s">0.20</span></div>
-          <input type="range" class="param-slider" id="sl-s" min="0" max="0.5" step="0.01" value="0.20" oninput="updateParam('s', this.value)">
-        </div>
-        <div class="param-row">
-          <div class="param-label">Population Size <span id="val-N">500</span></div>
-          <input type="range" class="param-slider" id="sl-N" min="50" max="2000" step="50" value="500" oninput="updateParam('N', this.value)">
-        </div>
-        <div class="param-row">
-          <div class="param-label">Mutation Rate <span id="val-mu">0.01</span></div>
-          <input type="range" class="param-slider" id="sl-mu" min="0.001" max="0.05" step="0.001" value="0.01" oninput="updateParam('mu', this.value)">
-        </div>
-        <div class="param-row">
-          <div class="param-label">Bottleneck Risk <span id="val-bt">Low</span></div>
-          <input type="range" class="param-slider" id="sl-bt" min="0" max="1" step="1" value="0" oninput="updateParam('bt', this.value)">
-        </div>
-      </div>
-
-      <div class="sidebar-section-title" style="margin-top:.5rem">Controls</div>
-      <div style="display:flex;flex-direction:column;gap:.5rem">
-        <button class="game-btn game-btn-run" id="btn-run" onclick="toggleRun()">▶ RUN SIMULATION</button>
-        <button class="game-btn game-btn-reset" onclick="resetSim()">↺ RESET</button>
-      </div>
-
-      <div class="sidebar-section-title" style="margin-top:.5rem">Status</div>
-      <div class="score-panel">
-        <div class="score-row">Generation <span class="score-val" id="sc-gen">0</span></div>
-        <div class="score-row">Population <span class="score-val" id="sc-pop">—</span></div>
-        <div class="score-row">Allele Freq (p) <span class="score-val" id="sc-p">—</span></div>
-        <div class="score-row">Δp this gen <span class="score-val" id="sc-dp">—</span></div>
-        <div class="score-row">Drift Var σ² <span class="score-val" id="sc-drift">—</span></div>
-      </div>
-    </div>
-
-    <!-- Real data controls -->
-    <div id="rd-controls" style="display:none">
-      <div class="sidebar-section-title">Dataset</div>
-      <div class="param-block">
-        <div class="control-group">
-          <label>View</label>
-          <select onchange="updateRealDataView(this.value)">
-            <option value="trait">Trait Distribution</option>
-            <option value="fitness">Fitness Landscape</option>
-            <option value="drift">Drift Simulation</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- MAIN -->
-  <main class="evo-main">
-
-    <!-- SIMULATE MODE -->
-    <div class="simulate-panel" id="simulate-panel">
-
-      <!-- Trait distribution chart -->
-      <div class="chart-panel">
-        <div class="chart-panel-header">
-          <span class="chart-panel-title">Trait Distribution</span>
-          <span class="chart-panel-sub" id="trait-label">Beak Depth — G. fortis</span>
-        </div>
-        <div class="chart-body">
-          <canvas class="chart-canvas" id="chart-trait" height="180"></canvas>
-        </div>
-      </div>
-
-      <!-- Population + allele freq charts side by side -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
-        <div class="chart-panel">
-          <div class="chart-panel-header">
-            <span class="chart-panel-title">Population Size</span>
-            <span class="chart-panel-sub">Extinction Risk</span>
-          </div>
-          <div class="chart-body">
-            <canvas class="chart-canvas" id="chart-pop" height="160"></canvas>
-          </div>
-        </div>
-        <div class="chart-panel">
-          <div class="chart-panel-header">
-            <span class="chart-panel-title">Selection Pressure</span>
-            <span class="chart-panel-sub">Δp per generation</span>
-          </div>
-          <div class="chart-body">
-            <canvas class="chart-canvas" id="chart-sel" height="160"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- Allele frequency over time -->
-      <div class="chart-panel">
-        <div class="chart-panel-header">
-          <span class="chart-panel-title">Allele Frequency (p) Over Time</span>
-          <span class="chart-panel-sub" id="real-ref-label">Reference: G. fortis beak depth h²=0.65</span>
-        </div>
-        <div class="chart-body">
-          <canvas class="chart-canvas" id="chart-allele" height="160"></canvas>
-        </div>
-      </div>
-
-      <!-- Event log -->
-      <div class="chart-panel">
-        <div class="chart-panel-header">
-          <span class="chart-panel-title">Event Log</span>
-          <span class="chart-panel-sub">simulation events</span>
-        </div>
-        <div class="event-log" id="event-log">
-          <div class="log-entry"><span class="log-gen">GEN 0</span><span>Simulation ready. Press RUN to begin.</span></div>
-        </div>
-      </div>
-
-    </div><!-- /simulate-panel -->
-
-    <!-- REAL DATA MODE -->
-    <div class="realdata-panel" id="realdata-panel">
-
-      <div class="species-info-card" id="species-info-card">
-        <h3>Geospiza fortis — <em>Darwin's Medium Ground Finch</em></h3>
-        <div class="info-stat"><div class="info-stat-val">0.65</div><div class="info-stat-label">Heritability (h²)</div></div>
-        <div class="info-stat"><div class="info-stat-val">±0.5mm</div><div class="info-stat-label">Beak depth variance</div></div>
-        <div class="info-stat"><div class="info-stat-val">~1200</div><div class="info-stat-label">Pop. Galápagos study</div></div>
-        <div class="info-stat"><div class="info-stat-val">1977</div><div class="info-stat-label">Grant drought study</div></div>
-      </div>
-
-      <div class="chart-panel">
-        <div class="chart-panel-header">
-          <span class="chart-panel-title">Real Trait Distribution</span>
-          <span class="chart-panel-sub" id="rd-trait-label">Beak Depth — G. fortis (empirical)</span>
-        </div>
-        <div class="chart-body">
-          <canvas class="chart-canvas" id="rd-chart-trait" height="200"></canvas>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
-        <div class="chart-panel">
-          <div class="chart-panel-header">
-            <span class="chart-panel-title">Fitness Landscape</span>
-            <span class="chart-panel-sub">trait vs. survival</span>
-          </div>
-          <div class="chart-body">
-            <canvas class="chart-canvas" id="rd-chart-fitness" height="180"></canvas>
-          </div>
-        </div>
-        <div class="chart-panel">
-          <div class="chart-panel-header">
-            <span class="chart-panel-title">Drift Simulation</span>
-            <span class="chart-panel-sub">50 replicate populations</span>
-          </div>
-          <div class="chart-body">
-            <canvas class="chart-canvas" id="rd-chart-drift" height="180"></canvas>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /realdata-panel -->
-
-  </main>
-</div><!-- /evo-app -->
-
-<!-- EXTINCTION OVERLAY -->
-<div class="extinction-overlay" id="extinction-overlay">
-  <div class="extinction-title">Extinction</div>
-  <div class="extinction-score">
-    <strong id="final-score">0</strong>
-    generations survived
+    <div id="gen-counter">Gen <span id="gen-num">0</span></div>
   </div>
-  <div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;letter-spacing:.15em;color:var(--fog);max-width:36ch;line-height:1.8;text-align:center" id="extinction-msg">
-    Population collapsed under selection pressure.
+
+  <!-- ACTIVE EVENTS BAR -->
+  <div id="active-events-bar"></div>
+
+  <!-- MAP -->
+  <div id="map-area">
+    <canvas id="map-canvas"></canvas>
+    <div id="event-feed"></div>
   </div>
-  <div style="display:flex;gap:1rem;margin-top:1rem">
-    <button class="btn btn-primary" onclick="resetSim(); document.getElementById('extinction-overlay').classList.remove('active')">Try Again</button>
-    <button class="btn btn-ghost" onclick="document.getElementById('extinction-overlay').classList.remove('active')">View Results</button>
+
+  <!-- RIGHT PANEL -->
+  <div id="panel">
+    <div class="panel-section">
+      <h3 id="panel-title">Global Overview</h3>
+      <div class="panel-toggle">
+        <button class="active" onclick="setPanelMode('global')">Global</button>
+        <button onclick="setPanelMode('tile')">Selected Tile</button>
+      </div>
+      <div id="species-list"></div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Population Trends</h3>
+      <canvas class="chart-canvas tall" id="pop-chart"></canvas>
+    </div>
+
+    <div class="panel-section">
+      <h3 id="trait-title">Trait Distribution</h3>
+      <canvas class="chart-canvas" id="trait-chart"></canvas>
+    </div>
+
+    <div class="panel-section">
+      <h3>Scatter Plot</h3>
+      <div class="scatter-controls">
+        <div class="scatter-mode-toggle">
+          <button class="active" onclick="setScatterMode('spatial')">Spatial</button>
+          <button onclick="setScatterMode('temporal')">Temporal</button>
+        </div>
+        <div class="scatter-axes">
+          <label>X <select id="scatter-x"></select></label>
+          <label>Y <select id="scatter-y"></select></label>
+        </div>
+      </div>
+      <canvas class="chart-canvas tall" id="scatter-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- EVENT LOG -->
+  <div id="event-log">
+    <div class="log-entry"><span class="ev-gen">[System]</span> <span class="ev-text">Ecosystem initializing...</span></div>
   </div>
 </div>
 
-<footer>
-  <p>© 2025 Ian Handy — <a href="../">ianhandy.com</a></p>
-  <p>Built with vanilla JS + D3 · <a href="https://github.com/" target="_blank">Source on GitHub</a></p>
-</footer>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script>
-// ══════════════════════════════════════════════
-//  SPECIES DATA (from evolution-simulation-research.md)
-// ══════════════════════════════════════════════
-const SPECIES = {
-  fortis: {
-    name: 'G. fortis', common: "Darwin's Finch",
-    trait: 'Beak Depth', unit: 'mm',
-    h2: 0.65, meanTrait: 9.5, sdTrait: 0.8,
-    genTime: 1, typicalN: 1200,
-    info: { h2: '0.65', variance: '±0.5mm', pop: '~1200', year: '1977' },
-    infoTitle: 'Geospiza fortis', infoSubtitle: "Darwin's Medium Ground Finch",
-    refLabel: 'G. fortis beak depth h²=0.65',
-  },
-  aculeatus: {
-    name: 'G. aculeatus', common: 'Threespine Stickleback',
-    trait: 'Lateral Plate Count', unit: 'plates',
-    h2: 0.85, meanTrait: 32, sdTrait: 5,
-    genTime: 1, typicalN: 800,
-    info: { h2: '0.85', variance: '±5 plates', pop: '~800', year: 'freshwater' },
-    infoTitle: 'Gasterosteus aculeatus', infoSubtitle: 'Threespine Stickleback',
-    refLabel: 'G. aculeatus lateral plate count h²=0.85',
-  },
-  melanogaster: {
-    name: 'D. melanogaster', common: 'Fruit Fly',
-    trait: 'Wing Venation Index', unit: 'idx',
-    h2: 0.40, meanTrait: 1.0, sdTrait: 0.15,
-    genTime: 0.05, typicalN: 5000,
-    info: { h2: '0.40', variance: '±0.15', pop: '~5000', year: 'lab strain' },
-    infoTitle: 'Drosophila melanogaster', infoSubtitle: 'Fruit Fly',
-    refLabel: 'D. melanogaster wing venation h²=0.40',
-  },
-  reticulata: {
-    name: 'P. reticulata', common: 'Trinidadian Guppy',
-    trait: 'Color Brightness', unit: '%',
-    h2: 0.52, meanTrait: 60, sdTrait: 12,
-    genTime: 0.5, typicalN: 600,
-    info: { h2: '0.52', variance: '±12%', pop: '~600', year: 'Trinidad' },
-    infoTitle: 'Poecilia reticulata', infoSubtitle: 'Trinidadian Guppy',
-    refLabel: 'P. reticulata color brightness h²=0.52',
-  },
-  major: {
-    name: 'P. major', common: 'Great Tit',
-    trait: 'Tarsus Length', unit: 'mm',
-    h2: 0.70, meanTrait: 20.5, sdTrait: 0.6,
-    genTime: 1, typicalN: 400,
-    info: { h2: '0.70', variance: '±0.6mm', pop: '~400', year: 'Wytham' },
-    infoTitle: 'Parus major', infoSubtitle: 'Great Tit',
-    refLabel: 'P. major tarsus length h²=0.70',
+// ── GLOBALS ──
+let pyodide = null;
+let playing = false;
+let speed = 1;
+let selectedSpecies = 0; // index into SPECIES
+let panelMode = 'global';
+let selectedTile = null; // {r, c} or null
+let popHistory = []; // [{gen, pops: [5 numbers]}]
+let mapCanvas, mapCtx;
+let popCanvas, popCtx;
+let traitCanvas, traitCtx;
+let scatterCanvas, scatterCtx;
+let scatterMode = 'spatial'; // 'spatial' or 'temporal'
+let animFrame = null;
+let stepsPerFrame = 1;
+
+// ── ISOMETRIC CAMERA ──
+let camTilt = 0.5;    // 0.25 = nearly flat, 0.75 = steep
+let camZoom = 1.0;
+let camPanX = 0;
+let camPanY = 0;
+let isDragging = false;
+let dragLastX = 0;
+let dragLastY = 0;
+
+const SPECIES = [
+  { name: 'Velothrix', fullName: 'Velothrix aurantis', color: '#DDC165', trait: 'Crest Brightness', variantColor: '#CC8833' },
+  { name: 'Leviathan', fullName: 'Kelp Leviathan', color: '#C0392B', trait: 'Hunting Range', variantColor: '#E06040' },
+  { name: 'Crawler', fullName: 'Reed Crawler', color: '#2ECC71', trait: 'Burrowing Depth', variantColor: '#1A9050' },
+  { name: 'Crab', fullName: 'Tidal Crab', color: '#E5591C', trait: 'Shell Thickness', variantColor: '#CC9944' },
+  { name: 'Worm', fullName: 'Bioluminescent Worm', color: '#9B59B6', trait: 'Glow Intensity', variantColor: '#6E3FA0' }
+];
+
+const MAX_HISTORY = 200;
+
+// ── INIT ──
+async function init() {
+  const fill = document.getElementById('loader-fill');
+  const loaderMsg = document.querySelector('#loader p');
+  fill.style.width = '20%';
+
+  try {
+    loaderMsg.textContent = 'Downloading Pyodide runtime (~10 MB)...';
+    pyodide = await loadPyodide();
+    fill.style.width = '50%';
+
+    loaderMsg.textContent = 'Initializing ecosystem simulation...';
+    await pyodide.runPythonAsync(SIM_CODE);
+    fill.style.width = '80%';
+
+    loaderMsg.textContent = 'Setting up interface...';
+    setupUI();
+    fill.style.width = '100%';
+
+    setTimeout(() => {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('app').style.display = 'grid';
+      resizeCanvases();
+      renderAll();
+    }, 300);
+  } catch (err) {
+    console.error('Init failed:', err);
+    loaderMsg.textContent = 'Failed to load: ' + (err.message || err);
+    loaderMsg.style.color = '#E5591C';
+    fill.style.width = '100%';
+    fill.style.background = '#E5591C';
   }
-};
+}
 
-// ══════════════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════════════
-let currentSpecies = 'fortis';
-let currentMode = 'simulate';
-let params = { s: 0.20, N: 500, mu: 0.01, bt: 0 };
-let running = false;
-let simTimer = null;
+function setupUI() {
+  // Species tabs
+  const tabsEl = document.getElementById('species-tabs');
+  SPECIES.forEach((sp, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'species-tab' + (i === 0 ? ' active' : '');
+    btn.textContent = sp.name;
+    btn.style.borderColor = i === selectedSpecies ? sp.color : '';
+    btn.onclick = () => selectSpecies(i);
+    tabsEl.appendChild(btn);
+  });
 
-let state = {
-  gen: 0,
-  p: 0.3,       // allele frequency
-  popSize: 500,
-  traitMean: 0,
-  traitSd: 0,
-};
+  // Canvases
+  mapCanvas = document.getElementById('map-canvas');
+  mapCtx = mapCanvas.getContext('2d');
+  popCanvas = document.getElementById('pop-chart');
+  popCtx = popCanvas.getContext('2d');
+  traitCanvas = document.getElementById('trait-chart');
+  traitCtx = traitCanvas.getContext('2d');
+  scatterCanvas = document.getElementById('scatter-chart');
+  scatterCtx = scatterCanvas.getContext('2d');
 
-// History arrays
-let histP = [], histPop = [], histDp = [], histTrait = [];
+  // Populate scatter dropdowns
+  populateScatterDropdowns();
 
-// ══════════════════════════════════════════════
-//  CANVAS HELPERS
-// ══════════════════════════════════════════════
-function getCtx(id) {
-  const canvas = document.getElementById(id);
-  if (!canvas) return null;
+  // ── Map camera controls ──
+  // Click to select tile (only if not dragging)
+  let clickStartX = 0, clickStartY = 0;
+  mapCanvas.addEventListener('pointerdown', (e) => {
+    clickStartX = e.clientX;
+    clickStartY = e.clientY;
+    isDragging = true;
+    dragLastX = e.clientX;
+    dragLastY = e.clientY;
+    mapCanvas.style.cursor = 'grabbing';
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragLastX;
+    const dy = e.clientY - dragLastY;
+    dragLastX = e.clientX;
+    dragLastY = e.clientY;
+    if (e.shiftKey) {
+      camTilt = Math.max(0.2, Math.min(0.8, camTilt + dy * 0.004));
+    } else {
+      camPanX += dx;
+      camPanY += dy;
+    }
+    renderMap();
+  });
+  window.addEventListener('pointerup', (e) => {
+    if (isDragging) {
+      const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
+      if (dist < 6) onMapClick(e); // click, not drag
+    }
+    isDragging = false;
+    mapCanvas.style.cursor = 'grab';
+  });
+  // Scroll to zoom
+  mapCanvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    camZoom = Math.max(0.4, Math.min(3.0, camZoom + (e.deltaY > 0 ? -0.1 : 0.1)));
+    renderMap();
+  }, { passive: false });
+  // Touch: one-finger pan, two-finger zoom
+  let lastTouchDist = 0;
+  mapCanvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      clickStartX = dragLastX = e.touches[0].clientX;
+      clickStartY = dragLastY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      lastTouchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  }, { passive: true });
+  mapCanvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && isDragging) {
+      const dx = e.touches[0].clientX - dragLastX;
+      const dy = e.touches[0].clientY - dragLastY;
+      dragLastX = e.touches[0].clientX;
+      dragLastY = e.touches[0].clientY;
+      camPanX += dx;
+      camPanY += dy;
+      renderMap();
+    } else if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (lastTouchDist > 0) {
+        const scale = dist / lastTouchDist;
+        camZoom = Math.max(0.4, Math.min(3.0, camZoom * scale));
+        renderMap();
+      }
+      lastTouchDist = dist;
+    }
+  }, { passive: false });
+  mapCanvas.addEventListener('touchend', (e) => {
+    if (e.touches.length === 0 && isDragging) {
+      const dist = Math.hypot(
+        e.changedTouches[0].clientX - clickStartX,
+        e.changedTouches[0].clientY - clickStartY
+      );
+      if (dist < 10) onMapClick(e.changedTouches[0]);
+      isDragging = false;
+    }
+    lastTouchDist = 0;
+  });
+  // Double-click/tap to reset camera
+  mapCanvas.addEventListener('dblclick', () => {
+    camTilt = 0.5; camZoom = 1.0; camPanX = 0; camPanY = 0;
+    renderMap();
+  });
+  mapCanvas.style.cursor = 'grab';
+
+  window.addEventListener('resize', () => { resizeCanvases(); renderAll(); });
+}
+
+function resizeCanvases() {
   const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const w = rect.width || canvas.offsetWidth || 500;
-  const h = parseInt(canvas.getAttribute('height')) || 160;
-  canvas.width = w * dpr;
-  canvas.height = h * dpr;
-  canvas.style.width = w + 'px';
-  canvas.style.height = h + 'px';
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx._w = w; ctx._h = h;
-  return ctx;
+
+  const mapArea = document.getElementById('map-area');
+  mapCanvas.width = mapArea.clientWidth * dpr;
+  mapCanvas.height = mapArea.clientHeight * dpr;
+  mapCtx.scale(dpr, dpr);
+
+  for (const c of [popCanvas, traitCanvas, scatterCanvas]) {
+    c.width = c.clientWidth * dpr;
+    c.height = c.clientHeight * dpr;
+    c.getContext('2d').scale(dpr, dpr);
+  }
 }
 
-const C = {
-  bark: '#1a1008', soil: '#2c1a0e', umber: '#3d2410',
-  ember: '#c4581f', gold: '#d4942a', straw: '#e8c96a',
-  parchment: '#f2e8d0', fog: '#c8b89a', green: '#6a8a4a'
-};
-
-function clearChart(ctx) {
-  ctx.fillStyle = C.bark;
-  ctx.fillRect(0, 0, ctx._w, ctx._h);
+// ── SPECIES SELECTION ──
+function selectSpecies(i) {
+  selectedSpecies = i;
+  document.querySelectorAll('.species-tab').forEach((btn, idx) => {
+    btn.classList.toggle('active', idx === i);
+    btn.style.borderColor = idx === i ? SPECIES[i].color : '';
+  });
+  document.getElementById('trait-title').textContent = SPECIES[i].trait + ' Distribution';
+  renderAll();
 }
 
-function drawAxes(ctx, pad) {
-  ctx.strokeStyle = C.umber;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(pad, pad);
-  ctx.lineTo(pad, ctx._h - pad);
-  ctx.lineTo(ctx._w - pad, ctx._h - pad);
-  ctx.stroke();
+// ── PANEL MODE ──
+function setPanelMode(mode) {
+  panelMode = mode;
+  document.querySelectorAll('.panel-toggle button').forEach((btn, idx) => {
+    btn.classList.toggle('active', (mode === 'global' && idx === 0) || (mode === 'tile' && idx === 1));
+  });
+  if (mode === 'global') {
+    selectedTile = null;
+    document.getElementById('panel-title').textContent = 'Global Overview';
+  } else if (!selectedTile) {
+    document.getElementById('panel-title').textContent = 'Click a tile';
+  }
+  renderAll();
 }
 
-function axisLabel(ctx, text, x, y, color) {
-  ctx.fillStyle = color || C.fog;
-  ctx.font = `10px "IBM Plex Mono", monospace`;
-  ctx.fillText(text, x, y);
-}
+// ── MAP CLICK (isometric reverse projection) ──
+function onMapClick(e) {
+  const rect = mapCanvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
 
-// ══════════════════════════════════════════════
-//  SIMULATION MATH
-// ══════════════════════════════════════════════
-function stepSim() {
-  const sp = SPECIES[currentSpecies];
-  const { s, N, mu } = params;
-  let { p, popSize } = state;
+  const gs = pyodide.runPython('GRID_SIZE');
+  const dpr = window.devicePixelRatio || 1;
+  const w = mapCanvas.width / dpr;
+  const h = mapCanvas.height / dpr;
+  const baseTileW = (w / gs) * 0.9 * camZoom;
+  const tileW = baseTileW;
+  const tileH = tileW * camTilt;
+  const heightScale = 80 * camZoom;
+  const totalIsoH = gs * tileH * 0.5;
+  const offsetX = w / 2 + camPanX;
+  const offsetY = (h - totalIsoH + heightScale) / 2 + camPanY;
 
-  // Selection: Δp = sp(1-p) / (1 + sp)
-  const dp_sel = (s * p * (1 - p)) / (1 + s * p);
-
-  // Mutation
-  const dp_mu = mu * (1 - p) - mu * p;
-
-  // Genetic drift — sample from binomial
-  const drift_sd = Math.sqrt(p * (1 - p) / (2 * popSize));
-  const drift = (Math.random() - 0.5) * 2 * drift_sd * 2.5;
-
-  let newP = p + dp_sel + dp_mu + drift;
-  newP = Math.max(0.001, Math.min(0.999, newP));
-
-  // Population dynamics
-  // Bottleneck event
-  let bottleneck = false;
-  if (params.bt === '1' || params.bt === 1) {
-    if (Math.random() < 0.04) { // 4% chance per gen
-      popSize = Math.max(10, Math.floor(popSize * (0.1 + Math.random() * 0.3)));
-      bottleneck = true;
+  // Brute force: find which tile's diamond contains the click point
+  // Check front-to-back so topmost tile wins
+  let bestR = -1, bestC = -1, bestSy = -Infinity;
+  for (let r = 0; r < gs; r++) {
+    for (let c = 0; c < gs; c++) {
+      const ix = (c - r) * (tileW * 0.5);
+      const iy = (c + r) * (tileH * 0.5);
+      const cx = offsetX + ix;
+      const cy = offsetY + iy;
+      // Diamond hit test
+      const dx = Math.abs(sx - cx) / (tileW * 0.5);
+      const dy = Math.abs(sy - cy) / (tileH * 0.5);
+      if (dx + dy <= 1.0) {
+        // Frontmost tile (highest iy) wins
+        if (iy > bestSy) {
+          bestSy = iy;
+          bestR = r;
+          bestC = c;
+        }
+      }
     }
   }
 
-  // Natural pop change based on allele freq (fitness proxy)
-  const fitness = 1 + s * newP;
-  const growth = 0.05 * fitness;
-  const carrying = N;
-  popSize = Math.round(popSize * (1 + growth * (1 - popSize / carrying)));
-  popSize = Math.max(1, Math.min(N * 1.5, popSize));
+  if (bestR >= 0 && bestC >= 0) {
+    selectedTile = { r: bestR, c: bestC };
+    panelMode = 'tile';
+    document.querySelectorAll('.panel-toggle button').forEach((btn, idx) => {
+      btn.classList.toggle('active', idx === 1);
+    });
+    document.getElementById('panel-title').textContent = `Tile (${bestR}, ${bestC})`;
+    renderAll();
+  }
+}
 
-  // Drift variance σ² = p(1-p)/2N
-  const driftVar = (newP * (1 - newP)) / (2 * popSize);
+// ── PLAY / SPEED ──
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('btn-play');
+  btn.textContent = playing ? '⏸ Pause' : '▶ Play';
+  if (playing) tick();
+}
 
-  // Trait mean follows allele freq (simplified polygenic model)
-  const traitMean = sp.meanTrait + (newP - 0.3) * sp.sdTrait * 3 * sp.h2;
-  const traitSd = sp.sdTrait * (1 - sp.h2 * 0.3);
+function setSpeed(s) {
+  speed = s;
+  stepsPerFrame = s >= 20 ? s / 5 : 1;
+  document.querySelectorAll('.speed-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.speed) === s);
+  });
+}
 
-  state = {
-    gen: state.gen + 1,
-    p: newP,
-    popSize,
-    traitMean,
-    traitSd,
-    driftVar,
-    dp: dp_sel,
-    bottleneck
+// ── SIM TICK ──
+function tick() {
+  if (!playing) return;
+
+  const steps = Math.max(1, Math.floor(stepsPerFrame));
+  for (let i = 0; i < steps; i++) {
+    pyodide.runPython('step()');
+  }
+
+  // Get state
+  const gen = pyodide.runPython('generation');
+  document.getElementById('gen-num').textContent = gen.toLocaleString();
+
+  // Collect global populations for history
+  const globalPops = [];
+  for (let s = 0; s < 5; s++) {
+    globalPops.push(pyodide.runPython(`get_global_pop(${s})`));
+  }
+  // Collect global traits and season for scatter temporal mode
+  const globalTraits = [];
+  for (let s = 0; s < 5; s++) {
+    globalTraits.push(pyodide.runPython(`get_global_trait(${s})`));
+  }
+  const season = pyodide.runPython('get_season()');
+  popHistory.push({ gen, pops: globalPops, traits: globalTraits, season });
+  if (popHistory.length > MAX_HISTORY) popHistory.shift();
+
+  // Update active events bar
+  const activeEvJson = pyodide.runPython('get_active_events_info()');
+  const activeEvs = JSON.parse(activeEvJson);
+  const evBar = document.getElementById('active-events-bar');
+  evBar.innerHTML = '';
+  const evIcons = { algal_bloom: '🌿', tidal_surge: '🌊', migration_corridor: '🔀', reef_formation: '🪸' };
+  const evLabels = { algal_bloom: 'Algal Bloom', tidal_surge: 'Tidal Surge', migration_corridor: 'Migration', reef_formation: 'Reef' };
+  const evClasses = { algal_bloom: 'bloom', tidal_surge: 'surge', migration_corridor: 'corridor', reef_formation: 'reef' };
+  activeEvs.forEach(ev => {
+    const pill = document.createElement('span');
+    pill.className = 'active-event-pill ' + (evClasses[ev.type] || '');
+    const pct = ev.type === 'reef_formation' ? ` ${Math.round((ev.progress || 0) * 100)}%` : '';
+    pill.innerHTML = `${evIcons[ev.type] || '⚡'} ${evLabels[ev.type] || ev.type}${pct} <span class="pill-timer">${ev.remaining}g</span>`;
+    evBar.appendChild(pill);
+  });
+
+  // Check events
+  const eventsJson = pyodide.runPython('get_and_clear_events()');
+  const events = JSON.parse(eventsJson);
+  if (events.length > 0) {
+    const feed = document.getElementById('event-feed');
+    const log = document.getElementById('event-log');
+    events.forEach(ev => {
+      const isSpeciation = ev.speciation === true;
+      const feedDiv = document.createElement('div');
+      feedDiv.innerHTML = `<span class="ev-gen">[Gen ${ev.gen}]</span> <span class="ev-text">${ev.text}</span>`;
+      if (isSpeciation) feedDiv.style.color = 'var(--gold-light)';
+      feed.appendChild(feedDiv);
+
+      const logDiv = document.createElement('div');
+      logDiv.className = 'log-entry' + (isSpeciation ? ' speciation-event' : '');
+      logDiv.innerHTML = feedDiv.innerHTML;
+      log.appendChild(logDiv);
+    });
+    // Keep feed short
+    while (feed.children.length > 20) feed.removeChild(feed.firstChild);
+    log.scrollTop = log.scrollHeight;
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  renderAll();
+
+  if (speed <= 5) {
+    animFrame = requestAnimationFrame(tick);
+  } else {
+    animFrame = setTimeout(tick, 16);
+  }
+}
+
+// ── RENDER ALL ──
+function renderAll() {
+  renderMap();
+  renderSpeciesList();
+  renderPopChart();
+  renderTraitChart();
+  renderScatterPlot();
+}
+
+// ── RENDER MAP (Isometric 3D) ──
+function renderMap() {
+  const gs = pyodide.runPython('GRID_SIZE');
+  const dpr = window.devicePixelRatio || 1;
+  const w = mapCanvas.width / dpr;
+  const h = mapCanvas.height / dpr;
+  const ctx = mapCtx;
+
+  ctx.fillStyle = '#1A0D00';
+  ctx.fillRect(0, 0, w, h);
+
+  const si = selectedSpecies;
+  const color = SPECIES[si].color;
+
+  // Get density data
+  const dataJson = pyodide.runPython(`get_map_data(${si})`);
+  const data = JSON.parse(dataJson);
+
+  // Biome base colors: [r, g, b]
+  const BIOME_COLORS = {
+    deep_water:    [15, 30, 60],
+    shallow_marsh: [30, 55, 40],
+    reed_beds:     [45, 60, 30],
+    tidal_flats:   [60, 50, 35],
+    rocky_shore:   [75, 58, 45],
   };
 
-  // Record history (keep last 120 gens)
-  histP.push(newP);
-  histPop.push(popSize);
-  histDp.push(dp_sel);
-  histTrait.push({ mean: traitMean, sd: traitSd });
-  if (histP.length > 120) { histP.shift(); histPop.shift(); histDp.shift(); histTrait.shift(); }
+  // Isometric projection params
+  const baseTileW = (w / gs) * 0.9 * camZoom;
+  const tileW = baseTileW;
+  const tileH = tileW * camTilt;
+  const heightScale = 80 * camZoom;
 
-  return { bottleneck, extinct: popSize < 5 };
-}
+  const totalIsoH = gs * tileH * 0.5;
+  const offsetX = w / 2 + camPanX;
+  const offsetY = (h - totalIsoH + heightScale) / 2 + camPanY;
 
-// ══════════════════════════════════════════════
-//  DRAWING
-// ══════════════════════════════════════════════
-function drawTraitDist() {
-  const ctx = getCtx('chart-trait');
-  if (!ctx) return;
-  const pad = 36;
-  clearChart(ctx);
-  drawAxes(ctx, pad);
+  // Draw back-to-front for proper occlusion
+  for (let r = 0; r < gs; r++) {
+    for (let c = 0; c < gs; c++) {
+      const pop = data.pops[r][c];
+      const elev = data.elevations[r][c];
+      const biome = data.biomes[r][c];
+      const maxPop = data.max_pop || 1;
 
-  const sp = SPECIES[currentSpecies];
-  const mean = state.traitMean || sp.meanTrait;
-  const sd = state.traitSd || sp.sdTrait;
+      // Base color from biome
+      const bc = BIOME_COLORS[biome] || [30, 20, 10];
+      let tr = bc[0] + elev * 25;
+      let tg = bc[1] + elev * 18;
+      let tb = bc[2] + elev * 12;
 
-  // Gaussian bell curve
-  const W = ctx._w - pad * 2;
-  const H = ctx._h - pad * 2;
-  const xMin = mean - sd * 3.5, xMax = mean + sd * 3.5;
+      // Species density overlay — blend into tile color
+      if (pop > 0) {
+        const intensity = Math.min(1, pop / (maxPop * 0.7));
+        const tileColor = (data.speciated && data.variants[r][c] === 1)
+          ? SPECIES[si].variantColor : color;
+        const rgb = hexToRgb(tileColor);
+        const a = intensity * 0.7;
+        tr = tr * (1 - a) + rgb.r * a;
+        tg = tg * (1 - a) + rgb.g * a;
+        tb = tb * (1 - a) + rgb.b * a;
+      }
 
-  // Fill area
-  ctx.beginPath();
-  let first = true;
-  for (let i = 0; i <= W; i++) {
-    const x = xMin + (i / W) * (xMax - xMin);
-    const y = Math.exp(-0.5 * ((x - mean) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI));
-    const px = pad + i;
-    const py = pad + H - y * H * sd * Math.sqrt(2 * Math.PI) * 0.9;
-    if (first) { ctx.moveTo(px, py); first = false; }
-    else ctx.lineTo(px, py);
+      // Shading: basic directional light
+      let shade = 0.7;
+      if (r > 0 && c > 0) {
+        const hLeft = data.elevations[r][c - 1] || elev;
+        const hUp = data.elevations[r - 1][c] || elev;
+        shade = 0.55 + 0.45 * Math.max(0, Math.min(1, 0.5 + (elev - hLeft) * 2 + (elev - hUp) * 1.5));
+      }
+
+      // Isometric transform
+      const ix = (c - r) * (tileW * 0.5);
+      const iy = (c + r) * (tileH * 0.5);
+      const iz = elev * heightScale;
+      const sx = offsetX + ix;
+      const sy = offsetY + iy - iz;
+
+      // Pillar height — taller columns for higher elevation
+      const pillarH = Math.max(3, iz * 0.2 * (camTilt / 0.5) + 3);
+
+      // Right side face (darker)
+      ctx.fillStyle = `rgb(${tr * shade * 0.45 | 0},${tg * shade * 0.45 | 0},${tb * shade * 0.45 | 0})`;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + tileW * 0.5, sy + tileH * 0.5);
+      ctx.lineTo(sx + tileW * 0.5, sy + tileH * 0.5 + pillarH);
+      ctx.lineTo(sx, sy + pillarH);
+      ctx.fill();
+
+      // Left side face (darkest)
+      ctx.fillStyle = `rgb(${tr * shade * 0.3 | 0},${tg * shade * 0.3 | 0},${tb * shade * 0.3 | 0})`;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - tileW * 0.5, sy + tileH * 0.5);
+      ctx.lineTo(sx - tileW * 0.5, sy + tileH * 0.5 + pillarH);
+      ctx.lineTo(sx, sy + pillarH);
+      ctx.fill();
+
+      // Top face
+      ctx.fillStyle = `rgb(${tr * shade | 0},${tg * shade | 0},${tb * shade | 0})`;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - tileH * 0.5);
+      ctx.lineTo(sx + tileW * 0.5, sy);
+      ctx.lineTo(sx, sy + tileH * 0.5);
+      ctx.lineTo(sx - tileW * 0.5, sy);
+      ctx.closePath();
+      ctx.fill();
+
+      // Water shimmer for deep/shallow tiles
+      if (biome === 'deep_water' || biome === 'shallow_marsh') {
+        const shimmer = biome === 'deep_water' ? 0.2 : 0.1;
+        ctx.fillStyle = `rgba(20, 50, 80, ${shimmer})`;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - tileH * 0.5);
+        ctx.lineTo(sx + tileW * 0.5, sy);
+        ctx.lineTo(sx, sy + tileH * 0.5);
+        ctx.lineTo(sx - tileW * 0.5, sy);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Grid lines on top face
+      ctx.strokeStyle = 'rgba(221,193,101,0.08)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - tileH * 0.5);
+      ctx.lineTo(sx + tileW * 0.5, sy);
+      ctx.lineTo(sx, sy + tileH * 0.5);
+      ctx.lineTo(sx - tileW * 0.5, sy);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Selected tile glow
+      if (selectedTile && selectedTile.r === r && selectedTile.c === c) {
+        ctx.strokeStyle = '#FFE9A3';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - tileH * 0.5);
+        ctx.lineTo(sx + tileW * 0.5, sy);
+        ctx.lineTo(sx, sy + tileH * 0.5);
+        ctx.lineTo(sx - tileW * 0.5, sy);
+        ctx.closePath();
+        ctx.stroke();
+        // Glow overlay
+        ctx.fillStyle = 'rgba(255,233,163,0.15)';
+        ctx.fill();
+      }
+    }
   }
-  ctx.lineTo(pad + W, pad + H);
-  ctx.lineTo(pad, pad + H);
-  ctx.closePath();
-  const grad = ctx.createLinearGradient(0, pad, 0, pad + H);
-  grad.addColorStop(0, C.ember + 'cc');
-  grad.addColorStop(1, C.ember + '22');
+
+  // Vignette
+  const grad = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.min(w, h) * 0.7);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(26,13,0,0.5)');
   ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Line
-  ctx.beginPath(); first = true;
-  for (let i = 0; i <= W; i++) {
-    const x = xMin + (i / W) * (xMax - xMin);
-    const y = Math.exp(-0.5 * ((x - mean) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI));
-    const px = pad + i;
-    const py = pad + H - y * H * sd * Math.sqrt(2 * Math.PI) * 0.9;
-    if (first) { ctx.moveTo(px, py); first = false; }
-    else ctx.lineTo(px, py);
-  }
-  ctx.strokeStyle = C.gold; ctx.lineWidth = 2; ctx.stroke();
-
-  // Labels
-  axisLabel(ctx, mean.toFixed(2) + ' ' + sp.unit, pad + W / 2 - 20, pad + H + 16);
-  axisLabel(ctx, 'σ=' + sd.toFixed(2), pad + W - 50, pad + 14, C.ember);
+  ctx.fillRect(0, 0, w, h);
 }
 
-function drawLineChart(canvasId, data, color, yLabel, refLine) {
-  const ctx = getCtx(canvasId);
-  if (!ctx || data.length < 2) return;
-  const pad = 36;
-  clearChart(ctx);
-  drawAxes(ctx, pad);
+// ── RENDER SPECIES LIST ──
+function renderSpeciesList() {
+  const listEl = document.getElementById('species-list');
+  let html = '';
 
-  const W = ctx._w - pad * 2;
-  const H = ctx._h - pad * 2;
-  const yMin = Math.min(...data) * 0.9;
-  const yMax = Math.max(...data) * 1.1 || 1;
+  // Fetch speciation info once
+  const specInfoJson = pyodide.runPython('get_speciation_info()');
+  const specInfo = JSON.parse(specInfoJson);
 
-  // Reference line
-  if (refLine !== undefined) {
-    const ry = pad + H - ((refLine - yMin) / (yMax - yMin)) * H;
-    ctx.strokeStyle = C.straw + '44';
-    ctx.setLineDash([4, 4]);
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(pad, ry); ctx.lineTo(pad + W, ry); ctx.stroke();
-    ctx.setLineDash([]);
+  if (panelMode === 'global') {
+    for (let s = 0; s < 5; s++) {
+      const pop = pyodide.runPython(`get_global_pop(${s})`);
+      const trait = pyodide.runPython(`get_global_trait(${s})`);
+      const info = specInfo[String(s)];
+
+      if (info) {
+        // Show parent species row
+        html += `<div class="species-row">
+          <div class="sp-dot" style="background:${SPECIES[s].color}"></div>
+          <div class="sp-name">${SPECIES[s].fullName}</div>
+          <div class="sp-pop">${pop}</div>
+          <div class="sp-trait">${trait.toFixed(3)}</div>
+        </div>`;
+        // Variant sub-entries
+        html += `<div class="species-row species-variant">
+          <div class="sp-dot" style="background:${SPECIES[s].color}; width:6px; height:6px;"></div>
+          <div class="sp-name sp-variant-name">${info.parent_name}</div>
+          <div class="sp-pop">${info.parent_pop}</div>
+          <div class="sp-trait">${info.parent_trait.toFixed(3)}</div>
+        </div>`;
+        html += `<div class="species-row species-variant">
+          <div class="sp-dot" style="background:${SPECIES[s].variantColor}; width:6px; height:6px;"></div>
+          <div class="sp-name sp-variant-name">${info.variant_name}</div>
+          <div class="sp-pop">${info.variant_pop}</div>
+          <div class="sp-trait">${info.variant_trait.toFixed(3)}</div>
+        </div>`;
+      } else {
+        html += `<div class="species-row">
+          <div class="sp-dot" style="background:${SPECIES[s].color}"></div>
+          <div class="sp-name">${SPECIES[s].fullName}</div>
+          <div class="sp-pop">${pop}</div>
+          <div class="sp-trait">${trait.toFixed(3)}</div>
+        </div>`;
+      }
+    }
+  } else if (selectedTile) {
+    for (let s = 0; s < 5; s++) {
+      const pop = pyodide.runPython(`get_tile_pop(${selectedTile.r},${selectedTile.c},${s})`);
+      const trait = pyodide.runPython(`get_tile_trait(${selectedTile.r},${selectedTile.c},${s})`);
+      const info = specInfo[String(s)];
+
+      // Determine variant color for this tile
+      let dotColor = SPECIES[s].color;
+      let tileName = SPECIES[s].name;
+      if (info && pop > 0) {
+        if (trait > info.split_trait) {
+          dotColor = SPECIES[s].variantColor;
+          tileName = info.variant_name;
+        } else {
+          tileName = info.parent_name;
+        }
+      }
+
+      html += `<div class="species-row">
+        <div class="sp-dot" style="background:${dotColor}"></div>
+        <div class="sp-name">${tileName}</div>
+        <div class="sp-pop">${pop}</div>
+        <div class="sp-trait">${trait.toFixed(3)}</div>
+      </div>`;
+    }
+  } else {
+    html = '<div style="color:var(--dim);font-size:10px;">Click a tile on the map</div>';
   }
 
-  // Fill
-  ctx.beginPath();
-  data.forEach((v, i) => {
-    const x = pad + (i / (data.length - 1)) * W;
-    const y = pad + H - ((v - yMin) / (yMax - yMin)) * H;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  const lastX = pad + W;
-  const lastY = pad + H;
-  ctx.lineTo(lastX, lastY); ctx.lineTo(pad, lastY); ctx.closePath();
-  const g = ctx.createLinearGradient(0, pad, 0, pad + H);
-  g.addColorStop(0, color + '66'); g.addColorStop(1, color + '11');
-  ctx.fillStyle = g; ctx.fill();
+  listEl.innerHTML = html;
+}
 
-  // Line
-  ctx.beginPath();
-  data.forEach((v, i) => {
-    const x = pad + (i / (data.length - 1)) * W;
-    const y = pad + H - ((v - yMin) / (yMax - yMin)) * H;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+// ── RENDER POP CHART ──
+function renderPopChart() {
+  const ctx = popCtx;
+  const w = popCanvas.clientWidth;
+  const h = popCanvas.clientHeight;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#1A0D00';
+  ctx.fillRect(0, 0, w, h);
+
+  if (popHistory.length < 2) return;
+
+  // Find max for scaling
+  let maxPop = 1;
+  popHistory.forEach(entry => {
+    entry.pops.forEach(p => { if (p > maxPop) maxPop = p; });
   });
-  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+
+  const padL = 35;
+  const padR = 5;
+  const padT = 5;
+  const padB = 15;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  // Y axis labels
+  ctx.fillStyle = '#5a6a50';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(maxPop.toString(), padL - 4, padT + 9);
+  ctx.fillText('0', padL - 4, h - padB);
+
+  // X axis
+  ctx.strokeStyle = '#3d2a10';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(padL, h - padB);
+  ctx.lineTo(w - padR, h - padB);
+  ctx.stroke();
+
+  // Draw lines for each species
+  for (let s = 0; s < 5; s++) {
+    ctx.strokeStyle = SPECIES[s].color;
+    ctx.lineWidth = s === selectedSpecies ? 2 : 1;
+    ctx.globalAlpha = s === selectedSpecies ? 1 : 0.4;
+    ctx.beginPath();
+
+    for (let i = 0; i < popHistory.length; i++) {
+      const x = padL + (i / (popHistory.length - 1)) * plotW;
+      const y = padT + plotH - (popHistory[i].pops[s] / maxPop) * plotH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── RENDER TRAIT CHART ──
+function renderTraitChart() {
+  const ctx = traitCtx;
+  const w = traitCanvas.clientWidth;
+  const h = traitCanvas.clientHeight;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#1A0D00';
+  ctx.fillRect(0, 0, w, h);
+
+  // Get histogram data from Python
+  const histJson = pyodide.runPython(`get_trait_histogram(${selectedSpecies})`);
+  const hist = JSON.parse(histJson);
+
+  if (!hist || hist.length === 0) return;
+
+  const padL = 25;
+  const padR = 5;
+  const padT = 5;
+  const padB = 18;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  const maxCount = Math.max(...hist.map(b => b.count), 1);
+  const barW = plotW / hist.length;
+
+  const rgb = hexToRgb(SPECIES[selectedSpecies].color);
+
+  for (let i = 0; i < hist.length; i++) {
+    const barH = (hist[i].count / maxCount) * plotH;
+    const x = padL + i * barW;
+    const y = padT + plotH - barH;
+
+    ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.7)`;
+    ctx.fillRect(x + 1, y, barW - 2, barH);
+  }
+
+  // X axis labels
+  ctx.fillStyle = '#8a7560';
+  ctx.font = '8px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('0.0', padL, h - 2);
+  ctx.fillText('0.5', padL + plotW / 2, h - 2);
+  ctx.fillText('1.0', padL + plotW, h - 2);
+}
+
+// ── UTIL ──
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { r, g, b };
+}
+
+// ── SCATTER PLOT ──
+function populateScatterDropdowns() {
+  const xSel = document.getElementById('scatter-x');
+  const ySel = document.getElementById('scatter-y');
+
+  function buildOptions(mode) {
+    const opts = [];
+    if (mode === 'spatial') {
+      for (let s = 0; s < 5; s++) {
+        opts.push({ value: `pop_${s}`, label: `${SPECIES[s].name} Pop` });
+        opts.push({ value: `trait_${s}`, label: `${SPECIES[s].name} ${SPECIES[s].trait}` });
+      }
+      opts.push({ value: 'elevation', label: 'Elevation' });
+      opts.push({ value: 'food', label: 'Food Level' });
+      opts.push({ value: 'water', label: 'Water Level' });
+      opts.push({ value: 'temp', label: 'Temperature' });
+    } else {
+      for (let s = 0; s < 5; s++) {
+        opts.push({ value: `pop_${s}`, label: `${SPECIES[s].name} Pop` });
+        opts.push({ value: `trait_${s}`, label: `${SPECIES[s].name} ${SPECIES[s].trait}` });
+      }
+      opts.push({ value: 'season', label: 'Season Factor' });
+    }
+    return opts;
+  }
+
+  function fill(sel, opts, defaultIdx) {
+    sel.innerHTML = '';
+    opts.forEach((o, i) => {
+      const opt = document.createElement('option');
+      opt.value = o.value;
+      opt.textContent = o.label;
+      if (i === defaultIdx) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  const opts = buildOptions(scatterMode);
+  // Default: X = Velothrix Pop, Y = Leviathan Pop
+  fill(xSel, opts, 0);
+  fill(ySel, opts, 2);
+
+  xSel.onchange = () => renderScatterPlot();
+  ySel.onchange = () => renderScatterPlot();
+}
+
+function setScatterMode(mode) {
+  scatterMode = mode;
+  document.querySelectorAll('.scatter-mode-toggle button').forEach((btn, idx) => {
+    btn.classList.toggle('active', (mode === 'spatial' && idx === 0) || (mode === 'temporal' && idx === 1));
+  });
+  populateScatterDropdowns();
+  renderScatterPlot();
+}
+
+function getScatterValue(entry, varKey) {
+  // entry is either a tile object (spatial) or a popHistory entry (temporal)
+  if (varKey.startsWith('pop_')) {
+    const s = parseInt(varKey.split('_')[1]);
+    return entry.pops[s];
+  }
+  if (varKey.startsWith('trait_')) {
+    const s = parseInt(varKey.split('_')[1]);
+    return entry.traits[s];
+  }
+  if (varKey === 'elevation') return entry.elev;
+  if (varKey === 'food') return entry.food;
+  if (varKey === 'water') return entry.water;
+  if (varKey === 'temp') return entry.temp;
+  if (varKey === 'season') return entry.season;
+  return 0;
+}
+
+function getVarLabel(varKey) {
+  if (varKey.startsWith('pop_')) {
+    const s = parseInt(varKey.split('_')[1]);
+    return SPECIES[s].name + ' Pop';
+  }
+  if (varKey.startsWith('trait_')) {
+    const s = parseInt(varKey.split('_')[1]);
+    return SPECIES[s].trait;
+  }
+  const labels = { elevation: 'Elevation', food: 'Food', water: 'Water', temp: 'Temp', season: 'Season' };
+  return labels[varKey] || varKey;
+}
+
+function renderScatterPlot() {
+  const ctx = scatterCtx;
+  const w = scatterCanvas.clientWidth;
+  const h = scatterCanvas.clientHeight;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#1A0D00';
+  ctx.fillRect(0, 0, w, h);
+
+  const xVar = document.getElementById('scatter-x').value;
+  const yVar = document.getElementById('scatter-y').value;
+
+  const padL = 40;
+  const padR = 10;
+  const padT = 10;
+  const padB = 22;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  let points = [];
+
+  if (scatterMode === 'spatial') {
+    // Get all tile data from Python
+    const tilesJson = pyodide.runPython('get_scatter_spatial()');
+    const tiles = JSON.parse(tilesJson);
+    let maxElev = 0;
+    tiles.forEach(t => { if (t.elev > maxElev) maxElev = t.elev; });
+
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
+      const xVal = getScatterValue(tile, xVar);
+      const yVal = getScatterValue(tile, yVar);
+      // Color by elevation
+      const elevNorm = maxElev > 0 ? tile.elev / maxElev : 0;
+      const r = Math.round(60 + 160 * elevNorm);
+      const g = Math.round(40 + 120 * (1 - elevNorm));
+      const b = Math.round(20 + 80 * (1 - elevNorm));
+      points.push({ x: xVal, y: yVal, color: `rgb(${r},${g},${b})`, alpha: 0.85 });
+    }
+  } else {
+    // Temporal mode: each dot is one generation from popHistory
+    if (popHistory.length < 2) return;
+    const total = popHistory.length;
+    for (let i = 0; i < total; i++) {
+      const entry = popHistory[i];
+      const xVal = getScatterValue(entry, xVar);
+      const yVal = getScatterValue(entry, yVar);
+      // Color by recency (older = dimmer)
+      const recency = (i + 1) / total;
+      const rgb = hexToRgb(SPECIES[selectedSpecies].color);
+      points.push({
+        x: xVal, y: yVal,
+        color: `rgb(${rgb.r},${rgb.g},${rgb.b})`,
+        alpha: 0.15 + 0.85 * recency
+      });
+    }
+  }
+
+  if (points.length === 0) return;
+
+  // Compute ranges
+  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+  points.forEach(p => {
+    if (p.x < xMin) xMin = p.x;
+    if (p.x > xMax) xMax = p.x;
+    if (p.y < yMin) yMin = p.y;
+    if (p.y > yMax) yMax = p.y;
+  });
+  // Prevent zero-range
+  if (xMax === xMin) { xMin -= 0.5; xMax += 0.5; }
+  if (yMax === yMin) { yMin -= 0.5; yMax += 0.5; }
+  const xRange = xMax - xMin;
+  const yRange = yMax - yMin;
+
+  // Draw grid lines
+  ctx.strokeStyle = '#3d2a10';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const gx = padL + (i / 4) * plotW;
+    const gy = padT + (i / 4) * plotH;
+    ctx.beginPath(); ctx.moveTo(gx, padT); ctx.lineTo(gx, padT + plotH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + plotW, gy); ctx.stroke();
+  }
+
+  // Draw points
+  points.forEach(p => {
+    const px = padL + ((p.x - xMin) / xRange) * plotW;
+    const py = padT + plotH - ((p.y - yMin) / yRange) * plotH;
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
 
   // Axis labels
-  axisLabel(ctx, yMax.toFixed(2), 2, pad + 12);
-  axisLabel(ctx, yMin.toFixed(2), 2, pad + H);
-  axisLabel(ctx, yLabel, pad + 4, pad + H + 16, C.fog);
-  axisLabel(ctx, 'gen ' + Math.max(0, state.gen - data.length) + '–' + state.gen, pad + W - 60, pad + H + 16, C.fog);
+  ctx.fillStyle = '#8a7560';
+  ctx.font = '8px monospace';
+  ctx.textAlign = 'center';
+
+  // X axis
+  ctx.fillText(formatAxisVal(xMin), padL, h - 2);
+  ctx.fillText(formatAxisVal(xMax), padL + plotW, h - 2);
+  ctx.fillText(getVarLabel(xVar), padL + plotW / 2, h - 2);
+
+  // Y axis
+  ctx.textAlign = 'right';
+  ctx.fillText(formatAxisVal(yMax), padL - 4, padT + 9);
+  ctx.fillText(formatAxisVal(yMin), padL - 4, padT + plotH);
+  ctx.save();
+  ctx.translate(8, padT + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText(getVarLabel(yVar), 0, 0);
+  ctx.restore();
 }
 
-function updateAllCharts() {
-  drawTraitDist();
-  drawLineChart('chart-pop', histPop, C.green, 'population', SPECIES[currentSpecies].typicalN);
-  drawLineChart('chart-sel', histDp, C.ember, 'Δp selection');
-  drawLineChart('chart-allele', histP, C.gold, 'allele freq (p)', 0.5);
+function formatAxisVal(v) {
+  if (Number.isInteger(v) || Math.abs(v) >= 100) return Math.round(v).toString();
+  return v.toFixed(2);
 }
 
-// ══════════════════════════════════════════════
-//  SCOREBOARD
-// ══════════════════════════════════════════════
-function updateScore() {
-  const danger = state.popSize < params.N * 0.1;
-  document.getElementById('sc-gen').textContent = state.gen;
-  document.getElementById('sc-pop').textContent = state.popSize;
-  document.getElementById('sc-pop').className = 'score-val' + (danger ? ' danger' : '');
-  document.getElementById('sc-p').textContent = (state.p || 0).toFixed(4);
-  document.getElementById('sc-dp').textContent = (state.dp || 0).toFixed(5);
-  document.getElementById('sc-drift').textContent = (state.driftVar || 0).toFixed(6);
-}
+// ── PYTHON SIM CODE ──
+const SIM_CODE = `
+import json
+import math
+import random
 
-// ══════════════════════════════════════════════
-//  EVENT LOG
-// ══════════════════════════════════════════════
-function logEvent(msg, type) {
-  const log = document.getElementById('event-log');
-  const div = document.createElement('div');
-  div.className = 'log-entry' + (type ? ' log-' + type : '');
-  div.innerHTML = `<span class="log-gen">GEN ${state.gen}</span><span>${msg}</span>`;
-  log.insertBefore(div, log.firstChild);
-  while (log.children.length > 40) log.removeChild(log.lastChild);
-}
+# ── CONFIG ──
+GRID_SIZE = 12
+NUM_SPECIES = 5
 
-// ══════════════════════════════════════════════
-//  GAME LOOP
-// ══════════════════════════════════════════════
-function tick() {
-  const result = stepSim();
-  updateScore();
-  updateAllCharts();
+# Species indices
+VELOTHRIX = 0
+LEVIATHAN = 1
+CRAWLER = 2
+CRAB = 3
+WORM = 4
 
-  if (result.bottleneck) logEvent('⚠ Population bottleneck! Pop crashed to ' + state.popSize, 'warn');
-  if (state.p > 0.95) logEvent('Allele nearing fixation (p=' + state.p.toFixed(3) + ')', 'warn');
-  if (state.p < 0.05) logEvent('Allele nearly lost (p=' + state.p.toFixed(3) + ')', 'danger');
-  if (state.popSize < params.N * 0.2) logEvent('⚠ Population critically low: ' + state.popSize, 'danger');
-  if (state.gen % 20 === 0) logEvent('Generation ' + state.gen + ' — pop: ' + state.popSize + ', p: ' + state.p.toFixed(3), '');
+# Carrying capacities per tile
+BASE_K = [60, 45, 55, 50, 58]  # Velothrix, Leviathan, Crawler, Crab, Worm
 
-  if (result.extinct) {
-    stopRun();
-    document.getElementById('final-score').textContent = state.gen;
-    document.getElementById('extinction-msg').textContent =
-      state.popSize < 5 ? 'Population collapsed to zero. Selection pressure was too strong.' :
-      'Allele lost from population. No viable offspring remain.';
-    document.getElementById('extinction-overlay').classList.add('active');
-    logEvent('💀 EXTINCTION — ' + state.gen + ' generations survived', 'danger');
-  }
-}
+# Minimum effective K on any suitable tile (prevents stochastic extinction spirals)
+MIN_K = 15
 
-function toggleRun() {
-  if (running) stopRun(); else startRun();
-}
-function startRun() {
-  running = true;
-  document.getElementById('btn-run').textContent = '⏸ PAUSE';
-  document.getElementById('btn-run').className = 'game-btn game-btn-pause';
-  const sp = SPECIES[currentSpecies];
-  const interval = Math.max(80, Math.round(300 * sp.genTime));
-  simTimer = setInterval(tick, interval);
-  if (state.gen === 0) logEvent('Simulation started — ' + sp.name + ' · ' + sp.trait, 'good');
-}
-function stopRun() {
-  running = false;
-  clearInterval(simTimer);
-  document.getElementById('btn-run').textContent = '▶ RUN SIMULATION';
-  document.getElementById('btn-run').className = 'game-btn game-btn-run';
-}
-function resetSim() {
-  stopRun();
-  const sp = SPECIES[currentSpecies];
-  state = { gen: 0, p: 0.3, popSize: params.N, traitMean: sp.meanTrait, traitSd: sp.sdTrait };
-  histP = []; histPop = []; histDp = []; histTrait = [];
-  updateScore();
-  updateAllCharts();
-  document.getElementById('event-log').innerHTML =
-    '<div class="log-entry"><span class="log-gen">GEN 0</span><span>Reset. Press RUN to begin.</span></div>';
-}
+# Growth rates (per generation, logistic)
+GROWTH_RATES = [0.08, 0.06, 0.07, 0.065, 0.07]
 
-// ══════════════════════════════════════════════
-//  PARAM / SPECIES UPDATES
-// ══════════════════════════════════════════════
-function updateParam(key, val) {
-  params[key] = key === 'bt' ? parseInt(val) : parseFloat(val);
-  const labels = { s: 'val-s', N: 'val-N', mu: 'val-mu' };
-  if (labels[key]) document.getElementById(labels[key]).textContent =
-    key === 'N' ? Math.round(val) : parseFloat(val).toFixed(key === 'mu' ? 3 : 2);
-  if (key === 'bt') document.getElementById('val-bt').textContent = val === '1' || val === 1 ? 'High' : 'Low';
-}
+# Mutation rate and step
+MUTATION_RATE = 0.003
+MUTATION_STEP = 0.012
 
-function selectSpecies(key) {
-  currentSpecies = key;
-  document.querySelectorAll('.species-btn').forEach((b, i) => {
-    b.classList.toggle('active', Object.keys(SPECIES)[i] === key);
-  });
-  const sp = SPECIES[key];
-  document.getElementById('trait-label').textContent = sp.trait + ' — ' + sp.name;
-  document.getElementById('real-ref-label').textContent = 'Reference: ' + sp.refLabel;
-  document.getElementById('rd-trait-label').textContent = sp.trait + ' — ' + sp.name + ' (empirical)';
-  params.N = sp.typicalN;
-  document.getElementById('sl-N').value = sp.typicalN;
-  document.getElementById('val-N').textContent = sp.typicalN;
-  resetSim();
-  if (currentMode === 'realdata') drawRealData();
-}
+# Drift strength (lower = less drift)
+DRIFT_STRENGTH = 0.005
 
-// ══════════════════════════════════════════════
-//  MODE SWITCH
-// ══════════════════════════════════════════════
-function setMode(mode) {
-  currentMode = mode;
-  document.querySelectorAll('.mode-tab').forEach((t, i) => {
-    t.classList.toggle('active', ['simulate','realdata'][i] === mode);
-  });
-  document.getElementById('simulate-panel').classList.toggle('hidden', mode !== 'simulate');
-  document.getElementById('realdata-panel').style.display = mode === 'realdata' ? 'block' : 'none';
-  document.getElementById('sim-controls').style.display = mode === 'simulate' ? 'block' : 'none';
-  document.getElementById('rd-controls').style.display = mode === 'realdata' ? 'block' : 'none';
-  if (mode === 'realdata') { stopRun(); drawRealData(); }
-}
+# Selection strength (how much trait affects fitness)
+SELECTION_STRENGTH = 0.01
 
-// ══════════════════════════════════════════════
-//  REAL DATA CHARTS
-// ══════════════════════════════════════════════
-function drawRealData() {
-  const sp = SPECIES[currentSpecies];
+# Predation rates (fraction of prey eaten per predator per gen)
+PREDATION_LEVIATHAN_VELOTHRIX = 0.008
+PREDATION_LEVIATHAN_WORM = 0.006
+PREDATION_VELOTHRIX_WORM = 0.003
 
-  // Update species info card
-  const card = document.getElementById('species-info-card');
-  const stats = sp.info;
-  card.innerHTML = `
-    <h3>${sp.infoTitle} — <em>${sp.infoSubtitle}</em></h3>
-    <div class="info-stat"><div class="info-stat-val">${stats.h2}</div><div class="info-stat-label">Heritability (h²)</div></div>
-    <div class="info-stat"><div class="info-stat-val">${stats.variance}</div><div class="info-stat-label">${sp.trait} variance</div></div>
-    <div class="info-stat"><div class="info-stat-val">${stats.pop}</div><div class="info-stat-label">Study population</div></div>
-    <div class="info-stat"><div class="info-stat-val">${stats.year}</div><div class="info-stat-label">Key study</div></div>`;
+# Competition coefficients
+COMPETITION_VELOTHRIX_CRAWLER = 0.0002
+COMPETITION_CRAB_SPACE = 0.0002
 
-  drawRealTraitDist(sp);
-  drawFitnessLandscape(sp);
-  drawDriftReplicas(sp);
-}
+# Migration rate (fraction that migrates per gen)
+MIGRATION_RATE = 0.03
 
-function drawRealTraitDist(sp) {
-  const ctx = getCtx('rd-chart-trait');
-  if (!ctx) return;
-  const pad = 36;
-  clearChart(ctx);
-  drawAxes(ctx, pad);
+# Recolonization base rate (chance per gen per empty suitable tile)
+RECOLONIZATION_BASE = 0.05
 
-  const W = ctx._w - pad * 2, H = ctx._h - pad * 2;
-  const mean = sp.meanTrait, sd = sp.sdTrait;
-  const xMin = mean - sd * 3.5, xMax = mean + sd * 3.5;
+# Event probabilities per gen
+DROUGHT_PROB = 0.002
+FLOOD_PROB = 0.002
+DISEASE_PROB = 0.001
+ALGAL_BLOOM_PROB = 0.003
+TIDAL_SURGE_PROB = 0.002
+MIGRATION_CORRIDOR_PROB = 0.0015
+REEF_FORMATION_PROB = 0.001
 
-  // Empirical histogram (simulated from real params)
-  const bins = 20;
-  const binW_val = (xMax - xMin) / bins;
-  const counts = new Array(bins).fill(0);
-  const rng = () => mean + sd * (Array.from({length:6}, () => Math.random()).reduce((a,b) => a+b) - 3) / Math.sqrt(3);
-  for (let i = 0; i < 500; i++) {
-    const v = rng();
-    const b = Math.floor((v - xMin) / binW_val);
-    if (b >= 0 && b < bins) counts[b]++;
-  }
-  const maxCount = Math.max(...counts);
+# Season cycle length
+SEASON_LENGTH = 120
 
-  counts.forEach((c, i) => {
-    const x = pad + (i / bins) * W;
-    const bw = W / bins - 1;
-    const h = (c / maxCount) * H * 0.9;
-    ctx.fillStyle = C.gold + 'aa';
-    ctx.strokeStyle = C.gold;
-    ctx.lineWidth = 1;
-    ctx.fillRect(x, pad + H - h, bw, h);
-    ctx.strokeRect(x, pad + H - h, bw, h);
-  });
+# Environmental event state
+active_events = []  # list of {type, start_gen, duration, data}
 
-  // Overlay normal curve
-  ctx.beginPath();
-  let first = true;
-  for (let i = 0; i <= W; i++) {
-    const x = xMin + (i / W) * (xMax - xMin);
-    const y = Math.exp(-0.5 * ((x - mean) / sd) ** 2);
-    const px = pad + i, py = pad + H - y * H * 0.9;
-    first ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-    first = false;
-  }
-  ctx.strokeStyle = C.ember; ctx.lineWidth = 2; ctx.stroke();
+# Per-step event flags (set by _check_events, read by _update_tile)
+_bloom_active = False
+_surge_tiles = set()  # set of (r,c) tuples for tiles affected by tidal surge
 
-  axisLabel(ctx, mean.toFixed(1) + ' ' + sp.unit + ' (μ)', pad + W / 2 - 25, pad + H + 16);
-  axisLabel(ctx, 'h²=' + sp.h2, pad + W - 40, pad + 14, C.ember);
-}
+# Speciation tracking
+SPECIATION_THRESHOLD = 0.3
+SPECIATION_GENS = 100
 
-function drawFitnessLandscape(sp) {
-  const ctx = getCtx('rd-chart-fitness');
-  if (!ctx) return;
-  const pad = 36;
-  clearChart(ctx);
-  drawAxes(ctx, pad);
+# ── STATE ──
+generation = 0
+events_buffer = []
 
-  const W = ctx._w - pad * 2, H = ctx._h - pad * 2;
-  const mean = sp.meanTrait, sd = sp.sdTrait;
-  const xMin = mean - sd * 3, xMax = mean + sd * 3;
+# Persistent speciation state: species_idx -> {
+#   'split_trait': float,       # trait value where the split occurred
+#   'gen': int,                 # generation when speciation was detected
+#   'variant_name': str,        # name for the new variant
+#   'parent_name': str,         # name for the original variant
+#   'variant_color': str,       # hex color for the new variant
+#   'parent_color': str,        # hex color for the parent
+# }
+speciation_events = {}
 
-  // Fitness function: stabilizing selection bell centered slightly above mean
-  const optTrait = mean + sd * 0.3;
-  ctx.beginPath();
-  let first = true;
-  for (let i = 0; i <= W; i++) {
-    const x = xMin + (i / W) * (xMax - xMin);
-    const fitness = Math.exp(-0.5 * ((x - optTrait) / (sd * 1.2)) ** 2);
-    const px = pad + i, py = pad + H - fitness * H * 0.9;
-    first ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-    first = false;
-  }
-  const g = ctx.createLinearGradient(0, pad, 0, pad + H);
-  g.addColorStop(0, C.green + '88'); g.addColorStop(1, C.green + '11');
-  ctx.strokeStyle = C.green; ctx.lineWidth = 2.5; ctx.stroke();
+# Grid state: [row][col] -> tile
+# Each tile: {
+#   elevation: float 0-1,
+#   food: float 0-1,
+#   water: float 0-1,
+#   temp: float 0-1,
+#   pops: [5 ints],         # population per species
+#   traits: [5 floats],     # mean trait per species (0-1)
+#   trait_var: [5 floats],  # trait variance per species
+# }
 
-  // Optimal trait marker
-  const optX = pad + ((optTrait - xMin) / (xMax - xMin)) * W;
-  ctx.strokeStyle = C.straw + '88'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
-  ctx.beginPath(); ctx.moveTo(optX, pad); ctx.lineTo(optX, pad + H); ctx.stroke();
-  ctx.setLineDash([]);
-  axisLabel(ctx, 'optimal', optX - 20, pad + 12, C.straw);
-  axisLabel(ctx, 'fitness', 2, pad + 12, C.fog);
-  axisLabel(ctx, sp.trait, pad + W / 2 - 20, pad + H + 16);
-}
+grid = []
 
-function drawDriftReplicas(sp) {
-  const ctx = getCtx('rd-chart-drift');
-  if (!ctx) return;
-  const pad = 36;
-  clearChart(ctx);
-  drawAxes(ctx, pad);
+TERRAIN_SEED = None  # Set to an int for reproducible maps, None for random
 
-  const W = ctx._w - pad * 2, H = ctx._h - pad * 2;
-  const gens = 60;
-  const N = sp.typicalN;
+# Biome thresholds
+BIOME_DEEP_WATER = 0.2
+BIOME_SHALLOW_MARSH = 0.4
+BIOME_REED_BEDS = 0.5
+BIOME_TIDAL_FLATS = 0.7
 
-  // Run 30 replicate drift simulations
-  const replicas = 30;
-  for (let r = 0; r < replicas; r++) {
-    let p = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(pad, pad + H - p * H);
-    for (let g = 1; g <= gens; g++) {
-      const driftSd = Math.sqrt(p * (1 - p) / (2 * N));
-      p += (Math.random() - 0.5) * driftSd * 4;
-      p = Math.max(0.01, Math.min(0.99, p));
-      const x = pad + (g / gens) * W;
-      const y = pad + H - p * H;
-      ctx.lineTo(x, y);
+def _hash_noise(ix, iy, seed):
+    """Integer hash-based pseudo-random for value noise."""
+    n = ix * 374761393 + iy * 668265263 + seed * 1274126177
+    n = (n ^ (n >> 13)) * 1274126177
+    n = n ^ (n >> 16)
+    return (n & 0x7fffffff) / 0x7fffffff
+
+def _value_noise(x, y, seed):
+    """Smoothed value noise with bicubic-ish interpolation."""
+    ix = int(math.floor(x))
+    iy = int(math.floor(y))
+    fx = x - ix
+    fy = y - iy
+    # Smoothstep
+    fx = fx * fx * (3 - 2 * fx)
+    fy = fy * fy * (3 - 2 * fy)
+    n00 = _hash_noise(ix, iy, seed)
+    n10 = _hash_noise(ix + 1, iy, seed)
+    n01 = _hash_noise(ix, iy + 1, seed)
+    n11 = _hash_noise(ix + 1, iy + 1, seed)
+    nx0 = n00 * (1 - fx) + n10 * fx
+    nx1 = n01 * (1 - fx) + n11 * fx
+    return nx0 * (1 - fy) + nx1 * fy
+
+def _octave_noise(x, y, seed, octaves=4, lacunarity=2.0, persistence=0.5):
+    """Multi-octave value noise returning 0-1."""
+    total = 0.0
+    amplitude = 1.0
+    frequency = 1.0
+    max_val = 0.0
+    for i in range(octaves):
+        total += _value_noise(x * frequency, y * frequency, seed + i * 31) * amplitude
+        max_val += amplitude
+        amplitude *= persistence
+        frequency *= lacunarity
+    return total / max_val
+
+def generate_elevation():
+    """Multi-octave value noise terrain with water bodies and ridges."""
+    seed = TERRAIN_SEED if TERRAIN_SEED is not None else random.randint(0, 999999)
+    elev = [[0.0]*GRID_SIZE for _ in range(GRID_SIZE)]
+    scale = 0.35  # Controls feature size relative to grid
+
+    # Generate raw noise
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            nx = c * scale
+            ny = r * scale
+            # Base terrain: multi-octave noise
+            base = _octave_noise(nx, ny, seed, octaves=4, persistence=0.45)
+            # Ridge layer: fold noise to create ridge lines
+            ridge = _octave_noise(nx + 50, ny + 50, seed + 100, octaves=3, persistence=0.5)
+            ridge = 1.0 - abs(ridge * 2 - 1)  # Fold into ridges
+            ridge = ridge * ridge  # Sharpen ridges
+            # Combine: base terrain + subtle ridge influence
+            combined = base * 0.7 + ridge * 0.3
+            # Basin effect: lower center to create water body
+            cx, cy = GRID_SIZE / 2.0, GRID_SIZE / 2.0
+            dist = math.sqrt((r - cy)**2 + (c - cx)**2) / (GRID_SIZE * 0.6)
+            basin = max(0, 1.0 - dist * dist) * 0.25
+            combined = combined - basin
+            elev[r][c] = combined
+
+    # Normalize to 0-1
+    flat = [elev[r][c] for r in range(GRID_SIZE) for c in range(GRID_SIZE)]
+    lo, hi = min(flat), max(flat)
+    span = hi - lo if hi > lo else 1.0
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            elev[r][c] = (elev[r][c] - lo) / span
+
+    # Flood-fill to connect low regions into water bodies
+    # Push lowest 20% of tiles further down to form coherent water
+    threshold = sorted(flat)[max(1, len(flat) // 5)]
+    threshold_norm = (threshold - lo) / span
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            if elev[r][c] < threshold_norm:
+                elev[r][c] = elev[r][c] * 0.7  # Deepen low areas
+
+    # Re-normalize after deepening
+    flat2 = [elev[r][c] for r in range(GRID_SIZE) for c in range(GRID_SIZE)]
+    lo2, hi2 = min(flat2), max(flat2)
+    span2 = hi2 - lo2 if hi2 > lo2 else 1.0
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            elev[r][c] = (elev[r][c] - lo2) / span2
+
+    return elev
+
+def get_biome(elev):
+    """Classify elevation into biome type."""
+    if elev < BIOME_DEEP_WATER:
+        return 'deep_water'
+    elif elev < BIOME_SHALLOW_MARSH:
+        return 'shallow_marsh'
+    elif elev < BIOME_REED_BEDS:
+        return 'reed_beds'
+    elif elev < BIOME_TIDAL_FLATS:
+        return 'tidal_flats'
+    else:
+        return 'rocky_shore'
+
+def habitat_suitability(elev, species_idx):
+    """Returns 0-1 suitability for species at given elevation/biome."""
+    biome = get_biome(elev)
+    suits = {
+        VELOTHRIX: {'shallow_marsh': 1.0, 'reed_beds': 0.7, 'tidal_flats': 0.4, 'deep_water': 0.25, 'rocky_shore': 0.15},
+        LEVIATHAN: {'deep_water': 1.0, 'shallow_marsh': 0.7, 'reed_beds': 0.35, 'tidal_flats': 0.1, 'rocky_shore': 0.0},
+        CRAWLER: {'reed_beds': 1.0, 'shallow_marsh': 0.75, 'tidal_flats': 0.55, 'deep_water': 0.2, 'rocky_shore': 0.35},
+        CRAB: {'rocky_shore': 1.0, 'tidal_flats': 0.75, 'reed_beds': 0.35, 'shallow_marsh': 0.15, 'deep_water': 0.05},
+        WORM: {'deep_water': 0.75, 'shallow_marsh': 0.9, 'reed_beds': 0.7, 'tidal_flats': 0.4, 'rocky_shore': 0.1},
     }
-    ctx.strokeStyle = C.ember + '33'; ctx.lineWidth = 1; ctx.stroke();
+    return suits.get(species_idx, {}).get(biome, 0.5)
+
+def init_grid():
+    global grid
+    elevations = generate_elevation()
+    grid = []
+    for r in range(GRID_SIZE):
+        row = []
+        for c in range(GRID_SIZE):
+            elev = elevations[r][c]
+            tile = {
+                'elevation': elev,
+                'food': 0.7 + random.uniform(-0.1, 0.1),
+                'water': max(0, 1.0 - elev + random.uniform(-0.1, 0.1)),
+                'temp': 0.5 + random.uniform(-0.1, 0.1),
+                'pops': [0]*NUM_SPECIES,
+                'traits': [0.5]*NUM_SPECIES,
+                'trait_var': [0.01]*NUM_SPECIES,
+            }
+
+            # Set initial populations based on biome suitability
+            for s in range(NUM_SPECIES):
+                suit = habitat_suitability(elev, s)
+                if suit > 0.4:
+                    tile['pops'][s] = int(BASE_K[s] * suit * random.uniform(0.4, 0.7))
+                elif suit > 0.1:
+                    tile['pops'][s] = int(BASE_K[s] * suit * random.uniform(0.15, 0.35))
+                else:
+                    tile['pops'][s] = int(BASE_K[s] * suit * random.uniform(0.0, 0.1))
+
+            # Initial trait values with slight spatial variation
+            for s in range(NUM_SPECIES):
+                tile['traits'][s] = 0.5 + random.uniform(-0.05, 0.05)
+                tile['trait_var'][s] = 0.01
+
+            row.append(tile)
+        grid.append(row)
+
+init_grid()
+
+def get_season():
+    """Returns season factor 0-1 (0=harsh winter, 1=peak summer)."""
+    return 0.5 + 0.5 * math.sin(2 * math.pi * generation / SEASON_LENGTH)
+
+def step():
+    """Advance one generation."""
+    global generation
+    generation += 1
+    season = get_season()
+
+    # 1. Environment update
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            tile = grid[r][c]
+            # Food regrows
+            tile['food'] = min(1.0, tile['food'] + 0.01 * season)
+            # Temperature seasonal
+            tile['temp'] = 0.4 + 0.2 * season + random.uniform(-0.02, 0.02)
+
+    # 2. Random events (very rare)
+    _check_events(season)
+
+    # 3. Per-tile, per-species dynamics
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            _update_tile(r, c, season)
+
+    # 4. Migration
+    _migrate()
+
+    # 5. Speciation check (every 50 gens to save compute)
+    if generation % 50 == 0:
+        _check_speciation()
+
+def _check_events(season):
+    """Check for random environmental events and manage active persistent events."""
+    global active_events, _bloom_active, _surge_tiles
+    names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
+
+    # Reset per-step flags
+    _bloom_active = False
+    _surge_tiles = set()
+
+    # ── Process active persistent events ──
+    still_active = []
+    for ev in active_events:
+        remaining = ev['start_gen'] + ev['duration'] - generation
+        if remaining <= 0:
+            # Event ending
+            if ev['type'] == 'algal_bloom':
+                events_buffer.append({'gen': generation, 'text': f'Algal bloom subsiding — visibility returning to normal'})
+            elif ev['type'] == 'tidal_surge':
+                # Restore original elevations
+                for pos, orig_elev in ev['data']['original_elevations']:
+                    r, c = pos
+                    if 0 <= r < GRID_SIZE and 0 <= c < GRID_SIZE:
+                        grid[r][c]['elevation'] = orig_elev
+                events_buffer.append({'gen': generation, 'text': f'Tidal surge receding — deep water boundaries contracting'})
+            elif ev['type'] == 'migration_corridor':
+                events_buffer.append({'gen': generation, 'text': f'Migration corridor closing as seasonal currents shift'})
+            elif ev['type'] == 'reef_formation':
+                r, c = ev['data']['tile']
+                final_elev = ev['data']['target_elevation']
+                if 0 <= r < GRID_SIZE and 0 <= c < GRID_SIZE:
+                    grid[r][c]['elevation'] = final_elev
+                    biome = get_biome(final_elev)
+                    events_buffer.append({'gen': generation, 'text': f'🪸 Reef at ({r},{c}) fully formed — tile is now {biome.replace("_"," ")}'})
+            continue
+        still_active.append(ev)
+
+        if ev['type'] == 'algal_bloom':
+            _bloom_active = True
+            # Boost food in wet biomes
+            for r in range(GRID_SIZE):
+                for c in range(GRID_SIZE):
+                    biome = get_biome(grid[r][c]['elevation'])
+                    if biome in ('deep_water', 'shallow_marsh', 'reed_beds'):
+                        grid[r][c]['food'] = min(1.0, grid[r][c]['food'] + 0.015)
+
+        elif ev['type'] == 'tidal_surge':
+            # Track affected tiles so _update_tile can boost Leviathan/Worm K
+            for pos, _ in ev['data']['original_elevations']:
+                _surge_tiles.add(pos)
+
+        elif ev['type'] == 'migration_corridor':
+            # Enhanced bidirectional migration along corridor
+            path = ev['data']['path']
+            for i in range(len(path) - 1):
+                r1, c1 = path[i]
+                r2, c2 = path[i + 1]
+                if not (0 <= r1 < GRID_SIZE and 0 <= c1 < GRID_SIZE): continue
+                if not (0 <= r2 < GRID_SIZE and 0 <= c2 < GRID_SIZE): continue
+                for s in range(NUM_SPECIES):
+                    pop1 = grid[r1][c1]['pops'][s]
+                    pop2 = grid[r2][c2]['pops'][s]
+                    diff = pop1 - pop2
+                    # Flow from high to low, proportional to difference
+                    if abs(diff) > 3:
+                        transfer = max(1, int(abs(diff) * 0.1))
+                        if diff > 0:
+                            grid[r1][c1]['pops'][s] = max(0, pop1 - transfer)
+                            grid[r2][c2]['pops'][s] += transfer
+                        else:
+                            grid[r2][c2]['pops'][s] = max(0, pop2 - transfer)
+                            grid[r1][c1]['pops'][s] += transfer
+
+        elif ev['type'] == 'reef_formation':
+            # Gradually shift elevation toward rocky_shore
+            r, c = ev['data']['tile']
+            if 0 <= r < GRID_SIZE and 0 <= c < GRID_SIZE:
+                progress = (generation - ev['start_gen']) / ev['duration']
+                orig = ev['data']['original_elevation']
+                target = ev['data']['target_elevation']
+                grid[r][c]['elevation'] = orig + (target - orig) * progress
+
+    active_events = still_active
+
+    # ── Instantaneous events ──
+    if random.random() < DROUGHT_PROB:
+        cr = random.randint(0, GRID_SIZE-1)
+        cc = random.randint(0, GRID_SIZE-1)
+        radius = random.randint(1, 3)
+        affected_count = 0
+        for r in range(max(0,cr-radius), min(GRID_SIZE,cr+radius+1)):
+            for c in range(max(0,cc-radius), min(GRID_SIZE,cc+radius+1)):
+                grid[r][c]['food'] *= 0.5
+                grid[r][c]['water'] *= 0.6
+                affected_count += 1
+        region = "eastern" if cc > GRID_SIZE//2 else "western"
+        events_buffer.append({
+            'gen': generation,
+            'text': f'☀️ Drought in {region} marsh — {affected_count} tiles affected, food and water dropping'
+        })
+
+    if random.random() < FLOOD_PROB:
+        cr = random.randint(0, GRID_SIZE-1)
+        cc = random.randint(0, GRID_SIZE-1)
+        radius = random.randint(1, 3)
+        affected_count = 0
+        for r in range(max(0,cr-radius), min(GRID_SIZE,cr+radius+1)):
+            for c in range(max(0,cc-radius), min(GRID_SIZE,cc+radius+1)):
+                grid[r][c]['water'] = min(1.0, grid[r][c]['water'] + 0.3)
+                grid[r][c]['pops'][CRAB] = int(grid[r][c]['pops'][CRAB] * 0.75)
+                grid[r][c]['pops'][CRAWLER] = int(grid[r][c]['pops'][CRAWLER] * 0.85)
+                affected_count += 1
+        region = "northern" if cr < GRID_SIZE//2 else "southern"
+        events_buffer.append({
+            'gen': generation,
+            'text': f'🌧️ Flooding in {region} tidal flats — {affected_count} tiles submerged'
+        })
+
+    # ── Density-dependent disease ──
+    if random.random() < DISEASE_PROB:
+        # Target the currently most populous species (density-dependent)
+        global_pops = [0] * NUM_SPECIES
+        for r in range(GRID_SIZE):
+            for c in range(GRID_SIZE):
+                for s in range(NUM_SPECIES):
+                    global_pops[s] += grid[r][c]['pops'][s]
+        total_all = sum(global_pops)
+        if total_all > 0:
+            # Weight selection toward dominant species
+            weights = [p * p for p in global_pops]  # square for stronger density bias
+            total_w = sum(weights)
+            if total_w > 0:
+                roll = random.random() * total_w
+                target = 0
+                cumulative = 0
+                for s in range(NUM_SPECIES):
+                    cumulative += weights[s]
+                    if roll < cumulative:
+                        target = s
+                        break
+            else:
+                target = random.randint(0, NUM_SPECIES - 1)
+            # Severity: dominant species hit harder (lower survival)
+            dominance = global_pops[target] / max(1, total_all)
+            severity = 0.75 + 0.2 * (1.0 - dominance)  # 0.75-0.95 survival
+            # Disease spreads from epicenter — tiles near center hit harder
+            epicenter_r = random.randint(0, GRID_SIZE - 1)
+            epicenter_c = random.randint(0, GRID_SIZE - 1)
+            for r in range(GRID_SIZE):
+                for c in range(GRID_SIZE):
+                    dist = abs(r - epicenter_r) + abs(c - epicenter_c)
+                    local_severity = severity + 0.1 * min(1.0, dist / GRID_SIZE)  # farther = milder
+                    local_severity = min(1.0, local_severity)
+                    grid[r][c]['pops'][target] = int(grid[r][c]['pops'][target] * local_severity)
+            mortality_pct = int((1 - severity) * 100)
+            events_buffer.append({
+                'gen': generation,
+                'text': f'🦠 Disease outbreak targeting {names[target]} — epicenter ({epicenter_r},{epicenter_c}), ~{mortality_pct}% peak mortality'
+            })
+
+    # ── Algal bloom (persistent: 40-100 gens) ──
+    if random.random() < ALGAL_BLOOM_PROB:
+        if not any(e['type'] == 'algal_bloom' for e in active_events):
+            duration = random.randint(40, 100)
+            active_events.append({
+                'type': 'algal_bloom',
+                'start_gen': generation,
+                'duration': duration,
+                'data': {}
+            })
+            events_buffer.append({
+                'gen': generation,
+                'text': f'🌿 Algal bloom spreading across wetlands — Worm/Velothrix food surging, Leviathan hunting impaired (duration: {duration} gens)'
+            })
+
+    # ── Tidal surge (persistent: 25-60 gens) ──
+    if random.random() < TIDAL_SURGE_PROB:
+        if not any(e['type'] == 'tidal_surge' for e in active_events):
+            # Temporarily lower elevation of tiles adjacent to deep water
+            affected = []
+            for r in range(GRID_SIZE):
+                for c in range(GRID_SIZE):
+                    elev = grid[r][c]['elevation']
+                    if get_biome(elev) in ('shallow_marsh', 'reed_beds'):
+                        for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
+                            nr, nc = r+dr, c+dc
+                            if 0 <= nr < GRID_SIZE and 0 <= nc < GRID_SIZE:
+                                if get_biome(grid[nr][nc]['elevation']) == 'deep_water':
+                                    # Lower elevation to push tile toward deep water biome
+                                    new_elev = max(0.05, elev - 0.15)
+                                    affected.append(((r, c), elev))
+                                    grid[r][c]['elevation'] = new_elev
+                                    break
+            duration = random.randint(25, 60)
+            active_events.append({
+                'type': 'tidal_surge',
+                'start_gen': generation,
+                'duration': duration,
+                'data': {'original_elevations': affected}
+            })
+            events_buffer.append({
+                'gen': generation,
+                'text': f'🌊 Tidal surge — deep water expanding into {len(affected)} coastal tiles (duration: {duration} gens)'
+            })
+
+    # ── Migration corridor (persistent: 20-50 gens) ──
+    if random.random() < MIGRATION_CORRIDOR_PROB:
+        if not any(e['type'] == 'migration_corridor' for e in active_events):
+            # Create a winding path connecting two edges
+            if random.random() < 0.5:
+                row = random.randint(1, GRID_SIZE - 2)
+                path = []
+                for c in range(GRID_SIZE):
+                    # Slight wander for organic feel
+                    r_offset = random.choice([-1, 0, 0, 0, 1])
+                    actual_r = max(0, min(GRID_SIZE - 1, row + r_offset))
+                    path.append((actual_r, c))
+                direction = "east-west"
+            else:
+                col = random.randint(1, GRID_SIZE - 2)
+                path = []
+                for r in range(GRID_SIZE):
+                    c_offset = random.choice([-1, 0, 0, 0, 1])
+                    actual_c = max(0, min(GRID_SIZE - 1, col + c_offset))
+                    path.append((r, actual_c))
+                direction = "north-south"
+            duration = random.randint(20, 50)
+            active_events.append({
+                'type': 'migration_corridor',
+                'start_gen': generation,
+                'duration': duration,
+                'data': {'path': path}
+            })
+            events_buffer.append({
+                'gen': generation,
+                'text': f'🔀 Seasonal migration corridor opening {direction} — species flowing between isolated biomes (duration: {duration} gens)'
+            })
+
+    # ── Reef formation (persistent: 150-300 gens, permanent terrain change) ──
+    # Cap total reefs at 10 tiles (~7% of grid) to prevent long-run biome erasure
+    total_rocky = sum(1 for r in range(GRID_SIZE) for c in range(GRID_SIZE) if get_biome(grid[r][c]['elevation']) == 'rocky_shore')
+    if random.random() < REEF_FORMATION_PROB and total_rocky < GRID_SIZE * GRID_SIZE * 0.25:
+        if not any(e['type'] == 'reef_formation' for e in active_events):
+            # Pick a tidal_flats or shallow_marsh tile to develop into rocky_shore
+            candidates = []
+            for r in range(GRID_SIZE):
+                for c in range(GRID_SIZE):
+                    biome = get_biome(grid[r][c]['elevation'])
+                    if biome in ('tidal_flats', 'shallow_marsh'):
+                        candidates.append((r, c))
+            if candidates:
+                tile_pos = random.choice(candidates)
+                r, c = tile_pos
+                orig_elev = grid[r][c]['elevation']
+                # Target elevation in rocky_shore range (0.75-0.85)
+                target_elev = 0.75 + random.random() * 0.1
+                duration = random.randint(150, 300)
+                active_events.append({
+                    'type': 'reef_formation',
+                    'start_gen': generation,
+                    'duration': duration,
+                    'data': {'tile': tile_pos, 'original_elevation': orig_elev, 'target_elevation': target_elev}
+                })
+                events_buffer.append({
+                    'gen': generation,
+                    'text': f'🪸 Reef forming at ({r},{c}) — elevation rising, new Crab habitat developing over {duration} generations'
+                })
+
+def _update_tile(r, c, season):
+    """Update populations and traits for one tile."""
+    tile = grid[r][c]
+    elev = tile['elevation']
+
+    for s in range(NUM_SPECIES):
+        pop = tile['pops'][s]
+        if pop <= 0:
+            # Recolonization from nearby populations or seed bank
+            suit = habitat_suitability(elev, s)
+            if suit > 0.05 and random.random() < RECOLONIZATION_BASE * suit:
+                # Check if species exists on any adjacent tile (local dispersal)
+                has_neighbor = False
+                for dr, dc in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]:
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < GRID_SIZE and 0 <= nc < GRID_SIZE:
+                        if grid[nr][nc]['pops'][s] > 3:
+                            has_neighbor = True
+                            break
+                if has_neighbor:
+                    tile['pops'][s] = max(2, int(MIN_K * suit * 0.3))
+                    tile['traits'][s] = 0.5 + random.uniform(-0.1, 0.1)
+                elif random.random() < 0.005 * suit:
+                    # Rare long-distance dispersal / seed bank
+                    tile['pops'][s] = 1
+                    tile['traits'][s] = 0.5 + random.uniform(-0.1, 0.1)
+            continue
+
+        trait = tile['traits'][s]
+        trait_v = tile['trait_var'][s]
+
+        # Effective carrying capacity depends on habitat and food
+        suit = habitat_suitability(elev, s)
+        k = BASE_K[s] * suit * (0.7 + 0.3 * tile['food']) * (0.85 + 0.15 * season)
+        # Tidal surge: boost K for water species on affected tiles
+        if (r, c) in _surge_tiles and s in (LEVIATHAN, WORM):
+            k *= 1.3
+        # Algal bloom: boost K for Worm and Velothrix (food abundance)
+        if _bloom_active and s in (WORM, VELOTHRIX):
+            k *= 1.15
+        # Enforce minimum K on suitable tiles to prevent stochastic extinction spirals
+        if suit > 0.15:
+            k = max(MIN_K, k)
+
+        # ── SPECIES INTERACTIONS ──
+        if s == VELOTHRIX:
+            # Predation by Leviathans (brighter = more visible)
+            lev_pop = tile['pops'][LEVIATHAN]
+            pred_rate = PREDATION_LEVIATHAN_VELOTHRIX
+            # Algal bloom reduces Leviathan hunting efficiency
+            if _bloom_active:
+                pred_rate *= 0.5
+            predation_loss = lev_pop * pred_rate * (0.5 + trait * 0.5)
+            # Competition with crawlers
+            craw_pop = tile['pops'][CRAWLER]
+            comp_loss = craw_pop * COMPETITION_VELOTHRIX_CRAWLER
+            k = max(1, k - comp_loss * 10)
+            # Sexual selection: brighter = more mates (increases effective growth)
+            sex_sel_bonus = trait * 0.01
+            growth = GROWTH_RATES[s] + sex_sel_bonus
+            # Net selection pressure on trait: sexual sel pushes UP, predation pushes DOWN
+            sel_pressure = SELECTION_STRENGTH * (0.5 - trait) * 0.1  # mild stabilizing
+            sel_pressure += SELECTION_STRENGTH * 0.3  # sexual selection pushes up
+            if lev_pop > 0:
+                sel_pressure -= SELECTION_STRENGTH * 0.5 * (lev_pop / max(1, BASE_K[LEVIATHAN]))
+        elif s == LEVIATHAN:
+            # Energy from prey
+            vel_pop = tile['pops'][VELOTHRIX]
+            worm_pop = tile['pops'][WORM]
+            prey_available = vel_pop + worm_pop * 0.5
+            # Hunting range: wider = more prey but more energy cost
+            hunt_bonus = trait * 0.005 * prey_available / max(1, BASE_K[VELOTHRIX])
+            energy_cost = trait * trait * 0.01
+            # Algal bloom impairs hunting — energy cost increases
+            if _bloom_active:
+                energy_cost *= 1.5
+                hunt_bonus *= 0.6
+            growth = GROWTH_RATES[s] + hunt_bonus - energy_cost
+            k = max(1, k * (0.6 + 0.4 * prey_available / max(1, BASE_K[VELOTHRIX] + BASE_K[WORM])))
+            sel_pressure = 0
+            if prey_available > BASE_K[VELOTHRIX] * 0.3:
+                sel_pressure = SELECTION_STRENGTH * 0.2  # push range up when prey abundant
+            else:
+                sel_pressure = -SELECTION_STRENGTH * 0.2  # push range down when prey scarce
+            predation_loss = 0
+        elif s == CRAWLER:
+            # Burrowing depth: deeper = safer but less food
+            safety = trait * 0.8
+            food_access = 1.0 - trait * 0.3
+            lev_pop = tile['pops'][LEVIATHAN]
+            predation_loss = lev_pop * 0.001 * (1 - safety)
+            growth = GROWTH_RATES[s] * food_access
+            vel_pop = tile['pops'][VELOTHRIX]
+            comp_loss = vel_pop * COMPETITION_VELOTHRIX_CRAWLER
+            k = max(1, k * food_access - comp_loss * 5)
+            sel_pressure = 0
+            if lev_pop > BASE_K[LEVIATHAN] * 0.3:
+                sel_pressure = SELECTION_STRENGTH * 0.2  # burrow deeper when predators present
+            else:
+                sel_pressure = -SELECTION_STRENGTH * 0.1  # come up for food when safe
+        elif s == CRAB:
+            # Shell thickness: thicker = armor but slow
+            armor = trait * 0.7
+            mobility = 1.0 - trait * 0.3
+            growth = GROWTH_RATES[s] * mobility
+            # Space competition
+            total_pop = sum(tile['pops'])
+            space_pressure = total_pop * COMPETITION_CRAB_SPACE
+            k = max(1, k - space_pressure * 5)
+            predation_loss = 0
+            sel_pressure = SELECTION_STRENGTH * (0.5 - trait) * 0.1  # stabilizing
+            if total_pop > sum(BASE_K) * 0.5:
+                sel_pressure += SELECTION_STRENGTH * 0.15  # thicker shells when crowded
+        elif s == WORM:
+            # Glow: brighter = more mates but more predators
+            vel_pop = tile['pops'][VELOTHRIX]
+            lev_pop = tile['pops'][LEVIATHAN]
+            # Algal bloom reduces predation on worms (predators can't see through algae)
+            bloom_pred_mod = 0.5 if _bloom_active else 1.0
+            predation_loss = (vel_pop * PREDATION_VELOTHRIX_WORM + lev_pop * PREDATION_LEVIATHAN_WORM) * (0.3 + trait * 0.7) * bloom_pred_mod
+            # Sexual selection for brightness
+            sex_sel_bonus = trait * 0.01
+            growth = GROWTH_RATES[s] + sex_sel_bonus
+            sel_pressure = SELECTION_STRENGTH * 0.2  # sexual sel pushes up
+            predator_count = vel_pop + lev_pop
+            if predator_count > 10:
+                sel_pressure -= SELECTION_STRENGTH * 0.3 * (predator_count / max(1, BASE_K[VELOTHRIX] + BASE_K[LEVIATHAN]))
+
+        # ── POPULATION DYNAMICS (logistic) ──
+        if k <= 0:
+            k = 1
+
+        # Apply predation as survival fraction (not before growth)
+        if s != LEVIATHAN:
+            survival = max(0.0, 1.0 - predation_loss)
+            pop_after_pred = pop * survival
+        else:
+            pop_after_pred = float(pop)
+
+        # Logistic growth on surviving population
+        dpop = growth * pop_after_pred * (1.0 - pop_after_pred / k)
+        raw_pop = pop_after_pred + dpop
+
+        # Probabilistic rounding: preserves fractional growth
+        floor_pop = int(raw_pop)
+        frac = raw_pop - floor_pop
+        new_pop = floor_pop + (1 if random.random() < frac else 0)
+        new_pop = max(0, new_pop)
+
+        # Stochastic extinction only for truly tiny isolated populations
+        if new_pop == 1 and random.random() < 0.02:
+            new_pop = 0
+
+        tile['pops'][s] = min(new_pop, int(k * 1.5))  # hard cap
+
+        # ── TRAIT EVOLUTION ──
+        if tile['pops'][s] > 0:
+            # Selection
+            new_trait = trait + sel_pressure
+
+            # Soft boundaries: extreme phenotypes face increasing physiological resistance
+            # Cubic pull prevents permanent pinning at 0 or 1
+            boundary_pressure = -0.005 * (2 * trait - 1) ** 3
+            new_trait += boundary_pressure
+
+            # Drift (inversely proportional to sqrt(pop))
+            if tile['pops'][s] > 0:
+                drift = random.gauss(0, DRIFT_STRENGTH / math.sqrt(max(1, tile['pops'][s])))
+                new_trait += drift
+
+            # Mutation
+            if random.random() < MUTATION_RATE * tile['pops'][s]:
+                new_trait += random.gauss(0, MUTATION_STEP)
+
+            # Clamp to 0-1
+            tile['traits'][s] = max(0.0, min(1.0, new_trait))
+
+            # Update variance (simplified)
+            tile['trait_var'][s] = max(0.001, tile['trait_var'][s] * 0.99 + MUTATION_RATE * 0.01)
+
+def _migrate():
+    """Species migrate between adjacent tiles."""
+    # Build migration deltas first, apply after
+    deltas = [[{s: 0 for s in range(NUM_SPECIES)} for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            tile = grid[r][c]
+            neighbors = []
+            for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
+                nr, nc = r+dr, c+dc
+                if 0 <= nr < GRID_SIZE and 0 <= nc < GRID_SIZE:
+                    neighbors.append((nr, nc))
+
+            if not neighbors:
+                continue
+
+            for s in range(NUM_SPECIES):
+                pop = tile['pops'][s]
+                if pop < 3:
+                    continue
+
+                k = BASE_K[s] * habitat_suitability(tile['elevation'], s)
+                if k <= 0:
+                    continue
+
+                # Migrate when over capacity
+                pressure = pop / k
+                if pressure < 0.7:
+                    continue
+
+                migrants = max(0, int(pop * MIGRATION_RATE * (pressure - 0.5)))
+                if migrants <= 0:
+                    continue
+
+                # Distribute among neighbors based on suitability
+                suits = []
+                for nr, nc in neighbors:
+                    ns = habitat_suitability(grid[nr][nc]['elevation'], s)
+                    npop = grid[nr][nc]['pops'][s]
+                    nk = BASE_K[s] * ns
+                    if nk > 0 and npop < nk:
+                        suits.append((nr, nc, ns * (1 - npop/nk)))
+                    else:
+                        suits.append((nr, nc, 0))
+
+                total_suit = sum(x[2] for x in suits)
+                if total_suit <= 0:
+                    continue
+
+                actual_migrants = min(migrants, pop // 4)  # Never migrate more than 25%
+                deltas[r][c][s] -= actual_migrants
+
+                for nr, nc, su in suits:
+                    share = int(actual_migrants * su / total_suit)
+                    deltas[nr][nc][s] += share
+
+    # Apply deltas
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            for s in range(NUM_SPECIES):
+                grid[r][c]['pops'][s] = max(0, grid[r][c]['pops'][s] + deltas[r][c][s])
+
+# Track trait divergence for speciation
+trait_divergence_counter = {}
+
+def _check_speciation():
+    """Check if any species has diverged enough to speciate."""
+    global speciation_events
+    names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
+    trait_names = ['crest brightness', 'hunting range', 'burrowing depth', 'shell thickness', 'glow intensity']
+    variant_suffixes = [
+        ('aurantis', 'amberi'),
+        ('major', 'minor'),
+        ('viridis', 'pallida'),
+        ('robusta', 'gracilis'),
+        ('lucens', 'obscura'),
+    ]
+
+    for s in range(NUM_SPECIES):
+        # Skip species that have already speciated
+        if s in speciation_events:
+            continue
+
+        # Collect traits across all tiles with population
+        traits_by_tile = []
+        for r in range(GRID_SIZE):
+            for c in range(GRID_SIZE):
+                if grid[r][c]['pops'][s] > 5:
+                    traits_by_tile.append((r, c, grid[r][c]['traits'][s]))
+
+        if len(traits_by_tile) < 4:
+            continue
+
+        # Find max trait difference
+        trait_vals = [t[2] for t in traits_by_tile]
+        max_diff = max(trait_vals) - min(trait_vals)
+
+        key = f"species_{s}"
+        if max_diff > SPECIATION_THRESHOLD:
+            trait_divergence_counter[key] = trait_divergence_counter.get(key, 0) + 50  # we check every 50 gens
+            if trait_divergence_counter[key] >= SPECIATION_GENS:
+                # Find the median trait to determine the split point
+                sorted_traits = sorted(traits_by_tile, key=lambda x: x[2])
+                mid = len(sorted_traits) // 2
+                split_trait = (sorted_traits[mid-1][2] + sorted_traits[mid][2]) / 2.0
+
+                low_region = sorted_traits[0]
+                high_region = sorted_traits[-1]
+
+                # Compute geographic centers for each variant
+                low_tiles = [(r, c) for r, c, t in sorted_traits if t <= split_trait]
+                high_tiles = [(r, c) for r, c, t in sorted_traits if t > split_trait]
+                low_center = f"({sum(r for r,c in low_tiles)//max(1,len(low_tiles))},{sum(c for r,c in low_tiles)//max(1,len(low_tiles))})"
+                high_center = f"({sum(r for r,c in high_tiles)//max(1,len(high_tiles))},{sum(c for r,c in high_tiles)//max(1,len(high_tiles))})"
+
+                parent_suffix, variant_suffix = variant_suffixes[s]
+
+                # Store permanent speciation state
+                speciation_events[s] = {
+                    'split_trait': split_trait,
+                    'gen': generation,
+                    'parent_name': f'{names[s]} {parent_suffix}',
+                    'variant_name': f'{names[s]} {variant_suffix}',
+                }
+
+                # Fire prominent speciation event
+                events_buffer.append({
+                    'gen': generation,
+                    'text': f'⚡ SPECIATION: {names[s]} has split into two species! {names[s]} {parent_suffix} ({trait_names[s]} ≤{split_trait:.2f}, centered {low_center}, {len(low_tiles)} tiles) vs {names[s]} {variant_suffix} ({trait_names[s]} >{split_trait:.2f}, centered {high_center}, {len(high_tiles)} tiles). Divergence sustained for {SPECIATION_GENS}+ generations.',
+                    'speciation': True
+                })
+                trait_divergence_counter[key] = 0
+        else:
+            trait_divergence_counter[key] = 0
+
+    # Also check for population surges/crashes
+    for s in range(NUM_SPECIES):
+        total = sum(grid[r][c]['pops'][s] for r in range(GRID_SIZE) for c in range(GRID_SIZE))
+        expected = sum(BASE_K[s] * habitat_suitability(grid[r][c]['elevation'], s) * 0.5
+                      for r in range(GRID_SIZE) for c in range(GRID_SIZE))
+        names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
+        if expected > 0:
+            ratio = total / expected
+            if ratio > 2.0:
+                events_buffer.append({
+                    'gen': generation,
+                    'text': f'{names[s]} population surge — {total} individuals ({ratio:.1f}x expected)'
+                })
+            elif ratio < 0.2 and total > 0:
+                events_buffer.append({
+                    'gen': generation,
+                    'text': f'{names[s]} population critically low — only {total} individuals remain'
+                })
+
+# ── API FUNCTIONS (called from JS) ──
+
+def get_global_pop(species_idx):
+    total = 0
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            total += grid[r][c]['pops'][species_idx]
+    return total
+
+def get_global_trait(species_idx):
+    total_trait = 0.0
+    total_pop = 0
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            p = grid[r][c]['pops'][species_idx]
+            if p > 0:
+                total_trait += grid[r][c]['traits'][species_idx] * p
+                total_pop += p
+    if total_pop == 0:
+        return 0.5
+    return total_trait / total_pop
+
+def get_tile_pop(r, c, species_idx):
+    return grid[r][c]['pops'][species_idx]
+
+def get_tile_trait(r, c, species_idx):
+    return grid[r][c]['traits'][species_idx]
+
+def get_map_data(species_idx):
+    pops = []
+    elevations = []
+    biomes = []
+    variants = []  # 0 = no speciation or parent, 1 = variant
+    max_pop = 1
+    has_speciation = species_idx in speciation_events
+    split_trait = speciation_events[species_idx]['split_trait'] if has_speciation else 0
+
+    for r in range(GRID_SIZE):
+        pop_row = []
+        elev_row = []
+        biome_row = []
+        var_row = []
+        for c in range(GRID_SIZE):
+            p = grid[r][c]['pops'][species_idx]
+            e = grid[r][c]['elevation']
+            pop_row.append(p)
+            elev_row.append(e)
+            biome_row.append(get_biome(e))
+            if has_speciation and p > 0:
+                var_row.append(1 if grid[r][c]['traits'][species_idx] > split_trait else 0)
+            else:
+                var_row.append(0)
+            if p > max_pop:
+                max_pop = p
+        pops.append(pop_row)
+        elevations.append(elev_row)
+        biomes.append(biome_row)
+        variants.append(var_row)
+    return json.dumps({'pops': pops, 'elevations': elevations, 'biomes': biomes, 'max_pop': max_pop, 'variants': variants, 'speciated': has_speciation})
+
+def get_speciation_info():
+    """Return all speciation events for JS."""
+    result = {}
+    names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
+    for s, info in speciation_events.items():
+        # Compute per-variant stats
+        parent_pop = 0
+        parent_trait_sum = 0.0
+        parent_tiles = []
+        variant_pop = 0
+        variant_trait_sum = 0.0
+        variant_tiles = []
+        for r in range(GRID_SIZE):
+            for c in range(GRID_SIZE):
+                p = grid[r][c]['pops'][s]
+                if p > 0:
+                    t = grid[r][c]['traits'][s]
+                    if t > info['split_trait']:
+                        variant_pop += p
+                        variant_trait_sum += t * p
+                        variant_tiles.append(f'{r},{c}')
+                    else:
+                        parent_pop += p
+                        parent_trait_sum += t * p
+                        parent_tiles.append(f'{r},{c}')
+        result[str(s)] = {
+            'parent_name': info['parent_name'],
+            'variant_name': info['variant_name'],
+            'split_trait': info['split_trait'],
+            'gen': info['gen'],
+            'parent_pop': parent_pop,
+            'parent_trait': parent_trait_sum / max(1, parent_pop),
+            'parent_tiles': len(parent_tiles),
+            'variant_pop': variant_pop,
+            'variant_trait': variant_trait_sum / max(1, variant_pop),
+            'variant_tiles': len(variant_tiles),
+        }
+    return json.dumps(result)
+
+def get_trait_histogram(species_idx):
+    """Return histogram of trait values across all tiles (weighted by pop)."""
+    num_bins = 20
+    bins = [0] * num_bins
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            p = grid[r][c]['pops'][species_idx]
+            if p > 0:
+                t = grid[r][c]['traits'][species_idx]
+                bin_idx = min(num_bins - 1, int(t * num_bins))
+                bins[bin_idx] += p
+    result = []
+    for i in range(num_bins):
+        result.append({'low': i/num_bins, 'high': (i+1)/num_bins, 'count': bins[i]})
+    return json.dumps(result)
+
+def get_scatter_spatial():
+    """Return per-tile data for spatial scatter plot."""
+    tiles = []
+    season = get_season()
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            t = grid[r][c]
+            tiles.append({
+                'pops': t['pops'][:],
+                'traits': [round(v, 4) for v in t['traits']],
+                'elev': round(t['elevation'], 4),
+                'food': round(t['food'], 4),
+                'water': round(t['water'], 4),
+                'temp': round(t['temp'], 4),
+            })
+    return json.dumps(tiles)
+
+def get_active_events_info():
+    """Return info about currently active persistent events."""
+    result = []
+    for ev in active_events:
+        remaining = ev['start_gen'] + ev['duration'] - generation
+        info = {'type': ev['type'], 'remaining': remaining, 'duration': ev['duration']}
+        if ev['type'] == 'tidal_surge':
+            info['affected_count'] = len(ev['data']['original_elevations'])
+        elif ev['type'] == 'reef_formation':
+            info['tile'] = list(ev['data']['tile'])
+            info['progress'] = (generation - ev['start_gen']) / ev['duration']
+        elif ev['type'] == 'migration_corridor':
+            info['path_length'] = len(ev['data']['path'])
+        result.append(info)
+    return json.dumps(result)
+
+def get_and_clear_events():
+    global events_buffer
+    out = json.dumps(events_buffer)
+    events_buffer = []
+    return out
+`;
+
+// ── BOOT ──
+init();
+</script>
+<script>
+// Mobile tool tray — folder tab for #panel
+(function() {
+  var panel = document.getElementById('panel');
+  if (!panel) return;
+
+  var tab = document.createElement('div');
+  tab.className = 'tray-tab';
+  tab.setAttribute('role', 'button');
+  tab.innerHTML = '<span class="tray-tab-label">Data</span><span class="tray-tab-chevron">&#9650;</span>';
+  document.body.appendChild(tab);
+
+  var isOpen = false;
+
+  function toggle(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    isOpen = !isOpen;
+    panel.classList.toggle('tray-open', isOpen);
+    tab.classList.toggle('tab-active', isOpen);
+    requestAnimationFrame(function() {
+      tab.style.bottom = isOpen ? panel.offsetHeight + 'px' : '0';
+    });
   }
 
-  // Expected drift variance line (σ²=p(1-p)/2N * gen)
-  ctx.beginPath();
-  ctx.moveTo(pad, pad + H * 0.5);
-  ctx.lineTo(pad + W, pad + H * 0.5);
-  ctx.strokeStyle = C.fog + '44'; ctx.lineWidth = 1; ctx.setLineDash([4,4]); ctx.stroke();
-  ctx.setLineDash([]);
+  tab.addEventListener('click', toggle);
+  tab.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    toggle(e);
+  });
 
-  axisLabel(ctx, 'p=1', 2, pad + 8, C.fog);
-  axisLabel(ctx, 'p=0.5', 2, pad + H / 2 + 4, C.fog);
-  axisLabel(ctx, 'p=0', 2, pad + H, C.fog);
-  axisLabel(ctx, 'σ²=p(1-p)/2N', pad + 4, pad + 14, C.ember);
-  axisLabel(ctx, '50 replicate pops · N=' + N, pad + W / 2 - 60, pad + H + 16);
-}
+  document.addEventListener('touchend', function(e) {
+    if (isOpen && !panel.contains(e.target) && !tab.contains(e.target)) toggle();
+  });
+  document.addEventListener('click', function(e) {
+    if (isOpen && !panel.contains(e.target) && !tab.contains(e.target)) toggle();
+  });
 
-function updateRealDataView() { drawRealData(); }
-
-// ══════════════════════════════════════════════
-//  SCROLL ANIMATIONS
-// ══════════════════════════════════════════════
-if ('IntersectionObserver' in window) {
-  const obs = new IntersectionObserver(
-    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-    { threshold: 0.08 }
-  );
-  document.querySelectorAll('.fade-up').forEach(el => { el.classList.add('will-animate'); obs.observe(el); });
-}
-
-// ══════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════
-window.addEventListener('load', () => {
-  resetSim();
-  setTimeout(updateAllCharts, 100);
-});
-window.addEventListener('resize', () => { updateAllCharts(); if (currentMode === 'realdata') drawRealData(); });
+  var startY = 0;
+  panel.addEventListener('touchstart', function(e) {
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  panel.addEventListener('touchend', function(e) {
+    if (e.changedTouches[0].clientY - startY > 60 && isOpen) toggle();
+  }, { passive: true });
+})();
 </script>
 </body>
 </html>
