@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Sculpture</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#241200;color:#DDC165;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh;width:100vw}
+#canvas-container{position:absolute;top:0;left:0;width:100%;height:100%}
+canvas{display:block}
+
+/* Controls panel */
+#controls{position:absolute;top:16px;right:16px;width:280px;background:rgba(26,13,0,0.92);border:1px solid rgba(221,193,101,0.25);border-radius:12px;padding:20px;backdrop-filter:blur(12px);z-index:10;max-height:calc(100vh - 32px);overflow-y:auto}
+#controls::-webkit-scrollbar{width:4px}
+#controls::-webkit-scrollbar-thumb{background:rgba(221,193,101,0.3);border-radius:2px}
+#controls h1{font-size:18px;font-weight:600;margin-bottom:4px;color:#FFE9A3;letter-spacing:0.5px}
+#controls .subtitle{font-size:11px;color:rgba(221,193,101,0.5);margin-bottom:16px;display:block}
+
+.control-group{margin-bottom:14px}
+.control-group label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(221,193,101,0.7);margin-bottom:6px}
+.control-group select,.control-group input[type=file]{width:100%;background:rgba(36,18,0,0.8);border:1px solid rgba(221,193,101,0.2);color:#DDC165;padding:8px 10px;border-radius:6px;font-size:13px;outline:none;cursor:pointer}
+.control-group select:hover,.control-group select:focus{border-color:rgba(221,193,101,0.5)}
+.control-group select option{background:#1A0D00;color:#DDC165}
+
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:rgba(221,193,101,0.15);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:#DDC165;border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(221,193,101,0.4)}
+.range-row{display:flex;align-items:center;gap:8px}
+.range-val{font-size:11px;color:rgba(221,193,101,0.6);min-width:32px;text-align:right}
+
+.btn{width:100%;padding:9px;background:rgba(229,89,28,0.15);border:1px solid rgba(229,89,28,0.4);color:#E5591C;border-radius:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;transition:all 0.2s;margin-bottom:6px;font-weight:600}
+.btn:hover{background:rgba(229,89,28,0.3);border-color:#E5591C}
+.btn.gold{background:rgba(221,193,101,0.1);border-color:rgba(221,193,101,0.3);color:#DDC165}
+.btn.gold:hover{background:rgba(221,193,101,0.25);border-color:#DDC165}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.toggle-row span{font-size:12px;color:rgba(221,193,101,0.8)}
+.toggle{position:relative;width:40px;height:20px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle .slider{position:absolute;inset:0;background:rgba(221,193,101,0.15);border-radius:10px;transition:0.2s}
+.toggle .slider:before{content:'';position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:rgba(221,193,101,0.5);border-radius:50%;transition:0.2s}
+.toggle input:checked+.slider{background:rgba(229,89,28,0.4)}
+.toggle input:checked+.slider:before{transform:translateX(20px);background:#E5591C}
+
+.divider{height:1px;background:rgba(221,193,101,0.1);margin:14px 0}
+
+#csv-input{display:none}
+#info-bar{position:absolute;bottom:16px;left:16px;font-size:11px;color:rgba(221,193,101,0.4);z-index:10}
+
+.tray-tab { display: none; }
+
+/* Title overlay */
+#title-overlay{position:absolute;top:16px;left:16px;z-index:10}
+#title-overlay h2{font-size:24px;font-weight:300;color:#FFE9A3;letter-spacing:1px;text-shadow:0 2px 20px rgba(221,193,101,0.3)}
+#title-overlay p{font-size:12px;color:rgba(221,193,101,0.4);margin-top:4px}
+
+@media (max-width: 768px) {
+  #controls {
+    position: fixed;
+    bottom: 0; left: 0; right: 0; top: auto;
+    width: 100%; max-height: 55vh;
+    border-radius: 0;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    overflow-y: auto;
+    padding-bottom: 20px;
+  }
+  #controls.tray-open {
+    transform: translateY(0);
+  }
+  #info-bar {
+    bottom: 52px;
+  }
+  .tray-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: fixed;
+    bottom: 0;
+    right: 16px;
+    z-index: 101;
+    background: rgba(26,13,0,0.95);
+    border: 1px solid rgba(221,193,101,0.25);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 7px 14px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: bottom 0.3s ease;
+    font-family: inherit;
+  }
+  .tray-tab-label {
+    font-size: 11px;
+    color: rgba(221,193,101,0.7);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .tray-tab-chevron {
+    font-size: 10px;
+    color: rgba(221,193,101,0.5);
+    transition: transform 0.3s ease;
+    line-height: 1;
+  }
+  .tray-tab.tab-active .tray-tab-chevron {
+    transform: rotate(180deg);
+  }
+}
+
+@media (max-width: 480px) {
+  #controls {
+    padding: 12px;
+    padding-bottom: 16px;
+  }
+  #controls h1 { font-size: 15px; }
+  .control-group label { font-size: 10px; }
+  .control-group select { font-size: 12px; padding: 6px 8px; }
+  .btn { font-size: 11px; padding: 7px; }
+}
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+
+<div id="title-overlay">
+  <h2>Data Sculpture</h2>
+  <p id="dataset-label">Mathematical Surface</p>
+</div>
+
+<div id="controls">
+  <h1>Controls</h1>
+  <span class="subtitle">Shape your data into art</span>
+
+  <div class="control-group">
+    <label>Preset Dataset</label>
+    <select id="preset-select">
+      <option value="math">Mathematical Surface</option>
+      <option value="population">Population by Country/Year</option>
+      <option value="heatmap">Activity Heatmap (Hour × Day)</option>
+      <option value="terrain">Random Terrain</option>
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label>Surface Style</label>
+    <select id="style-select">
+      <option value="smooth">Smooth</option>
+      <option value="faceted">Faceted</option>
+      <option value="bars">Bars</option>
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label>Color Palette</label>
+    <select id="palette-select">
+      <option value="funforrest">FunForrest</option>
+      <option value="ember">Ember</option>
+      <option value="ocean">Ocean</option>
+      <option value="mono">Monochrome</option>
+    </select>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="control-group">
+    <label>Height Scale</label>
+    <div class="range-row">
+      <input type="range" id="height-scale" min="0.1" max="5" step="0.1" value="1">
+      <span class="range-val" id="height-val">1.0</span>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Smoothing</label>
+    <div class="range-row">
+      <input type="range" id="smoothing" min="0" max="5" step="1" value="1">
+      <span class="range-val" id="smooth-val">1</span>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Rotation Speed</label>
+    <div class="range-row">
+      <input type="range" id="rotation-speed" min="0" max="1" step="0.05" value="0.15">
+      <span class="range-val" id="rot-val">0.15</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="toggle-row">
+    <span>Wireframe</span>
+    <label class="toggle"><input type="checkbox" id="wireframe-toggle"><span class="slider"></span></label>
+  </div>
+
+  <div class="toggle-row">
+    <span>Auto-Rotate</span>
+    <label class="toggle"><input type="checkbox" id="autorotate-toggle" checked><span class="slider"></span></label>
+  </div>
+
+  <div class="divider"></div>
+
+  <button class="btn gold" onclick="document.getElementById('csv-input').click()">Load CSV</button>
+  <input type="file" id="csv-input" accept=".csv,.tsv,.txt">
+  <button class="btn" id="export-btn">Export PNG</button>
+</div>
+
+<div id="info-bar">Drag to orbit · Scroll to zoom · Right-click to pan</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ── Palettes ──
+const PALETTES = {
+  funforrest: [
+    new THREE.Color('#1A0D00'),
+    new THREE.Color('#5C2800'),
+    new THREE.Color('#E5591C'),
+    new THREE.Color('#DDC165'),
+    new THREE.Color('#FFE9A3')
+  ],
+  ember: [
+    new THREE.Color('#1a0000'),
+    new THREE.Color('#8B0000'),
+    new THREE.Color('#FF4500'),
+    new THREE.Color('#FF8C00'),
+    new THREE.Color('#FFD700')
+  ],
+  ocean: [
+    new THREE.Color('#001122'),
+    new THREE.Color('#003366'),
+    new THREE.Color('#0077AA'),
+    new THREE.Color('#00AACC'),
+    new THREE.Color('#88EEFF')
+  ],
+  mono: [
+    new THREE.Color('#111111'),
+    new THREE.Color('#444444'),
+    new THREE.Color('#888888'),
+    new THREE.Color('#BBBBBB'),
+    new THREE.Color('#EEEEEE')
+  ]
+};
+
+// ── Preset Datasets ──
+function generatePreset(name) {
+  const rows = 50, cols = 50;
+  const data = [];
+  switch (name) {
+    case 'math': {
+      for (let i = 0; i < rows; i++) {
+        const row = [];
+        for (let j = 0; j < cols; j++) {
+          const x = (i / rows - 0.5) * 6;
+          const z = (j / cols - 0.5) * 6;
+          const r = Math.sqrt(x * x + z * z) + 0.001;
+          row.push(Math.sin(r * 2) * Math.cos(x) * Math.exp(-r * 0.3) * 3 + Math.sin(x * 1.5) * Math.cos(z * 1.5) * 0.5);
+        }
+        data.push(row);
+      }
+      return { data, label: 'Mathematical Surface', xLabels: null, zLabels: null };
+    }
+    case 'population': {
+      const countries = ['China','India','USA','Indonesia','Pakistan','Brazil','Nigeria','Bangladesh','Russia','Mexico',
+        'Japan','Ethiopia','Philippines','Egypt','Vietnam','DR Congo','Turkey','Iran','Germany','Thailand',
+        'UK','France','Italy','Tanzania','South Africa','Myanmar','Kenya','South Korea','Colombia','Spain',
+        'Argentina','Algeria','Sudan','Uganda','Iraq','Poland','Canada','Morocco','Saudi Arabia','Uzbekistan',
+        'Peru','Angola','Malaysia','Mozambique','Ghana','Yemen','Nepal','Venezuela','Madagascar','Cameroon'];
+      const years = [];
+      for (let y = 1975; y <= 2024; y++) years.push(y);
+      const basePops = [900,600,220,135,70,110,60,75,135,60,112,33,42,38,48,22,40,33,78,42,56,53,56,16,26,30,14,35,25,36,26,17,17,11,11,34,23,18,7,14,16,7,13,10,10,7,13,13,8,8];
+      const growthRates = [0.012,0.018,0.009,0.016,0.025,0.015,0.027,0.019,0.004,0.017,0.003,0.028,0.021,0.020,0.016,0.030,0.016,0.018,0.001,0.012,0.003,0.004,0.002,0.030,0.018,0.017,0.028,0.010,0.016,0.004,0.011,0.022,0.026,0.032,0.028,0.003,0.011,0.017,0.030,0.022,0.018,0.030,0.022,0.028,0.025,0.030,0.020,0.020,0.028,0.026];
+      for (let i = 0; i < countries.length; i++) {
+        const row = [];
+        let pop = basePops[i];
+        for (let j = 0; j < years.length; j++) {
+          pop *= (1 + growthRates[i] * (1 + Math.sin(j * 0.3) * 0.2));
+          row.push(pop);
+        }
+        data.push(row);
+      }
+      return { data, label: 'Population by Country/Year', xLabels: countries, zLabels: years.map(String) };
+    }
+    case 'heatmap': {
+      const hours = 24, days = 7;
+      const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      const hourLabels = [];
+      for (let h = 0; h < 24; h++) hourLabels.push(`${h}:00`);
+      // Realistic activity pattern
+      for (let h = 0; h < hours; h++) {
+        const row = [];
+        for (let d = 0; d < days; d++) {
+          const isWeekend = d >= 5;
+          let activity = 0;
+          // Sleep trough
+          if (h >= 0 && h < 6) activity = 5 + Math.random() * 10;
+          // Morning ramp
+          else if (h >= 6 && h < 9) activity = 20 + (h - 6) * 20 + Math.random() * 15;
+          // Work hours
+          else if (h >= 9 && h < 17) activity = isWeekend ? 40 + Math.random() * 20 : 70 + Math.random() * 25;
+          // Evening
+          else if (h >= 17 && h < 21) activity = isWeekend ? 60 + Math.random() * 20 : 50 + Math.random() * 20;
+          // Late night
+          else activity = 25 + Math.random() * 15 + (isWeekend ? 20 : 0);
+          // Lunch dip
+          if (h === 12 || h === 13) activity *= 0.7;
+          row.push(activity);
+        }
+        data.push(row);
+      }
+      // Expand to make it smoother — repeat rows/cols via interpolation
+      const expanded = [];
+      const xScale = 3, zScale = 7;
+      for (let i = 0; i < hours * xScale; i++) {
+        const row = [];
+        for (let j = 0; j < days * zScale; j++) {
+          const si = i / xScale, sj = j / zScale;
+          const i0 = Math.floor(si), i1 = Math.min(i0 + 1, hours - 1);
+          const j0 = Math.floor(sj), j1 = Math.min(j0 + 1, days - 1);
+          const fi = si - i0, fj = sj - j0;
+          const v = data[i0][j0] * (1 - fi) * (1 - fj) + data[i1][j0] * fi * (1 - fj) +
+                    data[i0][j1] * (1 - fi) * fj + data[i1][j1] * fi * fj;
+          row.push(v);
+        }
+        expanded.push(row);
+      }
+      return { data: expanded, label: 'Activity Heatmap (Hour × Day)', xLabels: hourLabels, zLabels: dayNames };
+    }
+    case 'terrain': {
+      // Fractal-ish noise terrain
+      const seed = Math.random() * 1000;
+      function noise2d(x, y) {
+        const n = Math.sin(x * 127.1 + y * 311.7 + seed) * 43758.5453;
+        return n - Math.floor(n);
+      }
+      function smoothNoise(x, y) {
+        const ix = Math.floor(x), iy = Math.floor(y);
+        const fx = x - ix, fy = y - iy;
+        const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+        const n00 = noise2d(ix, iy), n10 = noise2d(ix + 1, iy);
+        const n01 = noise2d(ix, iy + 1), n11 = noise2d(ix + 1, iy + 1);
+        return (n00 * (1 - sx) + n10 * sx) * (1 - sy) + (n01 * (1 - sx) + n11 * sx) * sy;
+      }
+      for (let i = 0; i < rows; i++) {
+        const row = [];
+        for (let j = 0; j < cols; j++) {
+          let v = 0;
+          v += smoothNoise(i * 0.05, j * 0.05) * 4;
+          v += smoothNoise(i * 0.1, j * 0.1) * 2;
+          v += smoothNoise(i * 0.2, j * 0.2) * 1;
+          v += smoothNoise(i * 0.4, j * 0.4) * 0.5;
+          row.push(v);
+        }
+        data.push(row);
+      }
+      return { data, label: 'Random Terrain', xLabels: null, zLabels: null };
+    }
+  }
+}
+
+// ── Parse CSV ──
+function parseCSV(text) {
+  const lines = text.trim().split('\n').map(l => l.split(/[,\t;]/));
+  if (lines.length < 2) return null;
+
+  // Detect header
+  const hasHeader = isNaN(parseFloat(lines[0][1]));
+  const startRow = hasHeader ? 1 : 0;
+  const headers = hasHeader ? lines[0] : null;
+
+  // If only 2-3 columns, treat as x/y or x/z/y and build a grid
+  const numCols = lines[startRow].length;
+
+  if (numCols <= 3) {
+    // Pivot into grid
+    const records = [];
+    for (let i = startRow; i < lines.length; i++) {
+      const vals = lines[i].map(v => v.trim());
+      if (vals.length >= 2) {
+        records.push(vals);
+      }
+    }
+    // Try x, z, value format
+    if (numCols === 3) {
+      const xVals = [...new Set(records.map(r => r[0]))];
+      const zVals = [...new Set(records.map(r => r[1]))];
+      const grid = [];
+      for (const x of xVals) {
+        const row = [];
+        for (const z of zVals) {
+          const rec = records.find(r => r[0] === x && r[1] === z);
+          row.push(rec ? parseFloat(rec[2]) || 0 : 0);
+        }
+        grid.push(row);
+      }
+      return { data: grid, label: 'CSV Data', xLabels: xVals, zLabels: zVals };
+    }
+    // 2 columns — single series, make a ribbon
+    const vals = records.map(r => parseFloat(r[1]) || 0);
+    const grid = [];
+    const ribbonWidth = 5;
+    for (let i = 0; i < vals.length; i++) {
+      const row = [];
+      for (let j = 0; j < ribbonWidth; j++) row.push(vals[i]);
+      grid.push(row);
+    }
+    return { data: grid, label: 'CSV Data', xLabels: records.map(r => r[0]), zLabels: null };
+  }
+
+  // Multi-column: each row is a series, columns 1..n are values
+  const data = [];
+  const xLabels = [];
+  const zLabels = headers ? headers.slice(1) : null;
+  for (let i = startRow; i < lines.length; i++) {
+    const row = lines[i];
+    xLabels.push(row[0].trim());
+    const vals = [];
+    for (let j = 1; j < row.length; j++) {
+      vals.push(parseFloat(row[j]) || 0);
+    }
+    data.push(vals);
+  }
+  return { data, label: 'CSV Data', xLabels, zLabels };
+}
+
+// ── Smoothing ──
+function smoothData(data, passes) {
+  let d = data.map(r => [...r]);
+  const rows = d.length, cols = d[0].length;
+  for (let p = 0; p < passes; p++) {
+    const nd = d.map(r => [...r]);
+    for (let i = 1; i < rows - 1; i++) {
+      for (let j = 1; j < cols - 1; j++) {
+        nd[i][j] = (
+          d[i-1][j-1] + d[i-1][j] + d[i-1][j+1] +
+          d[i][j-1] + d[i][j] * 4 + d[i][j+1] +
+          d[i+1][j-1] + d[i+1][j] + d[i+1][j+1]
+        ) / 12;
+      }
+    }
+    d = nd;
+  }
+  return d;
+}
+
+// ── Color mapping ──
+function getColor(t, palette) {
+  const colors = PALETTES[palette];
+  t = Math.max(0, Math.min(1, t));
+  const idx = t * (colors.length - 1);
+  const i = Math.floor(idx);
+  const f = idx - i;
+  if (i >= colors.length - 1) return colors[colors.length - 1].clone();
+  return colors[i].clone().lerp(colors[i + 1], f);
+}
+
+// ── Scene Setup ──
+const container = document.getElementById('canvas-container');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#241200');
+scene.fog = new THREE.FogExp2('#241200', 0.04);
+
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(8, 6, 8);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.8;
+controls.minDistance = 3;
+controls.maxDistance = 30;
+controls.target.set(0, 0, 0);
+
+// Lighting
+const ambient = new THREE.AmbientLight('#DDC165', 0.3);
+scene.add(ambient);
+
+const dirLight = new THREE.DirectionalLight('#FFE9A3', 1.2);
+dirLight.position.set(5, 10, 5);
+dirLight.castShadow = false;
+scene.add(dirLight);
+
+const dirLight2 = new THREE.DirectionalLight('#E5591C', 0.4);
+dirLight2.position.set(-5, 6, -3);
+scene.add(dirLight2);
+
+const rimLight = new THREE.DirectionalLight('#DDC165', 0.3);
+rimLight.position.set(0, -3, -5);
+scene.add(rimLight);
+
+// Ground plane (subtle grid)
+const groundGeo = new THREE.PlaneGeometry(40, 40);
+const groundMat = new THREE.MeshBasicMaterial({ color: '#1A0D00', transparent: true, opacity: 0.5 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.01;
+scene.add(ground);
+
+// ── State ──
+let currentData = null;
+let meshGroup = new THREE.Group();
+scene.add(meshGroup);
+
+let state = {
+  heightScale: 1,
+  smoothing: 1,
+  palette: 'funforrest',
+  wireframe: false,
+  style: 'smooth',
+  autoRotate: true
+};
+
+// ── Build Mesh ──
+function buildMesh(dataset) {
+  // Clear old
+  while (meshGroup.children.length) {
+    const c = meshGroup.children[0];
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) {
+      if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
+      else c.material.dispose();
+    }
+    meshGroup.remove(c);
+  }
+
+  const rawData = dataset.data;
+  const data = smoothData(rawData, state.smoothing);
+  const rows = data.length;
+  const cols = data[0].length;
+
+  // Find value range
+  let vmin = Infinity, vmax = -Infinity;
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      if (data[i][j] < vmin) vmin = data[i][j];
+      if (data[i][j] > vmax) vmax = data[i][j];
+    }
+  }
+  const vrange = vmax - vmin || 1;
+
+  const scaleX = 10 / Math.max(rows, cols);
+  const scaleZ = 10 / Math.max(rows, cols);
+  const offsetX = -(rows - 1) * scaleX / 2;
+  const offsetZ = -(cols - 1) * scaleZ / 2;
+
+  if (state.style === 'bars') {
+    // Bar mode
+    const barW = scaleX * 0.8;
+    const barD = scaleZ * 0.8;
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        const norm = (data[i][j] - vmin) / vrange;
+        const h = Math.max(0.02, norm * state.heightScale * 3);
+        const geo = new THREE.BoxGeometry(barW, h, barD);
+        const color = getColor(norm, state.palette);
+        const mat = new THREE.MeshPhongMaterial({
+          color: color,
+          emissive: color.clone().multiplyScalar(0.1),
+          specular: new THREE.Color('#FFE9A3'),
+          shininess: 60,
+          wireframe: state.wireframe
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(
+          offsetX + i * scaleX,
+          h / 2,
+          offsetZ + j * scaleZ
+        );
+        meshGroup.add(mesh);
+      }
+    }
+  } else {
+    // Surface mode
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    const colors = [];
+    const indices = [];
+
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        const norm = (data[i][j] - vmin) / vrange;
+        const y = norm * state.heightScale * 3;
+        vertices.push(offsetX + i * scaleX, y, offsetZ + j * scaleZ);
+        const c = getColor(norm, state.palette);
+        colors.push(c.r, c.g, c.b);
+      }
+    }
+
+    for (let i = 0; i < rows - 1; i++) {
+      for (let j = 0; j < cols - 1; j++) {
+        const a = i * cols + j;
+        const b = (i + 1) * cols + j;
+        const c = (i + 1) * cols + (j + 1);
+        const d = i * cols + (j + 1);
+        indices.push(a, b, d);
+        indices.push(b, c, d);
+      }
+    }
+
+    geometry.setIndex(indices);
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+    if (state.style === 'smooth') {
+      geometry.computeVertexNormals();
+    } else {
+      // Faceted — compute face normals by not sharing vertices
+      const facetedGeo = geometry.toNonIndexed();
+      facetedGeo.computeVertexNormals();
+      const mat = new THREE.MeshPhongMaterial({
+        vertexColors: true,
+        specular: new THREE.Color('#FFE9A3'),
+        shininess: 80,
+        wireframe: state.wireframe,
+        side: THREE.DoubleSide,
+        emissive: new THREE.Color('#1A0D00'),
+        emissiveIntensity: 0.05
+      });
+      const mesh = new THREE.Mesh(facetedGeo, mat);
+      meshGroup.add(mesh);
+
+      // Wireframe overlay
+      if (state.wireframe) {
+        const wireMat = new THREE.MeshBasicMaterial({ color: '#DDC165', wireframe: true, transparent: true, opacity: 0.3 });
+        const wireMesh = new THREE.Mesh(facetedGeo.clone(), wireMat);
+        meshGroup.add(wireMesh);
+      }
+      return;
+    }
+
+    const mat = new THREE.MeshPhongMaterial({
+      vertexColors: true,
+      specular: new THREE.Color('#FFE9A3'),
+      shininess: 80,
+      wireframe: state.wireframe,
+      side: THREE.DoubleSide,
+      emissive: new THREE.Color('#1A0D00'),
+      emissiveIntensity: 0.05
+    });
+    const mesh = new THREE.Mesh(geometry, mat);
+    meshGroup.add(mesh);
+
+    // Wireframe overlay for non-wireframe mode too — subtle
+    if (!state.wireframe) {
+      // Add subtle edge glow on the base
+    }
+  }
+}
+
+// ── Rebuild ──
+function rebuild() {
+  if (!currentData) return;
+  buildMesh(currentData);
+}
+
+// ── Init ──
+currentData = generatePreset('math');
+document.getElementById('dataset-label').textContent = currentData.label;
+rebuild();
+
+// ── Controls Binding ──
+document.getElementById('preset-select').addEventListener('change', e => {
+  currentData = generatePreset(e.target.value);
+  document.getElementById('dataset-label').textContent = currentData.label;
+  rebuild();
+});
+
+document.getElementById('style-select').addEventListener('change', e => {
+  state.style = e.target.value;
+  rebuild();
+});
+
+document.getElementById('palette-select').addEventListener('change', e => {
+  state.palette = e.target.value;
+  rebuild();
+});
+
+document.getElementById('height-scale').addEventListener('input', e => {
+  state.heightScale = parseFloat(e.target.value);
+  document.getElementById('height-val').textContent = state.heightScale.toFixed(1);
+  rebuild();
+});
+
+document.getElementById('smoothing').addEventListener('input', e => {
+  state.smoothing = parseInt(e.target.value);
+  document.getElementById('smooth-val').textContent = state.smoothing;
+  rebuild();
+});
+
+document.getElementById('rotation-speed').addEventListener('input', e => {
+  const v = parseFloat(e.target.value);
+  document.getElementById('rot-val').textContent = v.toFixed(2);
+  controls.autoRotateSpeed = v * 6;
+});
+
+document.getElementById('wireframe-toggle').addEventListener('change', e => {
+  state.wireframe = e.target.checked;
+  rebuild();
+});
+
+document.getElementById('autorotate-toggle').addEventListener('change', e => {
+  controls.autoRotate = e.target.checked;
+});
+
+document.getElementById('csv-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const parsed = parseCSV(ev.target.result);
+    if (parsed) {
+      currentData = parsed;
+      document.getElementById('dataset-label').textContent = file.name;
+      rebuild();
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  renderer.render(scene, camera);
+  const link = document.createElement('a');
+  link.download = 'data-sculpture.png';
+  link.href = renderer.domElement.toDataURL('image/png');
+  link.click();
+});
+
+// ── Resize ──
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ── Animate ──
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+<script>
+(function() {
+  var tray = document.getElementById('controls');
+  if (!tray) return;
+  var tab = document.createElement('div');
+  tab.className = 'tray-tab';
+  tab.innerHTML = '<span class="tray-tab-label">Controls</span><span class="tray-tab-chevron">&#9650;</span>';
+  tray.parentNode.insertBefore(tab, tray.nextSibling);
+  var isOpen = false;
+  function toggle() {
+    isOpen = !isOpen;
+    tray.classList.toggle('tray-open', isOpen);
+    tab.classList.toggle('tab-active', isOpen);
+    tab.style.bottom = isOpen ? tray.offsetHeight + 'px' : '0';
+  }
+  tab.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); toggle(); });
+  document.addEventListener('click', function(e) {
+    if (isOpen && !tray.contains(e.target) && !tab.contains(e.target)) toggle();
+  });
+  var startY = 0;
+  tray.addEventListener('touchstart', function(e) { startY = e.touches[0].clientY; }, { passive: true });
+  tray.addEventListener('touchend', function(e) {
+    if (e.changedTouches[0].clientY - startY > 50 && isOpen) toggle();
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Contribution Art Generator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #241200;
+    --bg-dark: #1A0D00;
+    --gold: #DDC165;
+    --gold-light: #FFE9A3;
+    --orange: #E5591C;
+    --text: #DDC165;
+    --text-dim: rgba(221, 193, 101, 0.5);
+    --cell-empty: rgba(221, 193, 101, 0.06);
+    --cell-l1: rgba(221, 193, 101, 0.25);
+    --cell-l2: rgba(221, 193, 101, 0.5);
+    --cell-l3: rgba(221, 193, 101, 0.75);
+    --cell-l4: #DDC165;
+    --glow: rgba(221, 193, 101, 0.3);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--gold-light);
+    text-shadow: 0 0 20px var(--glow);
+    margin-bottom: 0.3rem;
+  }
+
+  header p {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-dark);
+    border-radius: 8px;
+    border: 1px solid rgba(221, 193, 101, 0.1);
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .control-group label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  input[type="text"], input[type="number"], select {
+    background: rgba(221, 193, 101, 0.08);
+    border: 1px solid rgba(221, 193, 101, 0.2);
+    color: var(--gold);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 8px var(--glow);
+  }
+
+  input[type="text"] { width: 200px; }
+  input[type="number"] { width: 70px; }
+
+  button {
+    background: rgba(229, 89, 28, 0.15);
+    border: 1px solid var(--orange);
+    color: var(--orange);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  button:hover {
+    background: rgba(229, 89, 28, 0.3);
+    box-shadow: 0 0 10px rgba(229, 89, 28, 0.3);
+  }
+
+  button.primary {
+    background: rgba(221, 193, 101, 0.15);
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  button.primary:hover {
+    background: rgba(221, 193, 101, 0.3);
+    box-shadow: 0 0 10px var(--glow);
+  }
+
+  .mode-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.5rem;
+    justify-content: center;
+  }
+
+  .mode-tab {
+    padding: 0.5rem 1.2rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid rgba(221, 193, 101, 0.2);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mode-tab:first-child { border-radius: 4px 0 0 4px; }
+  .mode-tab:last-child { border-radius: 0 4px 4px 0; }
+  .mode-tab + .mode-tab { border-left: none; }
+
+  .mode-tab.active {
+    background: rgba(221, 193, 101, 0.15);
+    color: var(--gold);
+    border-color: var(--gold);
+  }
+
+  .grid-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+    overflow-x: auto;
+    padding: 1rem 0;
+  }
+
+  .grid-container {
+    position: relative;
+    display: inline-block;
+  }
+
+  .month-labels {
+    display: flex;
+    margin-left: 30px;
+    margin-bottom: 4px;
+    height: 14px;
+  }
+
+  .month-label {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    position: absolute;
+    top: 0;
+  }
+
+  .day-labels {
+    position: absolute;
+    left: 0;
+    top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .day-label {
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    height: 13px;
+    line-height: 13px;
+    width: 26px;
+    text-align: right;
+    padding-right: 4px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-rows: repeat(7, 13px);
+    grid-auto-flow: column;
+    gap: 2px;
+    margin-left: 30px;
+    margin-top: 18px;
+  }
+
+  .cell {
+    width: 13px;
+    height: 13px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .cell[data-level="0"] { background: var(--cell-empty); }
+  .cell[data-level="1"] { background: var(--cell-l1); }
+  .cell[data-level="2"] { background: var(--cell-l2); }
+  .cell[data-level="3"] { background: var(--cell-l3); }
+  .cell[data-level="4"] { background: var(--cell-l4); box-shadow: 0 0 6px var(--glow); }
+
+  .cell:hover {
+    outline: 1px solid var(--gold);
+    outline-offset: -1px;
+    z-index: 1;
+  }
+
+  .cell-tooltip {
+    position: fixed;
+    background: var(--bg-dark);
+    border: 1px solid rgba(221, 193, 101, 0.3);
+    color: var(--gold);
+    font-size: 0.7rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 100;
+    display: none;
+    white-space: nowrap;
+  }
+
+  .intensity-picker {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .intensity-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .intensity-swatch.active {
+    border-color: var(--gold-light);
+    box-shadow: 0 0 6px var(--glow);
+  }
+
+  .intensity-swatch[data-level="0"] { background: var(--cell-empty); }
+  .intensity-swatch[data-level="1"] { background: var(--cell-l1); }
+  .intensity-swatch[data-level="2"] { background: var(--cell-l2); }
+  .intensity-swatch[data-level="3"] { background: var(--cell-l3); }
+  .intensity-swatch[data-level="4"] { background: var(--cell-l4); }
+
+  .output-section {
+    background: var(--bg-dark);
+    border: 1px solid rgba(221, 193, 101, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.8rem;
+  }
+
+  .output-header h2 {
+    font-size: 0.9rem;
+    color: var(--gold);
+  }
+
+  .output-stats {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+
+  .script-output {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(221, 193, 101, 0.1);
+    border-radius: 4px;
+    padding: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre;
+    line-height: 1.5;
+  }
+
+  .script-output::-webkit-scrollbar { width: 6px; }
+  .script-output::-webkit-scrollbar-track { background: transparent; }
+  .script-output::-webkit-scrollbar-thumb { background: rgba(221, 193, 101, 0.2); border-radius: 3px; }
+
+  .year-select-row {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .year-nav {
+    background: none;
+    border: none;
+    color: var(--gold);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+
+  .year-nav:hover { opacity: 1; }
+
+  .year-display {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gold);
+    min-width: 60px;
+    text-align: center;
+  }
+
+  .text-input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+
+  .text-input-row input[type="text"] {
+    width: 300px;
+    font-size: 1rem;
+    padding: 0.5rem 0.8rem;
+  }
+
+  .image-drop {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .image-drop.active { display: flex; }
+
+  .drop-zone {
+    border: 2px dashed rgba(221, 193, 101, 0.3);
+    border-radius: 8px;
+    padding: 2rem 3rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--gold);
+    background: rgba(221, 193, 101, 0.05);
+  }
+
+  .drop-zone input { display: none; }
+
+  .preview-thumb {
+    max-width: 200px;
+    max-height: 80px;
+    border-radius: 4px;
+    border: 1px solid rgba(221, 193, 101, 0.2);
+    display: none;
+  }
+
+  .actions-row {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(221, 193, 101, 0.1);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+
+  footer a {
+    color: var(--orange);
+    text-decoration: none;
+  }
+
+  footer a:hover { text-decoration: underline; }
+
+  .keyboard-hint {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-align: center;
+    margin-top: 0.5rem;
+  }
+
+  kbd {
+    background: rgba(221, 193, 101, 0.1);
+    border: 1px solid rgba(221, 193, 101, 0.2);
+    border-radius: 3px;
+    padding: 0.1rem 0.3rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+  }
+
+  @media (max-width: 768px) {
+    .controls { flex-direction: column; align-items: stretch; }
+    .control-group { justify-content: space-between; }
+    .text-input-row { flex-direction: column; }
+    .text-input-row input[type="text"] { width: 100%; }
+    header h1 { font-size: 1.3rem; }
+    .actions-row { flex-direction: column; align-items: stretch; }
+    .mode-tabs { flex-wrap: wrap; justify-content: center; }
+  }
+  @media (max-width: 480px) {
+    .container { padding: 1rem 0.75rem; }
+    header h1 { font-size: 1.1rem; }
+    header p { font-size: 0.75rem; }
+    button { padding: 0.4rem 0.6rem; font-size: 0.75rem; }
+    .grid-wrapper { padding: 0.5rem 0; }
+    .output-section { padding: 0.75rem; }
+    .script-output { font-size: 0.6rem; max-height: 200px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>GitHub Contribution Art</h1>
+    <p>Paint your contribution graph. Generate a script to make it real.</p>
+  </header>
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="draw">Draw</button>
+    <button class="mode-tab" data-mode="text">Text</button>
+    <button class="mode-tab" data-mode="image">Image</button>
+  </div>
+
+  <div class="text-input-row" id="textInputRow" style="display:none">
+    <input type="text" id="textInput" placeholder="Type something..." maxlength="12">
+    <button class="primary" id="renderTextBtn">Render</button>
+  </div>
+
+  <div class="image-drop" id="imageDrop">
+    <div class="drop-zone" id="dropZone">
+      <p>Drop an image here or click to upload</p>
+      <input type="file" id="imageInput" accept="image/*">
+    </div>
+    <img class="preview-thumb" id="previewThumb" alt="Preview">
+    <div class="control-group">
+      <label>Threshold</label>
+      <input type="range" id="imageThreshold" min="0" max="255" value="128" style="width:120px">
+    </div>
+  </div>
+
+  <div class="year-select-row">
+    <button class="year-nav" id="yearPrev">&#9664;</button>
+    <span class="year-display" id="yearDisplay">2026</span>
+    <button class="year-nav" id="yearNext">&#9654;</button>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Intensity</label>
+      <div class="intensity-picker" id="intensityPicker">
+        <div class="intensity-swatch" data-level="0" title="Empty"></div>
+        <div class="intensity-swatch active" data-level="1" title="Light"></div>
+        <div class="intensity-swatch" data-level="2" title="Medium"></div>
+        <div class="intensity-swatch" data-level="3" title="Dark"></div>
+        <div class="intensity-swatch" data-level="4" title="Max"></div>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Commits/level</label>
+      <input type="number" id="commitsPerLevel" value="5" min="1" max="30">
+    </div>
+    <div class="control-group">
+      <label>Repo name</label>
+      <input type="text" id="repoName" value="contrib-art" style="width:130px">
+    </div>
+    <button id="clearBtn">Clear</button>
+    <button id="randomBtn">Random Fill</button>
+  </div>
+
+  <div class="grid-wrapper">
+    <div class="grid-container" id="gridContainer">
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+
+  <div class="keyboard-hint">
+    <kbd>1</kbd>-<kbd>4</kbd> intensity &nbsp; <kbd>0</kbd> eraser &nbsp; Click + drag to paint
+  </div>
+
+  <div class="actions-row">
+    <button class="primary" id="generateBtn">Generate Script</button>
+    <button id="copyBtn">Copy to Clipboard</button>
+    <button id="downloadBtn">Download .sh</button>
+  </div>
+
+  <div class="output-section" id="outputSection" style="display:none">
+    <div class="output-header">
+      <h2>Generated Script</h2>
+      <span class="output-stats" id="outputStats"></span>
+    </div>
+    <div class="script-output" id="scriptOutput"></div>
+  </div>
+
+  <footer>
+    <p>Built by <a href="https://ianhandy.com">Ian Handy</a></p>
+  </footer>
+</div>
+
+<div class="cell-tooltip" id="tooltip"></div>
+
+<canvas id="fontCanvas" style="display:none"></canvas>
+
+<script>
+// ── State ──
+let year = 2026;
+let currentLevel = 1;
+let mode = 'draw';
+let painting = false;
+let gridData = []; // 7 rows × 52-53 cols
+let weeks = 0;
+let startDate = null;
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ── Pixel font (5×7) ──
+const FONT = {
+  'A': [0x04,0x0A,0x11,0x1F,0x11,0x11,0x11],
+  'B': [0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E],
+  'C': [0x0E,0x11,0x10,0x10,0x10,0x11,0x0E],
+  'D': [0x1C,0x12,0x11,0x11,0x11,0x12,0x1C],
+  'E': [0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F],
+  'F': [0x1F,0x10,0x10,0x1E,0x10,0x10,0x10],
+  'G': [0x0E,0x11,0x10,0x17,0x11,0x11,0x0E],
+  'H': [0x11,0x11,0x11,0x1F,0x11,0x11,0x11],
+  'I': [0x0E,0x04,0x04,0x04,0x04,0x04,0x0E],
+  'J': [0x07,0x02,0x02,0x02,0x02,0x12,0x0C],
+  'K': [0x11,0x12,0x14,0x18,0x14,0x12,0x11],
+  'L': [0x10,0x10,0x10,0x10,0x10,0x10,0x1F],
+  'M': [0x11,0x1B,0x15,0x15,0x11,0x11,0x11],
+  'N': [0x11,0x19,0x15,0x13,0x11,0x11,0x11],
+  'O': [0x0E,0x11,0x11,0x11,0x11,0x11,0x0E],
+  'P': [0x1E,0x11,0x11,0x1E,0x10,0x10,0x10],
+  'Q': [0x0E,0x11,0x11,0x11,0x15,0x12,0x0D],
+  'R': [0x1E,0x11,0x11,0x1E,0x14,0x12,0x11],
+  'S': [0x0E,0x11,0x10,0x0E,0x01,0x11,0x0E],
+  'T': [0x1F,0x04,0x04,0x04,0x04,0x04,0x04],
+  'U': [0x11,0x11,0x11,0x11,0x11,0x11,0x0E],
+  'V': [0x11,0x11,0x11,0x11,0x0A,0x0A,0x04],
+  'W': [0x11,0x11,0x11,0x15,0x15,0x1B,0x11],
+  'X': [0x11,0x11,0x0A,0x04,0x0A,0x11,0x11],
+  'Y': [0x11,0x11,0x0A,0x04,0x04,0x04,0x04],
+  'Z': [0x1F,0x01,0x02,0x04,0x08,0x10,0x1F],
+  '0': [0x0E,0x11,0x13,0x15,0x19,0x11,0x0E],
+  '1': [0x04,0x0C,0x04,0x04,0x04,0x04,0x0E],
+  '2': [0x0E,0x11,0x01,0x06,0x08,0x10,0x1F],
+  '3': [0x0E,0x11,0x01,0x06,0x01,0x11,0x0E],
+  '4': [0x02,0x06,0x0A,0x12,0x1F,0x02,0x02],
+  '5': [0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E],
+  '6': [0x06,0x08,0x10,0x1E,0x11,0x11,0x0E],
+  '7': [0x1F,0x01,0x02,0x04,0x08,0x08,0x08],
+  '8': [0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E],
+  '9': [0x0E,0x11,0x11,0x0F,0x01,0x02,0x0C],
+  '!': [0x04,0x04,0x04,0x04,0x04,0x00,0x04],
+  '?': [0x0E,0x11,0x01,0x02,0x04,0x00,0x04],
+  '.': [0x00,0x00,0x00,0x00,0x00,0x00,0x04],
+  '-': [0x00,0x00,0x00,0x0E,0x00,0x00,0x00],
+  ' ': [0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+  '<': [0x02,0x04,0x08,0x10,0x08,0x04,0x02],
+  '>': [0x08,0x04,0x02,0x01,0x02,0x04,0x08],
+  '/': [0x01,0x02,0x02,0x04,0x08,0x08,0x10],
+  ':': [0x00,0x04,0x04,0x00,0x04,0x04,0x00],
+  '+': [0x00,0x04,0x04,0x1F,0x04,0x04,0x00],
+  '=': [0x00,0x00,0x1F,0x00,0x1F,0x00,0x00],
+  '*': [0x00,0x15,0x0E,0x1F,0x0E,0x15,0x00],
+  '#': [0x0A,0x1F,0x0A,0x0A,0x1F,0x0A,0x00],
+  '@': [0x0E,0x11,0x17,0x15,0x17,0x10,0x0E],
+};
+
+// ── Grid setup ──
+function getYearRange(y) {
+  // GitHub contribution graph: Jan 1 to Dec 31 of the year
+  // But it aligns to weeks starting on Sunday
+  const jan1 = new Date(y, 0, 1);
+  const dec31 = new Date(y, 11, 31);
+  // Start on the Sunday of the week containing Jan 1
+  const start = new Date(jan1);
+  start.setDate(start.getDate() - start.getDay());
+  // End on the Saturday of the week containing Dec 31
+  const end = new Date(dec31);
+  end.setDate(end.getDate() + (6 - end.getDay()));
+  const totalDays = Math.round((end - start) / 86400000) + 1;
+  return { start, end, weeks: totalDays / 7 };
+}
+
+function buildGrid() {
+  const range = getYearRange(year);
+  startDate = range.start;
+  weeks = range.weeks;
+
+  // Initialize grid data
+  gridData = Array.from({ length: 7 }, () => Array(weeks).fill(0));
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = `repeat(${weeks}, 13px)`;
+
+  // Build cells column by column (week by week)
+  const container = document.getElementById('gridContainer');
+
+  // Remove old month/day labels
+  container.querySelectorAll('.month-label, .day-labels').forEach(el => el.remove());
+
+  // Day labels
+  const dayLabels = document.createElement('div');
+  dayLabels.className = 'day-labels';
+  DAYS.forEach((d, i) => {
+    const lbl = document.createElement('div');
+    lbl.className = 'day-label';
+    lbl.textContent = (i % 2 === 1) ? d : '';
+    dayLabels.appendChild(lbl);
+  });
+  container.appendChild(dayLabels);
+
+  // Month labels
+  let lastMonth = -1;
+  for (let w = 0; w < weeks; w++) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + w * 7);
+    const m = d.getMonth();
+    if (m !== lastMonth) {
+      lastMonth = m;
+      const lbl = document.createElement('div');
+      lbl.className = 'month-label';
+      lbl.textContent = MONTHS[m];
+      lbl.style.left = (30 + w * 15) + 'px';
+      container.appendChild(lbl);
+    }
+  }
+
+  // Cells
+  for (let w = 0; w < weeks; w++) {
+    for (let d = 0; d < 7; d++) {
+      const cellDate = new Date(startDate);
+      cellDate.setDate(cellDate.getDate() + w * 7 + d);
+
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.level = '0';
+      cell.dataset.week = w;
+      cell.dataset.day = d;
+      cell.dataset.date = cellDate.toISOString().split('T')[0];
+
+      // Grey out cells outside the year
+      if (cellDate.getFullYear() !== year) {
+        cell.style.opacity = '0.3';
+        cell.style.pointerEvents = 'none';
+      }
+
+      cell.addEventListener('mousedown', onCellDown);
+      cell.addEventListener('mouseenter', onCellEnter);
+      cell.addEventListener('mousemove', onCellMove);
+
+      grid.appendChild(cell);
+    }
+  }
+}
+
+// ── Painting ──
+function onCellDown(e) {
+  e.preventDefault();
+  painting = true;
+  paintCell(e.target);
+}
+
+function onCellEnter(e) {
+  if (painting) paintCell(e.target);
+}
+
+function onCellMove(e) {
+  const tooltip = document.getElementById('tooltip');
+  tooltip.style.display = 'block';
+  tooltip.style.left = (e.clientX + 12) + 'px';
+  tooltip.style.top = (e.clientY - 8) + 'px';
+  const w = parseInt(e.target.dataset.week);
+  const d = parseInt(e.target.dataset.day);
+  const level = gridData[d]?.[w] || 0;
+  const cpl = parseInt(document.getElementById('commitsPerLevel').value) || 5;
+  tooltip.textContent = `${e.target.dataset.date} · ${level * cpl} commits`;
+}
+
+function paintCell(cell) {
+  if (mode !== 'draw') return;
+  const w = parseInt(cell.dataset.week);
+  const d = parseInt(cell.dataset.day);
+  const cellDate = new Date(cell.dataset.date);
+  if (cellDate.getFullYear() !== year) return;
+
+  gridData[d][w] = currentLevel;
+  cell.dataset.level = currentLevel;
+}
+
+document.addEventListener('mouseup', () => { painting = false; });
+document.addEventListener('mouseleave', () => {
+  document.getElementById('tooltip').style.display = 'none';
+});
+document.getElementById('grid').addEventListener('mouseleave', () => {
+  document.getElementById('tooltip').style.display = 'none';
+});
+
+// ── Intensity picker ──
+document.getElementById('intensityPicker').addEventListener('click', e => {
+  const swatch = e.target.closest('.intensity-swatch');
+  if (!swatch) return;
+  currentLevel = parseInt(swatch.dataset.level);
+  document.querySelectorAll('.intensity-swatch').forEach(s => s.classList.remove('active'));
+  swatch.classList.add('active');
+});
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key >= '0' && e.key <= '4') {
+    currentLevel = parseInt(e.key);
+    document.querySelectorAll('.intensity-swatch').forEach(s => s.classList.remove('active'));
+    document.querySelector(`.intensity-swatch[data-level="${currentLevel}"]`).classList.add('active');
+  }
+});
+
+// ── Mode tabs ──
+document.querySelectorAll('.mode-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    mode = tab.dataset.mode;
+
+    document.getElementById('textInputRow').style.display = mode === 'text' ? 'flex' : 'none';
+    document.getElementById('imageDrop').classList.toggle('active', mode === 'image');
+  });
+});
+
+// ── Text rendering ──
+function renderText(text) {
+  text = text.toUpperCase();
+  // Clear grid
+  for (let d = 0; d < 7; d++) gridData[d].fill(0);
+
+  let col = 1; // start 1 week in
+  for (const ch of text) {
+    const glyph = FONT[ch];
+    if (!glyph) continue;
+    const charWidth = ch === ' ' ? 3 : 5;
+
+    for (let row = 0; row < 7; row++) {
+      for (let bit = 0; bit < charWidth; bit++) {
+        if (col + bit >= weeks) break;
+        const cellDate = new Date(startDate);
+        cellDate.setDate(cellDate.getDate() + (col + bit) * 7 + row);
+        if (cellDate.getFullYear() !== year) continue;
+        if (glyph[row] & (1 << (4 - bit))) {
+          gridData[row][col + bit] = 4;
+        }
+      }
+    }
+    col += charWidth + 1;
+    if (col >= weeks) break;
+  }
+  syncGridUI();
+}
+
+function syncGridUI() {
+  const cells = document.querySelectorAll('.cell');
+  cells.forEach(cell => {
+    const w = parseInt(cell.dataset.week);
+    const d = parseInt(cell.dataset.day);
+    const cellDate = new Date(cell.dataset.date);
+    if (cellDate.getFullYear() !== year) return;
+    cell.dataset.level = gridData[d][w];
+  });
+}
+
+document.getElementById('renderTextBtn').addEventListener('click', () => {
+  renderText(document.getElementById('textInput').value);
+});
+
+document.getElementById('textInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') renderText(e.target.value);
+});
+
+// ── Image upload ──
+const dropZone = document.getElementById('dropZone');
+const imageInput = document.getElementById('imageInput');
+const previewThumb = document.getElementById('previewThumb');
+
+dropZone.addEventListener('click', () => imageInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) processImage(e.dataTransfer.files[0]);
+});
+imageInput.addEventListener('change', e => {
+  if (e.target.files.length) processImage(e.target.files[0]);
+});
+
+let loadedImage = null;
+
+function processImage(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      loadedImage = img;
+      previewThumb.src = e.target.result;
+      previewThumb.style.display = 'block';
+      renderImage();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderImage() {
+  if (!loadedImage) return;
+  const canvas = document.getElementById('fontCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // Scale image to fit grid (weeks × 7)
+  const targetW = weeks - 2;
+  const targetH = 7;
+  canvas.width = targetW;
+  canvas.height = targetH;
+  ctx.drawImage(loadedImage, 0, 0, targetW, targetH);
+
+  const imageData = ctx.getImageData(0, 0, targetW, targetH);
+  const threshold = parseInt(document.getElementById('imageThreshold').value);
+
+  for (let d = 0; d < 7; d++) gridData[d].fill(0);
+
+  for (let y = 0; y < targetH; y++) {
+    for (let x = 0; x < targetW; x++) {
+      const i = (y * targetW + x) * 4;
+      const brightness = imageData.data[i] * 0.299 + imageData.data[i+1] * 0.587 + imageData.data[i+2] * 0.114;
+      const alpha = imageData.data[i+3] / 255;
+      const effective = brightness * alpha + 255 * (1 - alpha);
+
+      const w = x + 1;
+      if (w >= weeks) continue;
+      const cellDate = new Date(startDate);
+      cellDate.setDate(cellDate.getDate() + w * 7 + y);
+      if (cellDate.getFullYear() !== year) continue;
+
+      if (effective < threshold * 0.5) gridData[y][w] = 4;
+      else if (effective < threshold * 0.75) gridData[y][w] = 3;
+      else if (effective < threshold) gridData[y][w] = 2;
+      else if (effective < threshold * 1.25) gridData[y][w] = 1;
+      else gridData[y][w] = 0;
+    }
+  }
+  syncGridUI();
+}
+
+document.getElementById('imageThreshold').addEventListener('input', renderImage);
+
+// ── Controls ──
+document.getElementById('clearBtn').addEventListener('click', () => {
+  for (let d = 0; d < 7; d++) gridData[d].fill(0);
+  syncGridUI();
+  document.getElementById('outputSection').style.display = 'none';
+});
+
+document.getElementById('randomBtn').addEventListener('click', () => {
+  for (let d = 0; d < 7; d++) {
+    for (let w = 0; w < weeks; w++) {
+      const cellDate = new Date(startDate);
+      cellDate.setDate(cellDate.getDate() + w * 7 + d);
+      if (cellDate.getFullYear() !== year) continue;
+      gridData[d][w] = Math.random() > 0.6 ? Math.ceil(Math.random() * 4) : 0;
+    }
+  }
+  syncGridUI();
+});
+
+// ── Year navigation ──
+document.getElementById('yearPrev').addEventListener('click', () => { year--; updateYear(); });
+document.getElementById('yearNext').addEventListener('click', () => { year++; updateYear(); });
+
+function updateYear() {
+  document.getElementById('yearDisplay').textContent = year;
+  buildGrid();
+}
+
+// ── Script generation ──
+function generateScript() {
+  const cpl = parseInt(document.getElementById('commitsPerLevel').value) || 5;
+  const repoName = document.getElementById('repoName').value || 'contrib-art';
+
+  let commits = [];
+  for (let w = 0; w < weeks; w++) {
+    for (let d = 0; d < 7; d++) {
+      const level = gridData[d][w];
+      if (level === 0) continue;
+      const cellDate = new Date(startDate);
+      cellDate.setDate(cellDate.getDate() + w * 7 + d);
+      if (cellDate.getFullYear() !== year) continue;
+
+      const count = level * cpl;
+      const dateStr = cellDate.toISOString().split('T')[0];
+      commits.push({ date: dateStr, count });
+    }
+  }
+
+  if (commits.length === 0) return '';
+
+  const totalCommits = commits.reduce((s, c) => s + c.count, 0);
+  const totalDays = commits.length;
+
+  let script = `#!/bin/bash
+# GitHub Contribution Art Generator
+# ${totalCommits} commits across ${totalDays} days
+# Generated at ianhandy.com/contrib-art
+#
+# HOW TO USE:
+# 1. Create a new repo on GitHub named "${repoName}"
+# 2. Run this script: bash contrib-art.sh
+# 3. Wait for GitHub to process (may take a few minutes)
+# 4. Check your profile — art appears on your contribution graph!
+#
+# WARNING: This creates real commits. Use a throwaway repo.
+
+set -e
+
+REPO="${repoName}"
+
+# Create and init repo
+mkdir -p "$REPO" && cd "$REPO"
+git init
+git checkout -b main
+
+`;
+
+  for (const { date, count } of commits) {
+    script += `# ${date} — ${count} commits\n`;
+    for (let i = 0; i < count; i++) {
+      script += `GIT_AUTHOR_DATE="${date}T12:00:00" GIT_COMMITTER_DATE="${date}T12:00:00" git commit --allow-empty -m "art ${date} ${i+1}/${count}" > /dev/null\n`;
+    }
+    script += '\n';
+  }
+
+  script += `echo "\\n✓ ${totalCommits} commits created across ${totalDays} days"
+echo "Now push to GitHub:"
+echo "  git remote add origin git@github.com:YOUR_USERNAME/$REPO.git"
+echo "  git push -u origin main"
+`;
+
+  return { script, totalCommits, totalDays };
+}
+
+document.getElementById('generateBtn').addEventListener('click', () => {
+  const result = generateScript();
+  if (!result) return;
+  document.getElementById('outputSection').style.display = 'block';
+  document.getElementById('scriptOutput').textContent = result.script;
+  document.getElementById('outputStats').textContent = `${result.totalCommits} commits · ${result.totalDays} days`;
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const result = generateScript();
+  if (!result) return;
+  navigator.clipboard.writeText(result.script).then(() => {
+    const btn = document.getElementById('copyBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+});
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const result = generateScript();
+  if (!result) return;
+  const blob = new Blob([result.script], { type: 'text/x-shellscript' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'contrib-art.sh';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ── Init ──
+buildGrid();
+</script>
+</body>
+</html>

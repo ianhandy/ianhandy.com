@@ -795,73 +795,6 @@ body {
 .outcome-loss .outcome-title { color: #C0392B; }
 .outcome-loss { border-color: #C0392B; }
 
-/* ── EULOGY OVERLAY ── */
-#eulogy-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(10,5,0,0.85);
-  z-index: 200;
-  justify-content: center;
-  align-items: center;
-}
-#eulogy-overlay.visible { display: flex; }
-.eulogy-card {
-  background: var(--card);
-  border: 2px solid #C0392B;
-  border-radius: 6px;
-  padding: 32px 40px;
-  max-width: 420px;
-  text-align: center;
-}
-.eulogy-icon { font-size: 48px; margin-bottom: 8px; opacity: 0.6; }
-.eulogy-species {
-  font-family: var(--sans);
-  font-size: 20px;
-  font-weight: 800;
-  margin-bottom: 4px;
-}
-.eulogy-dates {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--dim);
-  margin-bottom: 16px;
-}
-.eulogy-cause {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text);
-  line-height: 1.6;
-  margin-bottom: 8px;
-}
-.eulogy-stats {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--dim);
-  margin-bottom: 12px;
-}
-.eulogy-sparkline {
-  margin: 0 auto 20px;
-  display: block;
-}
-
-/* ── GRAVEYARD PANEL ── */
-.grave-entry {
-  padding: 6px 12px;
-  border-left: 3px solid;
-  margin-bottom: 4px;
-  opacity: 0.6;
-}
-.grave-name {
-  font-size: 11px;
-  font-weight: 600;
-  text-decoration: line-through;
-}
-.grave-info {
-  font-size: 10px;
-  color: var(--dim);
-}
-
 /* ── POST-MORTEM OVERLAY ── */
 #postmortem-overlay {
   display: none;
@@ -1600,10 +1533,6 @@ body.atmo-reef #atmosphere-layer {
           <button onclick="setPanelMode('tile')">Selected Tile</button>
         </div>
         <div id="species-list"></div>
-        <div id="graveyard" style="display:none;">
-          <div class="sidebar-section-head" style="margin-top:10px;font-size:11px;color:var(--dim);font-weight:600;">Fallen Species</div>
-          <div id="graveyard-list"></div>
-        </div>
       </div>
 
       <div class="panel-section">
@@ -1745,21 +1674,6 @@ body.atmo-reef #atmosphere-layer {
       </div>
     </div>
   </div>
-
-  <!-- EULOGY OVERLAY -->
-  <div id="eulogy-overlay">
-    <div class="eulogy-card">
-      <div class="eulogy-icon" id="eulogy-icon"></div>
-      <div class="eulogy-species" id="eulogy-species"></div>
-      <div class="eulogy-dates" id="eulogy-dates"></div>
-      <div class="eulogy-cause" id="eulogy-cause"></div>
-      <div class="eulogy-stats" id="eulogy-stats"></div>
-      <canvas class="eulogy-sparkline" id="eulogy-sparkline" width="200" height="40"></canvas>
-      <div class="outcome-actions">
-        <button class="outcome-btn" onclick="dismissEulogy()">Continue</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -1771,8 +1685,6 @@ let selectedSpecies = 0; // index into SPECIES
 let panelMode = 'global';
 let selectedTile = null; // {r, c} or null
 let popHistory = []; // [{gen, pops: [5 numbers]}]
-let knownExtinctions = []; // extinction records from Python
-let wasPlayingBeforeEulogy = false;
 let mapCanvas, mapCtx;
 let popCanvas, popCtx;
 let traitCanvas, traitCtx;
@@ -2018,7 +1930,6 @@ function beginObservation() {
 
   // Reset JS state
   popHistory = [];
-  knownExtinctions = [];
   selectedTile = null;
   playing = false;
   camTilt = 0.5; camZoom = 1.0; camPanX = 0; camPanY = 0;
@@ -2943,88 +2854,6 @@ function dismissOutcome() {
   // Game continues — player can keep observing
 }
 
-// ── EULOGY OVERLAY ──
-function showEulogy(extinction) {
-  wasPlayingBeforeEulogy = playing;
-  if (playing) togglePlay(); // Pause sim
-
-  const overlay = document.getElementById('eulogy-overlay');
-  const sp = SPECIES[extinction.species];
-  const card = overlay.querySelector('.eulogy-card');
-  card.style.borderColor = sp.color;
-
-  // Icon — colored dot
-  document.getElementById('eulogy-icon').innerHTML = `<span style="color:${sp.color}">●</span>`;
-  document.getElementById('eulogy-species').textContent = sp.fullName;
-  document.getElementById('eulogy-species').style.color = sp.color;
-  document.getElementById('eulogy-dates').textContent = `Gen ${extinction.first_gen} — Gen ${extinction.gen}`;
-
-  // Cause text
-  const causeTexts = {
-    predation: 'Hunted to extinction. The population couldn\'t sustain the predation pressure.',
-    habitat_loss: 'Their habitat eroded beneath them. As conditions shifted, nowhere remained.',
-    competition: 'Outcompeted for resources. Others claimed what was once theirs.',
-    disease: 'A blight swept through, and too few remained to recover.',
-    genetic_drift: 'Too few, for too long. Genetic diversity collapsed. The end was quiet.',
-    unknown: 'The cause remains unclear. One day they were there, and then they weren\'t.',
-  };
-  document.getElementById('eulogy-cause').textContent = causeTexts[extinction.cause] || causeTexts.unknown;
-  document.getElementById('eulogy-stats').textContent =
-    `Peak population: ${extinction.peak_pop} | Survived: ${extinction.gens_survived} generations`;
-
-  // Sparkline
-  const canvas = document.getElementById('eulogy-sparkline');
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const trend = extinction.final_pop_trend || [];
-  if (trend.length > 1) {
-    const maxVal = Math.max(...trend, 1);
-    ctx.strokeStyle = sp.color;
-    ctx.globalAlpha = 0.6;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let i = 0; i < trend.length; i++) {
-      const x = (i / (trend.length - 1)) * canvas.width;
-      const y = canvas.height - (trend[i] / maxVal) * (canvas.height - 4) - 2;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
-
-  overlay.classList.add('visible');
-}
-
-function dismissEulogy() {
-  document.getElementById('eulogy-overlay').classList.remove('visible');
-  if (wasPlayingBeforeEulogy) togglePlay(); // Resume
-}
-
-// ── GRAVEYARD PANEL ──
-function renderGraveyard() {
-  const section = document.getElementById('graveyard');
-  const list = document.getElementById('graveyard-list');
-  if (knownExtinctions.length === 0) {
-    section.style.display = 'none';
-    return;
-  }
-  section.style.display = 'block';
-  let html = '';
-  knownExtinctions.forEach(ext => {
-    const sp = SPECIES[ext.species];
-    const causeShort = {
-      predation: 'Predation', habitat_loss: 'Habitat Loss', competition: 'Competition',
-      disease: 'Disease', genetic_drift: 'Genetic Drift', unknown: 'Unknown'
-    };
-    html += `<div class="grave-entry" style="border-color:${sp.color}">
-      <div class="grave-name" style="color:${sp.color}">${sp.fullName}</div>
-      <div class="grave-info">Gen ${ext.first_gen}–${ext.gen} | Peak: ${ext.peak_pop} | ${causeShort[ext.cause] || 'Unknown'}</div>
-    </div>`;
-  });
-  list.innerHTML = html;
-}
-
 function showPostMortem() {
   document.getElementById('outcome-overlay').style.display = 'none';
   const overlay = document.getElementById('postmortem-overlay');
@@ -3475,17 +3304,6 @@ function tick() {
     });
   }
 
-  // Check for new extinctions
-  try {
-    const extJson = pyodide.runPython('get_extinctions()');
-    const allExts = JSON.parse(extJson);
-    if (allExts.length > knownExtinctions.length) {
-      const newExt = allExts[allExts.length - 1];
-      knownExtinctions = allExts;
-      showEulogy(newExt);
-    }
-  } catch(e) { /* ignore parse errors */ }
-
   // Update epoch (every 10 frames to match Python-side check interval)
   epochCheckCounter++;
   if (epochCheckCounter >= 10) {
@@ -3511,7 +3329,6 @@ function renderAll() {
   renderMap();
   renderSpeciesList();
   renderPopChart();
-  renderGraveyard();
   if (viewMode === 'lab') {
     if (currentLabTab === 'overview') renderTraitChart();
     if (currentLabTab === 'stats') renderScatterPlot();
@@ -3676,31 +3493,6 @@ function renderMap() {
     }
   }
 
-  // Extinction last-stand markers
-  if (knownExtinctions.length > 0) {
-    knownExtinctions.forEach(ext => {
-      const [er, ec] = ext.last_tile;
-      if (er >= 0 && er < gs && ec >= 0 && ec < gs) {
-        const eix = (ec - er) * (tileW * 0.5);
-        const eiy = (ec + er) * (tileH * 0.5);
-        const eiz = data.elevations[er][ec] * heightScale;
-        const esx = offsetX + eix;
-        const esy = offsetY + eiy - eiz;
-        const pulse = 0.3 + 0.2 * Math.sin(Date.now() / 500);
-        ctx.globalAlpha = pulse;
-        ctx.strokeStyle = SPECIES[ext.species].color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(esx - 5, esy - 5);
-        ctx.lineTo(esx + 5, esy + 5);
-        ctx.moveTo(esx + 5, esy - 5);
-        ctx.lineTo(esx - 5, esy + 5);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-      }
-    });
-  }
-
   // Vignette
   const grad = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.min(w, h) * 0.7);
   grad.addColorStop(0, 'rgba(0,0,0,0)');
@@ -3826,50 +3618,22 @@ function renderPopChart() {
   ctx.lineTo(w - padR, h - padB);
   ctx.stroke();
 
-  // Build extinction lookup: species index -> extinction record
-  const extinctSet = {};
-  knownExtinctions.forEach(ext => { extinctSet[ext.species] = ext; });
-
   // Draw lines for each species
   for (let s = 0; s < 5; s++) {
-    const isExtinct = s in extinctSet;
     ctx.strokeStyle = SPECIES[s].color;
     ctx.lineWidth = s === selectedSpecies ? 2 : 1;
-
-    if (isExtinct) {
-      // Ghost line: dashed, low opacity
-      ctx.setLineDash([4, 4]);
-      ctx.globalAlpha = s === selectedSpecies ? 0.35 : 0.15;
-    } else {
-      ctx.setLineDash([]);
-      ctx.globalAlpha = s === selectedSpecies ? 1 : 0.4;
-    }
-
+    ctx.globalAlpha = s === selectedSpecies ? 1 : 0.4;
     ctx.beginPath();
-    let lastNonZeroX = 0, lastNonZeroY = 0;
+
     for (let i = 0; i < popHistory.length; i++) {
       const x = padL + (i / (popHistory.length - 1)) * plotW;
       const y = padT + plotH - (popHistory[i].pops[s] / maxPop) * plotH;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
-      if (popHistory[i].pops[s] > 0) { lastNonZeroX = x; lastNonZeroY = y; }
     }
-    ctx.stroke();
 
-    // Draw extinction marker (cross) at the point where population last had value
-    if (isExtinct && lastNonZeroX > 0) {
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 0.5;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(lastNonZeroX - 4, lastNonZeroY - 4);
-      ctx.lineTo(lastNonZeroX + 4, lastNonZeroY + 4);
-      ctx.moveTo(lastNonZeroX + 4, lastNonZeroY - 4);
-      ctx.lineTo(lastNonZeroX - 4, lastNonZeroY + 4);
-      ctx.stroke();
-    }
+    ctx.stroke();
   }
-  ctx.setLineDash([]);
   ctx.globalAlpha = 1;
 }
 
@@ -4477,9 +4241,6 @@ def get_epoch_info():
 # ── STATE ──
 generation = 0
 events_buffer = []
-extinctions = []  # list of extinction records
-last_seen_tile = {}  # species_idx -> (r, c) — last tile where species had pop > 0
-disease_log = []  # list of (gen, target_species_idx) for cause-of-death detection
 
 # Persistent speciation state: species_idx -> {
 #   'split_trait': float,       # trait value where the split occurred
@@ -4767,13 +4528,8 @@ def init_grid(seed_str=None):
     tectonic_plates = _init_tectonic_plates()
     # Reset population splitting state
     global followed_population, ghost_populations, early_warnings, pending_splits, next_pop_id, split_history
-    global extinctions, last_seen_tile, disease_log, pop_check_history
     followed_population = None  # None = following whole grid (no split yet)
     ghost_populations = []
-    extinctions = []
-    last_seen_tile = {}
-    disease_log = []
-    pop_check_history = []
     early_warnings = []
     pending_splits = []
     next_pop_id = 1
@@ -4952,10 +4708,6 @@ def step():
     # 12. Win/loss condition checks (every 10 gens)
     if generation % 10 == 0:
         _check_win_loss_conditions()
-
-    # 13. Record pop snapshot & check extinctions (every gen)
-    _record_pop_check()
-    _check_extinction()
 
 def _check_win_loss_conditions():
     """Check for win and loss conditions."""
@@ -5338,7 +5090,6 @@ def _check_events(season):
                     grid[r][c]['pops'][target] = int(grid[r][c]['pops'][target] * local_severity)
             mortality_pct = int((1 - severity) * 100)
             _region = "northern" if epicenter_r < GRID_SIZE//2 else "southern"
-            disease_log.append((generation, target))
             events_buffer.append({
                 'gen': generation,
                 'text': _narrate_event('disease', target=names[target], region=_region, mortality=mortality_pct)
@@ -5460,8 +5211,6 @@ def _update_tile(r, c, season):
 
     for s in range(NUM_SPECIES):
         pop = tile['pops'][s]
-        if pop > 0:
-            last_seen_tile[s] = (r, c)
         if pop <= 0:
             # Recolonization from nearby populations or seed bank
             suit = habitat_suitability(elev, s)
@@ -6804,156 +6553,6 @@ def _check_speciation():
                     'gen': generation,
                     'text': _narrate_event('pop_critical', target=names[s], total=total)
                 })
-
-# ── EXTINCTION DETECTION ──
-
-def _check_extinction():
-    """Check all species for extinction. Called each generation from step()."""
-    names = ['Velothrix', 'Kelp Leviathan', 'Reed Crawler', 'Tidal Crab', 'Bioluminescent Worm']
-    extinct_species = {e['species'] for e in extinctions}
-
-    for s in range(NUM_SPECIES):
-        if s in extinct_species:
-            continue
-        total = sum(grid[r][c]['pops'][s] for r in range(GRID_SIZE) for c in range(GRID_SIZE))
-        if total > 0:
-            continue
-
-        # Species s just went extinct — gather data
-        # Find peak population and first generation from popHistory (JS tracks this,
-        # but we can scan grid history; use a simpler approach: scan all history we have)
-        # We'll use the pop_check_history we maintain
-        peak = 0
-        first_gen = 0
-        pop_trend = []
-
-        # Scan popHistory stored in pop_check_history
-        for entry in pop_check_history:
-            sp = entry[s]
-            if sp > peak:
-                peak = sp
-            if sp > 0 and first_gen == 0:
-                first_gen = entry[-1]  # gen stored as last element
-
-        # Get last 20 entries for trend
-        recent = pop_check_history[-20:] if len(pop_check_history) >= 20 else pop_check_history[:]
-        pop_trend = [entry[s] for entry in recent]
-
-        # Determine cause of death
-        cause = _determine_extinction_cause(s, names)
-
-        last_tile = last_seen_tile.get(s, (0, 0))
-
-        record = {
-            'species': s,
-            'name': names[s],
-            'gen': generation,
-            'peak_pop': peak,
-            'first_gen': first_gen,
-            'gens_survived': generation - first_gen if first_gen > 0 else generation,
-            'cause': cause,
-            'last_tile': list(last_tile),
-            'final_pop_trend': pop_trend,
-        }
-        extinctions.append(record)
-        events_buffer.append({
-            'gen': generation,
-            'text': f'EXTINCTION — {names[s]} has gone extinct.',
-            'severity': 'critical',
-            'extinction': True,
-        })
-
-
-def _determine_extinction_cause(species_idx, names):
-    """Analyze recent history to determine cause of extinction."""
-    # Predator/prey relationships:
-    # Leviathan(1) preys on Velothrix(0) and Worm(4)
-    # Velothrix(0) preys on Worm(4)
-    # Competition: Velothrix(0) vs Crawler(2), Crab(3) competes for space
-    predators_of = {
-        0: [1],       # Leviathan hunts Velothrix
-        4: [0, 1],    # Velothrix and Leviathan hunt Worm
-        2: [],
-        3: [],
-        1: [],
-    }
-    competitors_of = {
-        0: [2],       # Velothrix competes with Crawler
-        2: [0],       # Crawler competes with Velothrix
-        3: [0, 2, 4], # Crab competes for space generally
-        1: [],
-        4: [],
-    }
-
-    # Check disease first (most specific signal)
-    recent_diseases = [d for d in disease_log if d[0] >= generation - 50 and d[1] == species_idx]
-    if len(recent_diseases) >= 1:
-        return 'disease'
-
-    # Check recent pop history for patterns
-    history_len = len(pop_check_history)
-    lookback = min(100, history_len)
-    recent = pop_check_history[-lookback:] if lookback > 0 else []
-
-    if len(recent) < 5:
-        return 'unknown'
-
-    # Extract trends for the extinct species and potential causes
-    species_pops = [entry[species_idx] for entry in recent]
-    was_low_long = all(p < 20 for p in species_pops[-min(40, len(species_pops)):])
-
-    # Check genetic drift / lingering decline
-    if was_low_long and len(species_pops) >= 40:
-        return 'genetic_drift'
-
-    # Check predation pressure
-    predator_list = predators_of.get(species_idx, [])
-    if predator_list:
-        for pred in predator_list:
-            pred_pops = [entry[pred] for entry in recent]
-            # If predator pop was growing/high while species declined
-            pred_avg = sum(pred_pops[-20:]) / max(1, len(pred_pops[-20:]))
-            species_avg_early = sum(species_pops[:20]) / max(1, len(species_pops[:20]))
-            if pred_avg > 50 and species_avg_early > 10:
-                return 'predation'
-
-    # Check habitat loss via env trends
-    if 'productivity' in env_trends and env_trends['productivity'] < 0.3:
-        return 'habitat_loss'
-    if 'moisture' in env_trends and env_trends['moisture'] < 0.2:
-        return 'habitat_loss'
-
-    # Check competition
-    competitor_list = competitors_of.get(species_idx, [])
-    if competitor_list:
-        for comp in competitor_list:
-            comp_pops = [entry[comp] for entry in recent]
-            comp_avg = sum(comp_pops[-20:]) / max(1, len(comp_pops[-20:]))
-            if comp_avg > 100:
-                return 'competition'
-
-    return 'unknown'
-
-
-# Pop check history: list of [pop_s0, pop_s1, pop_s2, pop_s3, pop_s4, generation]
-pop_check_history = []
-
-def _record_pop_check():
-    """Record global populations for extinction cause analysis. Called every gen."""
-    pops = []
-    for s in range(NUM_SPECIES):
-        total = sum(grid[r][c]['pops'][s] for r in range(GRID_SIZE) for c in range(GRID_SIZE))
-        pops.append(total)
-    pops.append(generation)
-    pop_check_history.append(pops)
-    # Keep last 500 entries
-    if len(pop_check_history) > 500:
-        pop_check_history.pop(0)
-
-
-def get_extinctions():
-    return json.dumps(extinctions)
-
 
 # ── API FUNCTIONS (called from JS) ──
 

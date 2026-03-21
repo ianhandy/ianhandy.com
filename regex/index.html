@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regex Debugger — Step-by-Step Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #241200;
+    --bg-deep: #1A0D00;
+    --gold: #DDC165;
+    --gold-light: #FFE9A3;
+    --orange: #E5591C;
+    --orange-glow: #FF7A3D;
+    --green: #4ADE80;
+    --red: #EF4444;
+    --text: #E8D5C0;
+    --text-dim: #8B7355;
+    --surface: #2D1800;
+    --surface-light: #3D2200;
+    --border: #4A3020;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+    position: relative;
+  }
+  .header h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    font-weight: 700;
+    color: var(--gold);
+    text-shadow: 0 0 30px rgba(221, 193, 101, 0.3);
+    letter-spacing: -0.02em;
+  }
+  .header p {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
+  }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* ── Input Panel ── */
+  .input-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 700px) {
+    .input-panel { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .container { padding: 0.75rem; gap: 0.75rem; }
+    .input-group input, .input-group textarea { font-size: 16px; min-height: 44px; }
+    .input-group label { font-size: 0.7rem; }
+  }
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .input-group label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+  }
+  .input-group input, .input-group textarea {
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-group input:focus, .input-group textarea:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 12px rgba(221, 193, 101, 0.15);
+  }
+  .input-group textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+
+  .flags-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .flag-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .flag-toggle input[type="checkbox"] {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-deep);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .flag-toggle input[type="checkbox"]:checked {
+    background: var(--gold);
+    border-color: var(--gold);
+  }
+  .flag-toggle input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: -1px;
+    left: 2px;
+    font-size: 12px;
+    color: var(--bg);
+    font-weight: 700;
+  }
+  .flag-toggle span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  /* ── Controls ── */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    padding: 0.55rem 1.1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .btn-primary {
+    background: var(--gold);
+    color: var(--bg);
+  }
+  .btn-primary:hover { background: var(--gold-light); box-shadow: 0 0 16px rgba(221,193,101,0.3); }
+  .btn-secondary {
+    background: var(--surface-light);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-danger {
+    background: transparent;
+    color: var(--orange);
+    border: 1px solid var(--orange);
+  }
+  .btn-danger:hover { background: rgba(229,89,28,0.1); }
+
+  .speed-control {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+  }
+  .speed-control label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+  .speed-control input[type="range"] {
+    width: 80px;
+    accent-color: var(--gold);
+  }
+  .speed-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--gold);
+    min-width: 3em;
+    text-align: right;
+  }
+
+  /* ── Step Counter ── */
+  .step-info {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    padding: 0.3rem 0;
+  }
+  .step-info .current { color: var(--gold); font-weight: 600; }
+  .step-info .total { color: var(--text-dim); }
+
+  /* ── Visualization Area ── */
+  .viz-panel {
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    min-height: 200px;
+  }
+  .viz-section {
+    margin-bottom: 1.5rem;
+  }
+  .viz-section:last-child { margin-bottom: 0; }
+  .viz-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+  }
+
+  /* ── String Display ── */
+  .string-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 0.5rem;
+    background: var(--surface);
+    border-radius: 6px;
+    min-height: 2.5rem;
+    align-items: center;
+    position: relative;
+  }
+  .char-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .char-cell.cursor {
+    border-color: var(--gold);
+    box-shadow: 0 0 8px rgba(221, 193, 101, 0.4);
+  }
+  .char-cell.matched {
+    background: rgba(221, 193, 101, 0.25);
+    color: var(--gold-light);
+    border-color: rgba(221, 193, 101, 0.4);
+  }
+  .char-cell.matched-final {
+    background: rgba(74, 222, 128, 0.2);
+    color: var(--green);
+    border-color: rgba(74, 222, 128, 0.4);
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.2);
+  }
+  .char-cell.backtrack {
+    background: rgba(229, 89, 28, 0.2);
+    color: var(--orange);
+    border-color: rgba(229, 89, 28, 0.3);
+    animation: pulse-orange 0.4s ease;
+  }
+  .char-cell.failed {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--red);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+  .char-cell .char-index {
+    position: absolute;
+    bottom: -14px;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+  }
+  .char-cell.space-char::after {
+    content: '·';
+    color: var(--text-dim);
+  }
+
+  /* ── Pattern Display ── */
+  .pattern-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 0.5rem;
+    background: var(--surface);
+    border-radius: 6px;
+    min-height: 2.5rem;
+    align-items: center;
+  }
+  .pat-token {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pat-token.active {
+    background: rgba(221, 193, 101, 0.25);
+    color: var(--gold-light);
+    border-color: rgba(221, 193, 101, 0.5);
+    box-shadow: 0 0 10px rgba(221, 193, 101, 0.3);
+  }
+  .pat-token.success {
+    background: rgba(74, 222, 128, 0.15);
+    color: var(--green);
+    border-color: rgba(74, 222, 128, 0.3);
+  }
+  .pat-token.fail {
+    background: rgba(229, 89, 28, 0.15);
+    color: var(--orange);
+  }
+  .pat-token.type-quantifier { color: #C084FC; }
+  .pat-token.type-group { color: #60A5FA; }
+  .pat-token.type-anchor { color: #F472B6; }
+  .pat-token.type-charset { color: #34D399; }
+  .pat-token.type-alternation { color: #FBBF24; }
+  .pat-token.type-escape { color: #FB923C; }
+
+  /* ── Step Log ── */
+  .step-log {
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.6;
+  }
+  .step-log::-webkit-scrollbar { width: 6px; }
+  .step-log::-webkit-scrollbar-track { background: transparent; }
+  .step-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .log-entry {
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    transition: background 0.1s;
+  }
+  .log-entry.active { background: rgba(221, 193, 101, 0.1); }
+  .log-entry .step-num { color: var(--text-dim); }
+  .log-entry .action-try { color: var(--gold); }
+  .log-entry .action-match { color: var(--green); }
+  .log-entry .action-fail { color: var(--red); }
+  .log-entry .action-backtrack { color: var(--orange); }
+  .log-entry .action-start { color: #60A5FA; }
+  .log-entry .action-complete { color: var(--green); font-weight: 600; }
+  .log-entry .action-no-match { color: var(--red); font-weight: 600; }
+
+  /* ── Matches List ── */
+  .matches-bar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .match-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 5px;
+    background: rgba(74, 222, 128, 0.12);
+    color: var(--green);
+    border: 1px solid rgba(74, 222, 128, 0.25);
+  }
+  .match-badge .match-pos {
+    color: var(--text-dim);
+    font-size: 0.7rem;
+  }
+  .no-match {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  /* ── Presets ── */
+  .presets {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .preset-btn {
+    font-size: 0.72rem;
+    padding: 0.35rem 0.7rem;
+    background: var(--surface);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover {
+    color: var(--gold);
+    border-color: var(--gold);
+  }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--border);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+  .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+  .legend-swatch.cursor { border: 2px solid var(--gold); background: transparent; }
+  .legend-swatch.matched { background: rgba(221, 193, 101, 0.35); }
+  .legend-swatch.backtrack { background: rgba(229, 89, 28, 0.35); }
+  .legend-swatch.final-match { background: rgba(74, 222, 128, 0.3); }
+  .legend-swatch.failed { background: rgba(239, 68, 68, 0.25); }
+
+  /* ── Animations ── */
+  @keyframes pulse-orange {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+
+  /* ── Keyboard hint ── */
+  .kbd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-dim);
+  }
+  .shortcuts {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    padding-top: 0.3rem;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+  .footer a { color: var(--gold); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* ── Error display ── */
+  .error-msg {
+    color: var(--red);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.5rem;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 6px;
+    display: none;
+  }
+  .error-msg.visible { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>/regex-debugger/</h1>
+  <p>Step-by-step regex matching — see exactly how the engine thinks</p>
+</div>
+
+<div class="container">
+  <!-- Presets -->
+  <div>
+    <div class="viz-label">Presets</div>
+    <div class="presets" id="presets"></div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-panel">
+    <div class="input-group">
+      <label>Pattern</label>
+      <input type="text" id="patternInput" placeholder="e.g. (\d+)\.(\d+)" spellcheck="false" autocomplete="off">
+      <div class="flags-row">
+        <label class="flag-toggle"><input type="checkbox" id="flagI"><span>i</span></label>
+        <label class="flag-toggle"><input type="checkbox" id="flagG" checked><span>g</span></label>
+        <label class="flag-toggle"><input type="checkbox" id="flagM"><span>m</span></label>
+        <label class="flag-toggle"><input type="checkbox" id="flagS"><span>s</span></label>
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Test String</label>
+      <textarea id="testInput" placeholder="Text to match against..." spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <div id="errorMsg" class="error-msg"></div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn-primary" id="btnRun" title="Run full match">Run</button>
+    <button class="btn-secondary" id="btnStep" title="Step forward">Step →</button>
+    <button class="btn-secondary" id="btnStepBack" title="Step backward">← Back</button>
+    <button class="btn-secondary" id="btnPlay" title="Auto-play">▶ Play</button>
+    <button class="btn-danger" id="btnReset" title="Reset">Reset</button>
+    <div class="speed-control">
+      <label>Speed</label>
+      <input type="range" id="speedSlider" min="1" max="10" value="5">
+      <span class="speed-val" id="speedVal">5×</span>
+    </div>
+  </div>
+
+  <div class="step-info" id="stepInfo">
+    Ready — enter a pattern and test string
+  </div>
+
+  <!-- Visualization -->
+  <div class="viz-panel">
+    <div class="viz-section">
+      <div class="viz-label">Pattern Tokens</div>
+      <div class="pattern-display" id="patternDisplay">
+        <span class="pat-token" style="color: var(--text-dim)">Enter a regex pattern above</span>
+      </div>
+    </div>
+
+    <div class="viz-section">
+      <div class="viz-label">Test String</div>
+      <div class="string-display" id="stringDisplay">
+        <span style="color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">Enter a test string above</span>
+      </div>
+    </div>
+
+    <div class="viz-section">
+      <div class="viz-label">Step Log</div>
+      <div class="step-log" id="stepLog">
+        <div class="log-entry"><span class="step-num">—</span> Waiting for input...</div>
+      </div>
+    </div>
+
+    <div class="viz-section">
+      <div class="viz-label">Matches</div>
+      <div class="matches-bar" id="matchesBar">
+        <span class="no-match">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend & Shortcuts -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch cursor"></div> Cursor</div>
+    <div class="legend-item"><div class="legend-swatch matched"></div> Trying</div>
+    <div class="legend-item"><div class="legend-swatch backtrack"></div> Backtrack</div>
+    <div class="legend-item"><div class="legend-swatch final-match"></div> Match</div>
+    <div class="legend-item"><div class="legend-swatch failed"></div> Failed</div>
+  </div>
+  <div class="shortcuts">
+    <span><span class="kbd">Space</span> Play/Pause</span>
+    <span><span class="kbd">→</span> Step forward</span>
+    <span><span class="kbd">←</span> Step back</span>
+    <span><span class="kbd">Enter</span> Run all</span>
+    <span><span class="kbd">R</span> Reset</span>
+  </div>
+</div>
+
+<div class="footer">
+  <a href="https://ianhandy.com">ianhandy.com</a> · Built with vanilla JS — no dependencies
+</div>
+
+<script>
+// ─── Regex Tokenizer ───
+function tokenizePattern(pattern) {
+  const tokens = [];
+  let i = 0;
+  while (i < pattern.length) {
+    const ch = pattern[i];
+    if (ch === '\\' && i + 1 < pattern.length) {
+      tokens.push({ text: '\\' + pattern[i+1], type: 'escape', start: i, end: i + 2 });
+      i += 2; continue;
+    }
+    if (ch === '[') {
+      let j = i + 1;
+      if (j < pattern.length && pattern[j] === '^') j++;
+      if (j < pattern.length && pattern[j] === ']') j++;
+      while (j < pattern.length && pattern[j] !== ']') { if (pattern[j] === '\\') j++; j++; }
+      if (j < pattern.length) j++;
+      tokens.push({ text: pattern.slice(i, j), type: 'charset', start: i, end: j });
+      i = j; continue;
+    }
+    if (ch === '(') {
+      let text = '(', j = i + 1;
+      if (j < pattern.length && pattern[j] === '?') {
+        if (j+1 < pattern.length) {
+          if (pattern[j+1] === ':') { text = '(?:'; j += 2; }
+          else if (pattern[j+1] === '=') { text = '(?='; j += 2; }
+          else if (pattern[j+1] === '!') { text = '(?!'; j += 2; }
+          else if (pattern[j+1] === '<' && j+2 < pattern.length) {
+            if (pattern[j+2] === '=') { text = '(?<='; j += 3; }
+            else if (pattern[j+2] === '!') { text = '(?<!'; j += 3; }
+            else { let k = j+2; while (k < pattern.length && pattern[k] !== '>') k++; text = pattern.slice(i, k+1); j = k+1; }
+          } else { text = '(?'; j += 1; }
+        }
+      }
+      tokens.push({ text, type: 'group', start: i, end: j }); i = j; continue;
+    }
+    if (ch === ')') { tokens.push({ text: ')', type: 'group', start: i, end: i+1 }); i++; continue; }
+    if (ch === '*' || ch === '+' || ch === '?') {
+      let text = ch, s = i;
+      if (i+1 < pattern.length && pattern[i+1] === '?') { text += '?'; i++; }
+      tokens.push({ text, type: 'quantifier', start: s, end: i+1 }); i++; continue;
+    }
+    if (ch === '{') {
+      let j = i+1; while (j < pattern.length && pattern[j] !== '}') j++;
+      if (j < pattern.length) j++; let text = pattern.slice(i, j);
+      if (j < pattern.length && pattern[j] === '?') { text += '?'; j++; }
+      tokens.push({ text, type: 'quantifier', start: i, end: j }); i = j; continue;
+    }
+    if (ch === '|') { tokens.push({ text: '|', type: 'alternation', start: i, end: i+1 }); i++; continue; }
+    if (ch === '^' || ch === '$') { tokens.push({ text: ch, type: 'anchor', start: i, end: i+1 }); i++; continue; }
+    if (ch === '.') { tokens.push({ text: '.', type: 'literal', start: i, end: i+1 }); i++; continue; }
+    tokens.push({ text: ch, type: 'literal', start: i, end: i+1 }); i++;
+  }
+  return tokens;
+}
+
+// ─── Step-Recording Engine ───
+// Strategy: Use native RegExp for correctness, but for patterns with quantifiers,
+// simulate the greedy/lazy matching and backtracking by probing incrementally.
+// This gives us accurate results AND visible backtracking.
+
+function generateSteps(pattern, text, flags) {
+  const steps = [];
+  let re;
+  try { re = new RegExp(pattern, flags); } catch (e) { return { steps: [], matches: [], error: e.message }; }
+
+  const matches = [];
+  const global = flags.includes('g');
+  const tokens = tokenizePattern(pattern);
+  const MAX_STEPS = 5000;
+  const ch = i => i < text.length ? (text[i] === ' ' ? '·' : text[i]) : '⌁';
+
+  // Find token index by pattern position
+  function tokenAt(patPos) {
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i].start <= patPos && patPos < tokens[i].end) return i;
+    }
+    return -1;
+  }
+
+  // Build a structured AST from the flat token list for backtracking simulation
+  // For complex patterns we fall back to native-only; for common patterns we simulate.
+
+  function tryMatchAt(startPos) {
+    if (steps.length > MAX_STEPS) return null;
+
+    steps.push({ type: 'start-position', stringPos: startPos, message: `Try matching at position ${startPos}`, tokenIndex: -1 });
+
+    // Use native engine to determine if there's a match at this position
+    const testRe = new RegExp(pattern, flags.replace('g', '') + (flags.includes('g') ? '' : ''));
+    testRe.lastIndex = 0;
+    const slice = text.slice(startPos);
+    const nativeMatch = testRe.exec(slice);
+    const matchHere = nativeMatch && nativeMatch.index === 0;
+
+    if (!matchHere) {
+      // No match — show attempt on first char-consuming token
+      if (startPos < text.length) {
+        const firstCharTok = tokens.find(t => t.type !== 'anchor' && t.type !== 'group');
+        const ti = firstCharTok ? tokens.indexOf(firstCharTok) : 0;
+        if (tokens.length > 0) {
+          // Check if first token is anchor
+          if (tokens[0].type === 'anchor') {
+            steps.push({ type: 'try', stringPos: startPos, message: `Check ${tokens[0].text}`, tokenIndex: 0 });
+            const anchorOk = (tokens[0].text === '^' && (startPos === 0 || (flags.includes('m') && text[startPos-1] === '\n'))) ||
+                             (tokens[0].text === '$' && (startPos === text.length || (flags.includes('m') && text[startPos] === '\n')));
+            if (!anchorOk) {
+              steps.push({ type: 'fail', stringPos: startPos, message: `Anchor ${tokens[0].text} not satisfied at pos ${startPos}`, tokenIndex: 0 });
+              steps.push({ type: 'advance', stringPos: startPos, message: `No match at position ${startPos}, advance`, tokenIndex: -1 });
+              return null;
+            }
+            steps.push({ type: 'match', stringPos: startPos, message: `Anchor ${tokens[0].text} satisfied`, tokenIndex: 0 });
+          }
+          // Try first char-consuming token
+          if (ti >= 0 && ti < tokens.length) {
+            steps.push({ type: 'try', stringPos: startPos, message: `Try ${tokens[ti].text} against '${ch(startPos)}'`, tokenIndex: ti });
+            steps.push({ type: 'fail', stringPos: startPos, message: `${tokens[ti].text} fails against '${ch(startPos)}'`, tokenIndex: ti });
+          }
+        }
+      }
+      steps.push({ type: 'advance', stringPos: startPos, message: `No match at position ${startPos}, advance`, tokenIndex: -1 });
+      return null;
+    }
+
+    // Match exists at this position — now simulate steps with backtracking
+    const matchStr = nativeMatch[0];
+    const matchEnd = startPos + matchStr.length;
+
+    simulateMatch(startPos, matchEnd, matchStr);
+
+    steps.push({
+      type: 'complete', stringPos: startPos, stringEnd: matchEnd,
+      message: `Match found: "${matchStr}" at ${startPos}–${matchEnd - 1}`,
+      tokenIndex: -1, matchValue: matchStr, matchStart: startPos, matchEnd,
+    });
+
+    return { value: matchStr, index: startPos, length: matchStr.length, groups: [...nativeMatch] };
+  }
+
+  function simulateMatch(startPos, matchEnd, matchStr) {
+    // Walk through tokens and simulate character-by-character matching
+    // Key: detect quantifiers and show greedy consumption + backtracking
+    let sPos = startPos;
+    let ti = 0;
+
+    while (ti < tokens.length && steps.length < MAX_STEPS) {
+      const tok = tokens[ti];
+
+      // Groups — just note them
+      if (tok.type === 'group') {
+        steps.push({ type: 'try', stringPos: sPos, message: `Enter group ${tok.text}`, tokenIndex: ti });
+        ti++; continue;
+      }
+
+      // Alternation
+      if (tok.type === 'alternation') {
+        steps.push({ type: 'try', stringPos: sPos, message: `Alternation |`, tokenIndex: ti });
+        ti++; continue;
+      }
+
+      // Anchors
+      if (tok.type === 'anchor') {
+        steps.push({ type: 'try', stringPos: sPos, message: `Check anchor ${tok.text} at pos ${sPos}`, tokenIndex: ti });
+        steps.push({ type: 'match', stringPos: sPos, message: `Anchor ${tok.text} satisfied`, tokenIndex: ti });
+        ti++; continue;
+      }
+
+      // Check if next token is a quantifier
+      const nextTok = (ti + 1 < tokens.length) ? tokens[ti + 1] : null;
+
+      if (nextTok && nextTok.type === 'quantifier') {
+        // QUANTIFIED TOKEN — this is where backtracking happens
+        const qText = nextTok.text;
+        const lazy = qText.endsWith('?') && qText.length > 1;
+        const baseQ = qText.replace('?', '');
+
+        let minReps = 0, maxReps = Infinity;
+        if (baseQ === '+') { minReps = 1; }
+        else if (baseQ === '*') { minReps = 0; }
+        else if (baseQ === '?') { minReps = 0; maxReps = 1; }
+        else {
+          // {n}, {n,}, {n,m}
+          const brace = baseQ.match(/^\{(\d+)(?:,(\d*))?\}$/);
+          if (brace) {
+            minReps = parseInt(brace[1]);
+            maxReps = brace[2] === undefined ? minReps : (brace[2] === '' ? Infinity : parseInt(brace[2]));
+          }
+        }
+
+        // Find how many chars this token CAN match from sPos
+        const canMatch = (pos) => {
+          if (pos >= text.length) return false;
+          return charMatchesToken(tok, text[pos], pos, flags);
+        };
+
+        // Count max possible matches
+        let maxPossible = 0;
+        let testPos = sPos;
+        while (testPos < text.length && maxPossible < Math.min(maxReps, text.length - sPos) && canMatch(testPos)) {
+          maxPossible++;
+          testPos++;
+        }
+
+        // Figure out how many chars the quantifier actually consumed in the match
+        // Use native engine to determine this precisely
+        const afterQuantPat = pattern.slice(nextTok.end);
+        let actualConsumed = 0;
+
+        if (afterQuantPat.length === 0) {
+          // Quantifier is at pattern end (or only groups/anchors follow)
+          // Check if remaining tokens are non-consuming
+          let hasConsumer = false;
+          for (let t = ti + 2; t < tokens.length; t++) {
+            if (tokens[t].type !== 'group' && tokens[t].type !== 'anchor') { hasConsumer = true; break; }
+          }
+          actualConsumed = hasConsumer ? Math.min(maxPossible, matchEnd - sPos) : (matchEnd - sPos);
+          actualConsumed = Math.min(actualConsumed, maxPossible);
+        } else {
+          // Need to find the split point
+          // The actual consumed count is determined by what the native engine chose
+          // For greedy: try max first, reduce until rest matches
+          // For lazy: try min first, increase until rest matches
+          const restFlags = flags.replace('g', '');
+
+          if (!lazy) {
+            // GREEDY — try max first, backtrack down
+            let tryCount = maxPossible;
+            while (tryCount >= minReps) {
+              const restStr = text.slice(sPos + tryCount);
+              try {
+                const restRe = new RegExp('^(?:' + afterQuantPat + ')', restFlags);
+                const restM = restRe.exec(restStr);
+                if (restM && (sPos + tryCount + restM[0].length <= matchEnd)) {
+                  actualConsumed = tryCount;
+                  break;
+                }
+              } catch(e) { break; }
+              tryCount--;
+            }
+
+            // SHOW GREEDY + BACKTRACKING STEPS
+            // First: show greedy consuming max
+            steps.push({ type: 'try', stringPos: sPos, message: `${tok.text}${qText} — greedy, try max`, tokenIndex: ti });
+
+            // Show each char being consumed greedily
+            for (let c = 0; c < maxPossible; c++) {
+              steps.push({
+                type: 'match', stringPos: sPos + c, stringEnd: sPos + c + 1,
+                message: `${tok.text} matches '${ch(sPos + c)}' (rep ${c + 1})`,
+                tokenIndex: ti,
+              });
+            }
+
+            if (maxPossible > actualConsumed) {
+              // BACKTRACKING! Show giving chars back
+              steps.push({
+                type: 'try', stringPos: sPos + maxPossible,
+                message: `Greedy consumed ${maxPossible} — try rest of pattern`,
+                tokenIndex: ti + 2 < tokens.length ? ti + 2 : ti,
+              });
+
+              for (let bt = maxPossible; bt > actualConsumed; bt--) {
+                steps.push({
+                  type: 'fail', stringPos: sPos + bt - 1,
+                  message: `Rest of pattern fails — backtrack, give back '${ch(sPos + bt - 1)}'`,
+                  tokenIndex: ti,
+                });
+              }
+
+              if (actualConsumed >= minReps) {
+                steps.push({
+                  type: 'match', stringPos: sPos, stringEnd: sPos + actualConsumed,
+                  message: `${tok.text}${qText} settled on ${actualConsumed} char(s)`,
+                  tokenIndex: ti,
+                });
+              }
+            } else {
+              steps.push({
+                type: 'match', stringPos: sPos, stringEnd: sPos + actualConsumed,
+                message: `${tok.text}${qText} consumed ${actualConsumed} — no backtrack needed`,
+                tokenIndex: ti,
+              });
+            }
+          } else {
+            // LAZY — try min first, expand up
+            let tryCount = minReps;
+            while (tryCount <= maxPossible) {
+              const restStr = text.slice(sPos + tryCount);
+              try {
+                const restRe = new RegExp('^(?:' + afterQuantPat + ')', restFlags);
+                const restM = restRe.exec(restStr);
+                if (restM && (sPos + tryCount + restM[0].length <= matchEnd)) {
+                  actualConsumed = tryCount;
+                  break;
+                }
+              } catch(e) { break; }
+              tryCount++;
+            }
+
+            // SHOW LAZY STEPS
+            steps.push({ type: 'try', stringPos: sPos, message: `${tok.text}${qText} — lazy, try min (${minReps})`, tokenIndex: ti });
+
+            if (minReps === 0 && actualConsumed > 0) {
+              steps.push({ type: 'try', stringPos: sPos, message: `Try 0 repetitions — check rest of pattern`, tokenIndex: ti });
+              steps.push({ type: 'fail', stringPos: sPos, message: `Rest of pattern fails with 0 reps — expand`, tokenIndex: ti });
+            }
+
+            for (let c = 0; c < actualConsumed; c++) {
+              steps.push({
+                type: 'match', stringPos: sPos + c, stringEnd: sPos + c + 1,
+                message: `${tok.text} matches '${ch(sPos + c)}' (lazy rep ${c + 1})`,
+                tokenIndex: ti,
+              });
+            }
+
+            steps.push({
+              type: 'match', stringPos: sPos, stringEnd: sPos + actualConsumed,
+              message: `${tok.text}${qText} lazy settled on ${actualConsumed}`,
+              tokenIndex: ti,
+            });
+          }
+        }
+
+        sPos += actualConsumed;
+        ti += 2; // skip both the base token and quantifier
+        continue;
+      }
+
+      // NON-QUANTIFIED char-consuming token
+      if (sPos < text.length) {
+        const c = text[sPos];
+        steps.push({ type: 'try', stringPos: sPos, message: `Try ${tok.text} against '${ch(sPos)}'`, tokenIndex: ti });
+        if (charMatchesToken(tok, c, sPos, flags)) {
+          steps.push({ type: 'match', stringPos: sPos, stringEnd: sPos + 1, message: `${tok.text} matches '${ch(sPos)}'`, tokenIndex: ti });
+          sPos++;
+        } else {
+          steps.push({ type: 'fail', stringPos: sPos, message: `${tok.text} fails against '${ch(sPos)}'`, tokenIndex: ti });
+        }
+      } else if (tok.type === 'quantifier') {
+        // Already handled above, skip
+      }
+
+      ti++;
+    }
+  }
+
+  // Check if a character matches a token
+  function charMatchesToken(tok, c, pos, flags) {
+    const ci = flags.includes('i');
+    if (tok.type === 'literal') {
+      if (tok.text === '.') return c !== '\n' || flags.includes('s');
+      return ci ? tok.text.toLowerCase() === c.toLowerCase() : tok.text === c;
+    }
+    if (tok.type === 'escape') {
+      const esc = tok.text[1];
+      if (esc === 'd') return /\d/.test(c);
+      if (esc === 'D') return /\D/.test(c);
+      if (esc === 'w') return /\w/.test(c);
+      if (esc === 'W') return /\W/.test(c);
+      if (esc === 's') return /\s/.test(c);
+      if (esc === 'S') return /\S/.test(c);
+      if (esc === 'b' || esc === 'B') return true; // boundaries handled elsewhere
+      if (esc === 'n') return c === '\n';
+      if (esc === 't') return c === '\t';
+      if (esc === 'r') return c === '\r';
+      return ci ? esc.toLowerCase() === c.toLowerCase() : esc === c;
+    }
+    if (tok.type === 'charset') {
+      try {
+        const re = new RegExp(tok.text, ci ? 'i' : '');
+        return re.test(c);
+      } catch(e) { return false; }
+    }
+    return false;
+  }
+
+  // Run matching across the string
+  for (let pos = 0; pos <= text.length && steps.length < MAX_STEPS; pos++) {
+    const m = tryMatchAt(pos);
+    if (m) {
+      matches.push({ value: m.value, start: m.index, end: m.index + m.length, groups: m.groups });
+      if (!global) break;
+      pos = m.index + m.length - 1;
+      if (m.length === 0) pos = m.index;
+    }
+    if (!global && !m) continue;
+  }
+
+  if (matches.length === 0) {
+    steps.push({ type: 'no-match', stringPos: -1, message: 'No match found in the entire string', tokenIndex: -1 });
+  } else {
+    steps.push({ type: 'done', stringPos: -1, message: `Done — ${matches.length} match${matches.length > 1 ? 'es' : ''} found`, tokenIndex: -1 });
+  }
+
+  return { steps, matches, error: null, tokens };
+}
+
+
+// ─── UI Controller ───
+
+const $ = id => document.getElementById(id);
+const patternInput = $('patternInput');
+const testInput = $('testInput');
+const flagI = $('flagI');
+const flagG = $('flagG');
+const flagM = $('flagM');
+const flagS = $('flagS');
+const btnRun = $('btnRun');
+const btnStep = $('btnStep');
+const btnStepBack = $('btnStepBack');
+const btnPlay = $('btnPlay');
+const btnReset = $('btnReset');
+const speedSlider = $('speedSlider');
+const speedVal = $('speedVal');
+const stepInfo = $('stepInfo');
+const patternDisplay = $('patternDisplay');
+const stringDisplay = $('stringDisplay');
+const stepLog = $('stepLog');
+const matchesBar = $('matchesBar');
+const errorMsg = $('errorMsg');
+const presetsEl = $('presets');
+
+let state = {
+  steps: [],
+  matches: [],
+  tokens: [],
+  currentStep: -1,
+  playing: false,
+  playTimer: null,
+  text: '',
+  pattern: '',
+};
+
+// Presets
+const presets = [
+  { name: 'Email', pattern: '[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}', text: 'Contact us at hello@example.com or info@test.co.uk for details.', flags: 'g' },
+  { name: 'IP Address', pattern: '\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}', text: 'Server at 192.168.1.1 responded. Backup: 10.0.0.255', flags: 'g' },
+  { name: 'Backtracking', pattern: 'a+ab', text: 'aaaaaab', flags: '' },
+  { name: 'Greedy vs Lazy', pattern: '".*?"', text: 'She said "hello" and "world" today.', flags: 'g' },
+  { name: 'Phone Number', pattern: '\\(?(\\d{3})\\)?[-.\\s]?(\\d{3})[-.\\s]?(\\d{4})', text: 'Call (555) 123-4567 or 555.987.6543', flags: 'g' },
+  { name: 'HTML Tags', pattern: '<(\\w+)[^>]*>.*?</\\1>', text: '<div class="box">Hello</div> <span>World</span>', flags: 'g' },
+  { name: 'Hex Colors', pattern: '#[0-9a-fA-F]{3,8}', text: 'Colors: #241200 #DDC165 #E5591C #fff', flags: 'g' },
+  { name: 'Alternation', pattern: 'cat|dog|bird', text: 'I have a cat and a dog but no bird', flags: 'g' },
+  { name: 'Date', pattern: '(\\d{4})-(\\d{2})-(\\d{2})', text: 'Today is 2026-03-15, tomorrow is 2026-03-16.', flags: 'g' },
+  { name: 'Word Boundary', pattern: '\\bthe\\b', text: 'the cat sat on the mat with them', flags: 'gi' },
+];
+
+presets.forEach(p => {
+  const btn = document.createElement('button');
+  btn.className = 'preset-btn';
+  btn.textContent = p.name;
+  btn.addEventListener('click', () => {
+    patternInput.value = p.pattern;
+    testInput.value = p.text;
+    flagG.checked = p.flags.includes('g');
+    flagI.checked = p.flags.includes('i');
+    flagM.checked = p.flags.includes('m');
+    flagS.checked = p.flags.includes('s');
+    resetState();
+    initMatch();
+  });
+  presetsEl.appendChild(btn);
+});
+
+function getFlags() {
+  let f = '';
+  if (flagG.checked) f += 'g';
+  if (flagI.checked) f += 'i';
+  if (flagM.checked) f += 'm';
+  if (flagS.checked) f += 's';
+  return f;
+}
+
+function resetState() {
+  stopPlay();
+  state.steps = [];
+  state.matches = [];
+  state.tokens = [];
+  state.currentStep = -1;
+  state.text = '';
+  state.pattern = '';
+}
+
+function initMatch() {
+  const pattern = patternInput.value;
+  const text = testInput.value;
+  if (!pattern || !text) {
+    errorMsg.classList.remove('visible');
+    stepInfo.innerHTML = 'Ready — enter a pattern and test string';
+    renderEmpty();
+    return;
+  }
+
+  const flags = getFlags();
+  const result = generateSteps(pattern, text, flags);
+
+  if (result.error) {
+    errorMsg.textContent = 'Invalid regex: ' + result.error;
+    errorMsg.classList.add('visible');
+    return;
+  }
+
+  errorMsg.classList.remove('visible');
+  state.steps = result.steps;
+  state.matches = result.matches;
+  state.tokens = result.tokens || tokenizePattern(pattern);
+  state.currentStep = -1;
+  state.text = text;
+  state.pattern = pattern;
+
+  renderTokens();
+  renderString(-1);
+  renderStepLog();
+  renderMatches([]);
+  updateStepInfo();
+}
+
+function renderEmpty() {
+  patternDisplay.innerHTML = '<span class="pat-token" style="color: var(--text-dim)">Enter a regex pattern above</span>';
+  stringDisplay.innerHTML = '<span style="color: var(--text-dim); font-family: \'JetBrains Mono\', monospace; font-size: 0.85rem;">Enter a test string above</span>';
+  stepLog.innerHTML = '<div class="log-entry"><span class="step-num">—</span> Waiting for input...</div>';
+  matchesBar.innerHTML = '<span class="no-match">—</span>';
+}
+
+function renderTokens(activeIndex = -1, statusMap = {}) {
+  patternDisplay.innerHTML = '';
+  state.tokens.forEach((tok, i) => {
+    const el = document.createElement('span');
+    el.className = 'pat-token type-' + tok.type;
+    if (i === activeIndex) el.classList.add('active');
+    if (statusMap[i] === 'success') el.classList.add('success');
+    if (statusMap[i] === 'fail') el.classList.add('fail');
+    el.textContent = tok.text;
+    patternDisplay.appendChild(el);
+  });
+}
+
+function renderString(step) {
+  const text = state.text;
+  if (!text) { renderEmpty(); return; }
+
+  // Determine char states
+  const charStates = new Array(text.length).fill('');
+  let cursorPos = -1;
+
+  // Find all completed matches up to this step
+  const completedMatches = [];
+  for (let s = 0; s <= Math.min(step, state.steps.length - 1); s++) {
+    const st = state.steps[s];
+    if (st.type === 'complete') {
+      completedMatches.push({ start: st.matchStart, end: st.matchEnd });
+    }
+  }
+
+  // Mark completed matches
+  completedMatches.forEach(m => {
+    for (let i = m.start; i < m.end; i++) {
+      charStates[i] = 'matched-final';
+    }
+  });
+
+  // Apply current step highlighting
+  if (step >= 0 && step < state.steps.length) {
+    const st = state.steps[step];
+
+    if (st.type === 'start-position' || st.type === 'advance') {
+      cursorPos = st.stringPos;
+    } else if (st.type === 'try') {
+      cursorPos = st.stringPos;
+      if (st.stringPos >= 0 && st.stringPos < text.length) {
+        if (charStates[st.stringPos] !== 'matched-final') {
+          charStates[st.stringPos] = 'cursor';
+        }
+      }
+    } else if (st.type === 'match') {
+      const start = st.stringPos;
+      const end = st.stringEnd || st.stringPos + 1;
+      for (let i = start; i < end && i < text.length; i++) {
+        if (charStates[i] !== 'matched-final') {
+          charStates[i] = 'matched';
+        }
+      }
+      cursorPos = end < text.length ? end : end - 1;
+    } else if (st.type === 'fail') {
+      if (st.stringPos >= 0 && st.stringPos < text.length) {
+        if (charStates[st.stringPos] !== 'matched-final') {
+          charStates[st.stringPos] = 'backtrack';
+        }
+      }
+    } else if (st.type === 'complete') {
+      // Already handled above
+    }
+  }
+
+  stringDisplay.innerHTML = '';
+  for (let i = 0; i < text.length; i++) {
+    const el = document.createElement('span');
+    const ch = text[i];
+    el.className = 'char-cell';
+    if (charStates[i]) el.classList.add(charStates[i]);
+    if (i === cursorPos && charStates[i] !== 'matched-final') el.classList.add('cursor');
+    if (ch === ' ') {
+      el.classList.add('space-char');
+    } else {
+      el.textContent = ch;
+    }
+    // Index label for every 5th char
+    if (i % 5 === 0) {
+      const idx = document.createElement('span');
+      idx.className = 'char-index';
+      idx.textContent = i;
+      el.appendChild(idx);
+    }
+    stringDisplay.appendChild(el);
+  }
+}
+
+function renderStepLog() {
+  stepLog.innerHTML = '';
+  const maxVisible = state.currentStep + 1;
+  const startFrom = Math.max(0, maxVisible - 50); // keep last 50 visible
+
+  for (let i = startFrom; i < maxVisible && i < state.steps.length; i++) {
+    const st = state.steps[i];
+    const el = document.createElement('div');
+    el.className = 'log-entry';
+    if (i === state.currentStep) el.classList.add('active');
+
+    let actionClass = 'action-try';
+    switch (st.type) {
+      case 'start-position': actionClass = 'action-start'; break;
+      case 'try': actionClass = 'action-try'; break;
+      case 'match': actionClass = 'action-match'; break;
+      case 'fail': actionClass = 'action-fail'; break;
+      case 'advance': actionClass = 'action-backtrack'; break;
+      case 'complete': actionClass = 'action-complete'; break;
+      case 'no-match': actionClass = 'action-no-match'; break;
+      case 'done': actionClass = 'action-complete'; break;
+    }
+
+    el.innerHTML = `<span class="step-num">${i + 1}.</span> <span class="${actionClass}">${escapeHtml(st.message)}</span>`;
+    stepLog.appendChild(el);
+  }
+
+  // Scroll to bottom
+  stepLog.scrollTop = stepLog.scrollHeight;
+}
+
+function renderMatches(matches) {
+  matchesBar.innerHTML = '';
+  if (matches.length === 0) {
+    if (state.currentStep >= 0) {
+      const last = state.steps[state.currentStep];
+      if (last && (last.type === 'no-match' || last.type === 'done')) {
+        if (state.matches.length === 0) {
+          matchesBar.innerHTML = '<span class="no-match">No matches</span>';
+        }
+      } else {
+        matchesBar.innerHTML = '<span class="no-match">Matching in progress...</span>';
+      }
+    } else {
+      matchesBar.innerHTML = '<span class="no-match">—</span>';
+    }
+    return;
+  }
+
+  matches.forEach((m, i) => {
+    const badge = document.createElement('span');
+    badge.className = 'match-badge';
+    badge.innerHTML = `"${escapeHtml(m.value)}" <span class="match-pos">[${m.start}–${m.end - 1}]</span>`;
+    matchesBar.appendChild(badge);
+  });
+}
+
+function updateStepInfo() {
+  if (state.steps.length === 0) {
+    stepInfo.innerHTML = 'Ready — enter a pattern and test string';
+    return;
+  }
+  const cur = state.currentStep + 1;
+  const total = state.steps.length;
+  stepInfo.innerHTML = `Step <span class="current">${cur}</span> / <span class="total">${total}</span>`;
+}
+
+function stepForward() {
+  if (state.steps.length === 0) {
+    initMatch();
+    if (state.steps.length === 0) return;
+  }
+
+  if (state.currentStep >= state.steps.length - 1) {
+    stopPlay();
+    return;
+  }
+
+  state.currentStep++;
+  const step = state.steps[state.currentStep];
+
+  // Update token highlighting
+  const tokenStatus = {};
+  // Look back through steps to determine token statuses
+  for (let i = 0; i <= state.currentStep; i++) {
+    const s = state.steps[i];
+    if (s.tokenIndex >= 0) {
+      if (s.type === 'match') tokenStatus[s.tokenIndex] = 'success';
+      else if (s.type === 'fail') tokenStatus[s.tokenIndex] = 'fail';
+    }
+    if (s.type === 'start-position' || s.type === 'advance') {
+      // Reset token statuses on new position attempt
+      Object.keys(tokenStatus).forEach(k => delete tokenStatus[k]);
+    }
+  }
+
+  renderTokens(step.tokenIndex, tokenStatus);
+  renderString(state.currentStep);
+  renderStepLog();
+
+  // Collect completed matches so far
+  const completedMatches = [];
+  for (let i = 0; i <= state.currentStep; i++) {
+    if (state.steps[i].type === 'complete') {
+      completedMatches.push({
+        value: state.steps[i].matchValue,
+        start: state.steps[i].matchStart,
+        end: state.steps[i].matchEnd,
+      });
+    }
+  }
+  renderMatches(completedMatches);
+  updateStepInfo();
+}
+
+function stepBackward() {
+  if (state.currentStep <= 0) {
+    state.currentStep = -1;
+    renderTokens();
+    renderString(-1);
+    renderStepLog();
+    renderMatches([]);
+    updateStepInfo();
+    return;
+  }
+
+  state.currentStep--;
+  const step = state.steps[state.currentStep];
+
+  // Rebuild token status
+  const tokenStatus = {};
+  for (let i = 0; i <= state.currentStep; i++) {
+    const s = state.steps[i];
+    if (s.tokenIndex >= 0) {
+      if (s.type === 'match') tokenStatus[s.tokenIndex] = 'success';
+      else if (s.type === 'fail') tokenStatus[s.tokenIndex] = 'fail';
+    }
+    if (s.type === 'start-position' || s.type === 'advance') {
+      Object.keys(tokenStatus).forEach(k => delete tokenStatus[k]);
+    }
+  }
+
+  renderTokens(step.tokenIndex, tokenStatus);
+  renderString(state.currentStep);
+  renderStepLog();
+
+  const completedMatches = [];
+  for (let i = 0; i <= state.currentStep; i++) {
+    if (state.steps[i].type === 'complete') {
+      completedMatches.push({
+        value: state.steps[i].matchValue,
+        start: state.steps[i].matchStart,
+        end: state.steps[i].matchEnd,
+      });
+    }
+  }
+  renderMatches(completedMatches);
+  updateStepInfo();
+}
+
+function runAll() {
+  if (state.steps.length === 0) initMatch();
+  stopPlay();
+  state.currentStep = state.steps.length - 1;
+
+  const tokenStatus = {};
+  renderTokens(-1, tokenStatus);
+  renderString(state.currentStep);
+  state.currentStep = -1; // reset to re-render log from start
+
+  // Show all log entries
+  state.currentStep = state.steps.length - 1;
+  renderStepLog();
+  renderMatches(state.matches);
+  renderString(state.currentStep);
+  updateStepInfo();
+}
+
+function getSpeed() {
+  const v = parseInt(speedSlider.value);
+  // Map 1-10 to 500ms-30ms
+  return Math.max(30, 550 - v * 52);
+}
+
+function startPlay() {
+  if (state.steps.length === 0) initMatch();
+  if (state.steps.length === 0) return;
+  if (state.currentStep >= state.steps.length - 1) {
+    // Restart from beginning
+    state.currentStep = -1;
+    renderTokens();
+    renderString(-1);
+    stepLog.innerHTML = '';
+    renderMatches([]);
+  }
+
+  state.playing = true;
+  btnPlay.textContent = '⏸ Pause';
+  tick();
+}
+
+function tick() {
+  if (!state.playing) return;
+  stepForward();
+  if (state.currentStep >= state.steps.length - 1) {
+    stopPlay();
+    return;
+  }
+  state.playTimer = setTimeout(tick, getSpeed());
+}
+
+function stopPlay() {
+  state.playing = false;
+  btnPlay.textContent = '▶ Play';
+  if (state.playTimer) {
+    clearTimeout(state.playTimer);
+    state.playTimer = null;
+  }
+}
+
+function togglePlay() {
+  if (state.playing) stopPlay();
+  else startPlay();
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ─── Event Listeners ───
+btnRun.addEventListener('click', () => { resetState(); runAll(); });
+btnStep.addEventListener('click', stepForward);
+btnStepBack.addEventListener('click', stepBackward);
+btnPlay.addEventListener('click', togglePlay);
+btnReset.addEventListener('click', () => { resetState(); renderEmpty(); stepInfo.innerHTML = 'Ready — enter a pattern and test string'; });
+speedSlider.addEventListener('input', () => { speedVal.textContent = speedSlider.value + '×'; });
+
+// Auto-parse on input change
+let parseTimeout;
+patternInput.addEventListener('input', () => {
+  clearTimeout(parseTimeout);
+  parseTimeout = setTimeout(() => { resetState(); initMatch(); }, 300);
+});
+testInput.addEventListener('input', () => {
+  clearTimeout(parseTimeout);
+  parseTimeout = setTimeout(() => { resetState(); initMatch(); }, 300);
+});
+[flagI, flagG, flagM, flagS].forEach(el => {
+  el.addEventListener('change', () => { resetState(); initMatch(); });
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  // Don't capture when typing in inputs
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      resetState();
+      runAll();
+    }
+    return;
+  }
+
+  switch (e.key) {
+    case ' ':
+      e.preventDefault();
+      togglePlay();
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      stepForward();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      stepBackward();
+      break;
+    case 'Enter':
+      e.preventDefault();
+      resetState();
+      runAll();
+      break;
+    case 'r':
+    case 'R':
+      resetState();
+      renderEmpty();
+      stepInfo.innerHTML = 'Ready — enter a pattern and test string';
+      break;
+  }
+});
+
+// Load first preset on start
+presets[0] && (() => {
+  patternInput.value = presets[2].pattern; // Backtracking - most educational
+  testInput.value = presets[2].text;
+  flagG.checked = presets[2].flags.includes('g');
+  flagI.checked = presets[2].flags.includes('i');
+  resetState();
+  initMatch();
+})();
+</script>
+</body>
+</html>

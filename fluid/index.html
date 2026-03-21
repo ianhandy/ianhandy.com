@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Fluid Dynamics</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#1A0D00;touch-action:none;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
+canvas{display:block;width:100%;height:100%;cursor:crosshair;}
+
+.panel{
+  position:fixed;top:16px;right:16px;
+  background:rgba(26,13,0,0.92);
+  border:1px solid rgba(221,193,101,0.25);
+  border-radius:10px;
+  padding:18px 20px;
+  color:#DDC165;
+  font-size:13px;
+  z-index:100;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  min-width:220px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  transition:transform 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.35s ease;
+}
+.panel h2{font-size:14px;font-weight:600;letter-spacing:0.5px;margin-bottom:14px;color:#FFE9A3;text-transform:uppercase;}
+.ctrl{margin-bottom:12px;}
+.ctrl label{display:block;margin-bottom:4px;font-size:11px;color:rgba(221,193,101,0.7);text-transform:uppercase;letter-spacing:0.8px;}
+.ctrl input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:4px;
+  background:rgba(221,193,101,0.15);border-radius:2px;outline:none;
+}
+.ctrl input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:14px;height:14px;
+  background:#DDC165;border-radius:50%;cursor:pointer;
+  box-shadow:0 0 6px rgba(221,193,101,0.4);
+}
+.ctrl input[type=range]::-moz-range-thumb{
+  width:14px;height:14px;background:#DDC165;border:none;border-radius:50%;cursor:pointer;
+}
+.ctrl select,.ctrl button{
+  width:100%;padding:6px 10px;
+  background:rgba(221,193,101,0.08);
+  border:1px solid rgba(221,193,101,0.2);
+  border-radius:6px;color:#DDC165;font-size:12px;cursor:pointer;
+  transition:border-color 0.2s,background 0.2s;
+}
+.ctrl select:hover,.ctrl button:hover{border-color:rgba(221,193,101,0.5);background:rgba(221,193,101,0.15);}
+.ctrl select option{background:#1A0D00;color:#DDC165;}
+.ctrl button{text-transform:uppercase;letter-spacing:1px;font-weight:600;}
+.ctrl .val{float:right;color:#FFE9A3;font-size:11px;font-variant-numeric:tabular-nums;}
+.btn-row{display:flex;gap:8px;}
+.btn-row .ctrl{flex:1;margin-bottom:0;}
+
+.tray-tab{display:none;}
+.hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);color:rgba(221,193,101,0.35);font-size:11px;pointer-events:none;z-index:50;text-align:center;}
+
+@media(max-width:768px){
+  .panel{
+    top:auto;right:0;bottom:0;left:0;
+    border-radius:16px 16px 0 0;
+    min-width:unset;width:100%;
+    transform:translateY(100%);
+    padding:16px 20px 28px;
+    max-height:70vh;overflow-y:auto;
+  }
+  .panel.open{transform:translateY(0);}
+  .tray-tab{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    background:rgba(26,13,0,0.92);
+    border:1px solid rgba(221,193,101,0.25);
+    border-bottom:none;
+    border-radius:12px 12px 0 0;
+    padding:8px 24px;
+    color:#DDC165;font-size:12px;font-weight:600;
+    letter-spacing:0.8px;text-transform:uppercase;
+    cursor:pointer;z-index:101;
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    transition:bottom 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+  .tray-tab.shifted{bottom:calc(70vh - 16px);}
+  .tray-tab .chevron{
+    display:inline-block;transition:transform 0.35s ease;font-size:10px;
+  }
+  .tray-tab.shifted .chevron{transform:rotate(180deg);}
+  .hint{bottom:44px;}
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="panel" id="panel">
+  <h2>Fluid Controls</h2>
+  <div class="ctrl">
+    <label>Viscosity <span class="val" id="viscVal">0.0001</span></label>
+    <input type="range" id="viscosity" min="0.0001" max="0.001" step="0.00001" value="0.0001">
+  </div>
+  <div class="ctrl">
+    <label>Diffusion <span class="val" id="diffVal">0.0000</span></label>
+    <input type="range" id="diffusion" min="0" max="0.001" step="0.00001" value="0">
+  </div>
+  <div class="ctrl">
+    <label>Force Strength <span class="val" id="forceVal">200</span></label>
+    <input type="range" id="force" min="50" max="500" step="10" value="200">
+  </div>
+  <div class="ctrl">
+    <label>Color Mode</label>
+    <select id="colorMode">
+      <option value="funforrest" selected>FunForrest</option>
+      <option value="rainbow">Rainbow</option>
+      <option value="smoke">Smoke</option>
+    </select>
+  </div>
+  <div class="ctrl">
+    <label>Resolution</label>
+    <select id="resolution">
+      <option value="64">64</option>
+      <option value="128" selected>128</option>
+      <option value="256">256</option>
+    </select>
+  </div>
+  <div class="btn-row">
+    <div class="ctrl"><button id="btnClear">Clear</button></div>
+    <div class="ctrl"><button id="btnLines">Lines: Off</button></div>
+  </div>
+  <div class="ctrl" style="margin-top:12px;">
+    <button id="btnObstacle">Place Obstacle Mode</button>
+  </div>
+</div>
+
+<div class="tray-tab" id="trayTab">
+  Controls <span class="chevron">&#9650;</span>
+</div>
+
+<div class="hint" id="hint">drag to inject fluid &middot; right-click to place obstacles</div>
+
+<script>
+(function(){
+"use strict";
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const panel = document.getElementById('panel');
+const trayTab = document.getElementById('trayTab');
+
+// Controls
+const viscSlider = document.getElementById('viscosity');
+const diffSlider = document.getElementById('diffusion');
+const forceSlider = document.getElementById('force');
+const colorSelect = document.getElementById('colorMode');
+const resSelect = document.getElementById('resolution');
+const btnClear = document.getElementById('btnClear');
+const btnLines = document.getElementById('btnLines');
+const btnObstacle = document.getElementById('btnObstacle');
+const viscVal = document.getElementById('viscVal');
+const diffVal = document.getElementById('diffVal');
+const forceVal = document.getElementById('forceVal');
+const hint = document.getElementById('hint');
+
+let N = 128;
+let size;
+let u, v, u0, v0, dens, dens0, obstacle;
+let dt = 0.1;
+let showLines = false;
+let obstacleMode = false;
+let obstacles = [];
+
+function IX(i, j) { return i + (N + 2) * j; }
+
+function allocFields() {
+  size = (N + 2) * (N + 2);
+  u = new Float32Array(size);
+  v = new Float32Array(size);
+  u0 = new Float32Array(size);
+  v0 = new Float32Array(size);
+  dens = new Float32Array(size);
+  dens0 = new Float32Array(size);
+  obstacle = new Uint8Array(size);
+  // Restore obstacles
+  for (const ob of obstacles) {
+    placeObstacleGrid(ob.x, ob.y, ob.r);
+  }
+}
+
+function placeObstacleGrid(cx, cy, r) {
+  for (let j = 1; j <= N; j++) {
+    for (let i = 1; i <= N; i++) {
+      const dx = i - cx, dy = j - cy;
+      if (dx * dx + dy * dy <= r * r) {
+        obstacle[IX(i, j)] = 1;
+      }
+    }
+  }
+}
+
+function addSource(x, s, dtt) {
+  for (let i = 0; i < size; i++) x[i] += dtt * s[i];
+}
+
+function setBnd(b, x) {
+  for (let i = 1; i <= N; i++) {
+    x[IX(0, i)]     = b === 1 ? -x[IX(1, i)] : x[IX(1, i)];
+    x[IX(N+1, i)]   = b === 1 ? -x[IX(N, i)] : x[IX(N, i)];
+    x[IX(i, 0)]     = b === 2 ? -x[IX(i, 1)] : x[IX(i, 1)];
+    x[IX(i, N+1)]   = b === 2 ? -x[IX(i, N)] : x[IX(i, N)];
+  }
+  x[IX(0, 0)]       = 0.5 * (x[IX(1, 0)] + x[IX(0, 1)]);
+  x[IX(0, N+1)]     = 0.5 * (x[IX(1, N+1)] + x[IX(0, N)]);
+  x[IX(N+1, 0)]     = 0.5 * (x[IX(N, 0)] + x[IX(N+1, 1)]);
+  x[IX(N+1, N+1)]   = 0.5 * (x[IX(N, N+1)] + x[IX(N+1, N)]);
+
+  // Obstacles
+  for (let j = 1; j <= N; j++) {
+    for (let i = 1; i <= N; i++) {
+      if (obstacle[IX(i, j)]) {
+        if (b === 1) x[IX(i, j)] = -x[IX(i, j)];
+        else if (b === 2) x[IX(i, j)] = -x[IX(i, j)];
+        else x[IX(i, j)] = 0;
+      }
+    }
+  }
+}
+
+function diffuse(b, x, x0, diff) {
+  const a = dt * diff * N * N;
+  if (a === 0) { x.set(x0); setBnd(b, x); return; }
+  const c = 1 + 4 * a;
+  for (let k = 0; k < 20; k++) {
+    for (let j = 1; j <= N; j++) {
+      for (let i = 1; i <= N; i++) {
+        const idx = IX(i, j);
+        x[idx] = (x0[idx] + a * (x[IX(i-1,j)] + x[IX(i+1,j)] + x[IX(i,j-1)] + x[IX(i,j+1)])) / c;
+      }
+    }
+    setBnd(b, x);
+  }
+}
+
+function advect(b, d, d0, uu, vv) {
+  const dt0 = dt * N;
+  for (let j = 1; j <= N; j++) {
+    for (let i = 1; i <= N; i++) {
+      const idx = IX(i, j);
+      let x = i - dt0 * uu[idx];
+      let y = j - dt0 * vv[idx];
+      if (x < 0.5) x = 0.5;
+      if (x > N + 0.5) x = N + 0.5;
+      if (y < 0.5) y = 0.5;
+      if (y > N + 0.5) y = N + 0.5;
+      const i0 = x | 0, i1 = i0 + 1;
+      const j0 = y | 0, j1 = j0 + 1;
+      const s1 = x - i0, s0 = 1 - s1;
+      const t1 = y - j0, t0 = 1 - t1;
+      d[idx] = s0 * (t0 * d0[IX(i0,j0)] + t1 * d0[IX(i0,j1)]) +
+               s1 * (t0 * d0[IX(i1,j0)] + t1 * d0[IX(i1,j1)]);
+    }
+  }
+  setBnd(b, d);
+}
+
+function project(uu, vv, p, div) {
+  const h = 1.0 / N;
+  for (let j = 1; j <= N; j++) {
+    for (let i = 1; i <= N; i++) {
+      const idx = IX(i, j);
+      div[idx] = -0.5 * h * (uu[IX(i+1,j)] - uu[IX(i-1,j)] + vv[IX(i,j+1)] - vv[IX(i,j-1)]);
+      p[idx] = 0;
+    }
+  }
+  setBnd(0, div);
+  setBnd(0, p);
+
+  for (let k = 0; k < 20; k++) {
+    for (let j = 1; j <= N; j++) {
+      for (let i = 1; i <= N; i++) {
+        const idx = IX(i, j);
+        p[idx] = (div[idx] + p[IX(i-1,j)] + p[IX(i+1,j)] + p[IX(i,j-1)] + p[IX(i,j+1)]) * 0.25;
+      }
+    }
+    setBnd(0, p);
+  }
+
+  for (let j = 1; j <= N; j++) {
+    for (let i = 1; i <= N; i++) {
+      const idx = IX(i, j);
+      uu[idx] -= 0.5 * N * (p[IX(i+1,j)] - p[IX(i-1,j)]);
+      vv[idx] -= 0.5 * N * (p[IX(i,j+1)] - p[IX(i,j-1)]);
+    }
+  }
+  setBnd(1, uu);
+  setBnd(2, vv);
+}
+
+function velStep(visc) {
+  addSource(u, u0, dt);
+  addSource(v, v0, dt);
+
+  let tmp;
+  tmp = u0; u0 = u; u = tmp;
+  diffuse(1, u, u0, visc);
+  tmp = v0; v0 = v; v = tmp;
+  diffuse(2, v, v0, visc);
+
+  project(u, v, u0, v0);
+
+  tmp = u0; u0 = u; u = tmp;
+  tmp = v0; v0 = v; v = tmp;
+  advect(1, u, u0, u0, v0);
+  advect(2, v, v0, u0, v0);
+
+  project(u, v, u0, v0);
+}
+
+function densStep(diff) {
+  addSource(dens, dens0, dt);
+
+  let tmp = dens0; dens0 = dens; dens = tmp;
+  diffuse(0, dens, dens0, diff);
+
+  tmp = dens0; dens0 = dens; dens = tmp;
+  advect(0, dens, dens0, u, v);
+}
+
+// Colors
+function hslToRgb(h, s, l) {
+  h = ((h % 360) + 360) % 360;
+  s /= 100; l /= 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+  let r, g, b;
+  if (h < 60)       { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else              { r = c; g = 0; b = x; }
+  return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+}
+
+// FunForrest palette: bg #1A0D00, gold #DDC165, bright #FFE9A3, orange #E5591C
+const bgR = 0x1A, bgG = 0x0D, bgB = 0x00;
+const goldR = 0xDD, goldG = 0xC1, goldB = 0x65;
+const orangeR = 0xE5, orangeG = 0x59, orangeB = 0x1C;
+const brightR = 0xFF, brightG = 0xE9, brightB = 0xA3;
+
+function render() {
+  const cw = canvas.width;
+  const ch = canvas.height;
+  const imgData = ctx.createImageData(cw, ch);
+  const data = imgData.data;
+  const mode = colorSelect.value;
+
+  const cellW = cw / N;
+  const cellH = ch / N;
+
+  for (let py = 0; py < ch; py++) {
+    const fj = (py / ch) * N + 0.5;
+    const j0 = Math.max(1, Math.min(N, fj | 0));
+    for (let px = 0; px < cw; px++) {
+      const fi = (px / cw) * N + 0.5;
+      const i0 = Math.max(1, Math.min(N, fi | 0));
+      const idx = IX(i0, j0);
+      const off = (py * cw + px) * 4;
+
+      if (obstacle[idx]) {
+        data[off]   = 0x30;
+        data[off+1] = 0x20;
+        data[off+2] = 0x10;
+        data[off+3] = 255;
+        continue;
+      }
+
+      const d = dens[idx];
+      const velMag = Math.sqrt(u[idx] * u[idx] + v[idx] * v[idx]);
+
+      if (mode === 'funforrest') {
+        // Blend from bg → gold → bright based on density, shift toward orange with velocity
+        const t = Math.min(d * 2.5, 1);
+        const velT = Math.min(velMag * 0.15, 1);
+        // Base: lerp bg→gold by density
+        let r = bgR + (goldR - bgR) * t;
+        let g = bgG + (goldG - bgG) * t;
+        let b = bgB + (goldB - bgB) * t;
+        // Mix toward orange for velocity
+        r = r + (orangeR - r) * velT;
+        g = g + (orangeG - g) * velT;
+        b = b + (orangeB - b) * velT;
+        // Brighten high density
+        if (d > 0.6) {
+          const bt = Math.min((d - 0.6) * 2.5, 1) * 0.5;
+          r = r + (brightR - r) * bt;
+          g = g + (brightG - g) * bt;
+          b = b + (brightB - b) * bt;
+        }
+        data[off]   = Math.min(255, r) | 0;
+        data[off+1] = Math.min(255, g) | 0;
+        data[off+2] = Math.min(255, b) | 0;
+      } else if (mode === 'rainbow') {
+        const hue = (Math.atan2(v[idx], u[idx]) / Math.PI * 180 + 360) % 360;
+        const lit = Math.min(20 + d * 60, 80);
+        const sat = Math.min(50 + velMag * 80, 100);
+        const [r, g, b] = hslToRgb(hue, sat, lit * Math.min(d * 3 + 0.05, 1));
+        data[off]   = r | 0;
+        data[off+1] = g | 0;
+        data[off+2] = b | 0;
+      } else { // smoke
+        const t = Math.min(d * 3, 1);
+        const c = t * 220;
+        data[off]   = c | 0;
+        data[off+1] = c | 0;
+        data[off+2] = c | 0;
+      }
+      data[off+3] = 255;
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+
+  // Velocity streamlines
+  if (showLines) {
+    ctx.strokeStyle = 'rgba(221,193,101,0.15)';
+    ctx.lineWidth = 0.8;
+    const step = Math.max(4, N / 24 | 0);
+    for (let j = step; j <= N; j += step) {
+      for (let i = step; i <= N; i += step) {
+        const idx = IX(i, j);
+        const px = (i - 0.5) / N * cw;
+        const py = (j - 0.5) / N * ch;
+        const vx = u[idx] * 8;
+        const vy = v[idx] * 8;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px + vx * cellW, py + vy * cellH);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Draw obstacle outlines
+  if (obstacles.length > 0) {
+    ctx.strokeStyle = 'rgba(229,89,28,0.4)';
+    ctx.lineWidth = 1.5;
+    for (const ob of obstacles) {
+      ctx.beginPath();
+      ctx.arc((ob.x - 0.5) / N * cw, (ob.y - 0.5) / N * ch, ob.r / N * Math.min(cw, ch), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+}
+
+// Input
+let mouseDown = false;
+let mouseX = 0, mouseY = 0;
+let pmouseX = 0, pmouseY = 0;
+
+function getGridPos(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (clientX - rect.left) / rect.width;
+  const y = (clientY - rect.top) / rect.height;
+  return {
+    i: Math.max(1, Math.min(N, (x * N + 1) | 0)),
+    j: Math.max(1, Math.min(N, (y * N + 1) | 0))
+  };
+}
+
+function addInteraction(cx, cy, dx, dy) {
+  const forceAmt = parseFloat(forceSlider.value);
+  const radius = Math.max(2, N / 32);
+  for (let dj = -radius; dj <= radius; dj++) {
+    for (let di = -radius; di <= radius; di++) {
+      const dist2 = di * di + dj * dj;
+      if (dist2 > radius * radius) continue;
+      const i = cx + di, j = cy + dj;
+      if (i < 1 || i > N || j < 1 || j > N) continue;
+      const idx = IX(i, j);
+      if (obstacle[idx]) continue;
+      const falloff = 1 - Math.sqrt(dist2) / radius;
+      u0[idx] += dx * forceAmt * falloff;
+      v0[idx] += dy * forceAmt * falloff;
+      dens0[idx] += 0.8 * falloff;
+    }
+  }
+}
+
+function addObstacleAt(clientX, clientY) {
+  const pos = getGridPos(clientX, clientY);
+  const r = Math.max(3, N / 20);
+  obstacles.push({ x: pos.i, y: pos.j, r });
+  placeObstacleGrid(pos.i, pos.j, r);
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button === 2 || obstacleMode) {
+    addObstacleAt(e.clientX, e.clientY);
+    return;
+  }
+  mouseDown = true;
+  pmouseX = e.clientX;
+  pmouseY = e.clientY;
+});
+canvas.addEventListener('mousemove', (e) => {
+  if (!mouseDown) return;
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  const pos = getGridPos(mouseX, mouseY);
+  const ppos = getGridPos(pmouseX, pmouseY);
+  const dx = (mouseX - pmouseX) / canvas.width * N;
+  const dy = (mouseY - pmouseY) / canvas.height * N;
+  addInteraction(pos.i, pos.j, dx, dy);
+  pmouseX = mouseX;
+  pmouseY = mouseY;
+});
+canvas.addEventListener('mouseup', () => { mouseDown = false; });
+canvas.addEventListener('mouseleave', () => { mouseDown = false; });
+canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); });
+
+// Touch
+let touchId = null;
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 0) return;
+  const t = e.touches[0];
+  if (obstacleMode) {
+    addObstacleAt(t.clientX, t.clientY);
+    return;
+  }
+  touchId = t.identifier;
+  mouseDown = true;
+  pmouseX = t.clientX;
+  pmouseY = t.clientY;
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!mouseDown) return;
+  for (const t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      mouseX = t.clientX;
+      mouseY = t.clientY;
+      const pos = getGridPos(mouseX, mouseY);
+      const dx = (mouseX - pmouseX) / canvas.width * N;
+      const dy = (mouseY - pmouseY) / canvas.height * N;
+      addInteraction(pos.i, pos.j, dx, dy);
+      pmouseX = mouseX;
+      pmouseY = mouseY;
+    }
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', (e) => {
+  for (const t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      mouseDown = false;
+      touchId = null;
+    }
+  }
+});
+
+// Controls
+viscSlider.addEventListener('input', () => { viscVal.textContent = parseFloat(viscSlider.value).toFixed(4); });
+diffSlider.addEventListener('input', () => { diffVal.textContent = parseFloat(diffSlider.value).toFixed(4); });
+forceSlider.addEventListener('input', () => { forceVal.textContent = forceSlider.value; });
+
+btnClear.addEventListener('click', () => {
+  u.fill(0); v.fill(0); u0.fill(0); v0.fill(0);
+  dens.fill(0); dens0.fill(0);
+  obstacle.fill(0);
+  obstacles = [];
+});
+
+btnLines.addEventListener('click', () => {
+  showLines = !showLines;
+  btnLines.textContent = 'Lines: ' + (showLines ? 'On' : 'Off');
+});
+
+btnObstacle.addEventListener('click', () => {
+  obstacleMode = !obstacleMode;
+  btnObstacle.textContent = obstacleMode ? 'Obstacle Mode: ON' : 'Place Obstacle Mode';
+  btnObstacle.style.borderColor = obstacleMode ? '#E5591C' : '';
+  canvas.style.cursor = obstacleMode ? 'cell' : 'crosshair';
+});
+
+resSelect.addEventListener('change', () => {
+  N = parseInt(resSelect.value);
+  allocFields();
+});
+
+// Tray
+trayTab.addEventListener('click', () => {
+  panel.classList.toggle('open');
+  trayTab.classList.toggle('shifted');
+});
+trayTab.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  panel.classList.toggle('open');
+  trayTab.classList.toggle('shifted');
+});
+
+// Resize
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // Render at a limited resolution for performance
+  const maxDim = 512;
+  const aspect = window.innerWidth / window.innerHeight;
+  if (aspect >= 1) {
+    canvas.width = Math.min(window.innerWidth * dpr, maxDim * aspect) | 0;
+    canvas.height = (canvas.width / aspect) | 0;
+  } else {
+    canvas.height = Math.min(window.innerHeight * dpr, maxDim / aspect) | 0;
+    canvas.width = (canvas.height * aspect) | 0;
+  }
+}
+window.addEventListener('resize', resize);
+
+// Init
+resize();
+allocFields();
+
+// Hide hint after first interaction
+let hintVisible = true;
+canvas.addEventListener('mousedown', function hh() {
+  if (hintVisible) { hint.style.opacity = '0'; hint.style.transition = 'opacity 1s'; hintVisible = false; }
+}, { once: false });
+canvas.addEventListener('touchstart', function hh() {
+  if (hintVisible) { hint.style.opacity = '0'; hint.style.transition = 'opacity 1s'; hintVisible = false; }
+}, { once: false });
+
+// Main loop
+function step() {
+  const visc = parseFloat(viscSlider.value);
+  const diff = parseFloat(diffSlider.value);
+
+  velStep(visc);
+  densStep(diff);
+
+  // Decay density slightly to prevent saturation
+  for (let i = 0; i < size; i++) {
+    dens[i] *= 0.995;
+  }
+
+  // Clear source fields
+  u0.fill(0);
+  v0.fill(0);
+  dens0.fill(0);
+
+  render();
+  requestAnimationFrame(step);
+}
+requestAnimationFrame(step);
+
+})();
+</script>
+</body>
+</html>

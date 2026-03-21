@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ian Handy</title>
+<title>Ian Handy — Developer & Creative Coder</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,9 +12,7 @@
 <nav>
   <a href="#" class="nav-logo">IH</a>
   <ul class="nav-links">
-    <li><a href="#photography">Photography</a></li>
-    <li><a href="#coding">Coding</a></li>
-    <li><a href="#python-demo">Demo</a></li>
+    <li><a href="#coding">Projects</a></li>
     <li><a href="#about">About</a></li>
   </ul>
 </nav>
@@ -27,17 +25,17 @@
       Ian<br>
       <span>Handy</span>
     </h1>
-    <p class="hero-tagline">Photographer, developer, and data explorer — building things worth looking at.</p>
+    <p class="hero-tagline">Developer and creative coder — building things worth looking at.</p>
     <div class="hero-cta">
-      <a href="#photography" class="btn btn-primary">View Work</a>
+      <a href="#coding" class="btn btn-primary">View Projects</a>
       <a href="#about" class="btn btn-ghost">About Me</a>
     </div>
   </div>
   <div class="hero-right">
     <div class="hero-photo-grid">
-      <div class="photo-cell"><span class="photo-label">// FOREST_001</span></div>
-      <div class="photo-cell"><span class="photo-label">// URBAN_004</span></div>
-      <div class="photo-cell"><span class="photo-label">// MACRO_017</span></div>
+      <div class="photo-cell" style="background: url('https://images.unsplash.com/photo-1476231682828-37e571bc172f?w=800&q=80&auto=format&fit=crop') center/cover no-repeat;"><span class="photo-label">// GOLDEN_HOUR</span></div>
+      <div class="photo-cell" style="background: url('https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=800&q=80&auto=format&fit=crop') center/cover no-repeat;"><span class="photo-label">// DARK_FOREST</span></div>
+      <div class="photo-cell" style="background: url('https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?w=800&q=80&auto=format&fit=crop') center/cover no-repeat;"><span class="photo-label">// AMBER_LIGHT</span></div>
     </div>
   </div>
   <div class="scroll-hint">
@@ -46,7 +44,13 @@
   </div>
 </section>
 
-<!-- PHOTOGRAPHY -->
+<!-- VISUAL BREAK — warm amber landscape -->
+<div class="visual-break" style="height: 320px; background: linear-gradient(to bottom, var(--bark), transparent 20%, transparent 80%, var(--bark)), url('https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=1400&q=80&auto=format&fit=crop') center/cover no-repeat; opacity: 0.7;"></div>
+
+<!-- ============================================================
+     PHOTOGRAPHY — commented out, easy to restore
+     ============================================================ -->
+<!--
 <section id="photography">
   <div class="section-header fade-up">
     <span class="section-num">01 —</span>
@@ -80,24 +84,155 @@
     <a href="#" class="btn btn-ghost">Full Gallery →</a>
   </div>
 </section>
+-->
 
 <!-- CODING -->
 <section id="coding">
   <div class="section-header fade-up">
-    <span class="section-num">02 —</span>
-    <h2 class="section-title">Coding</h2>
+    <span class="section-num">01 —</span>
+    <h2 class="section-title">Projects</h2>
     <div class="section-rule"></div>
   </div>
   <div class="projects-grid fade-up">
-    <a href="https://evo.ianhandy.com" class="project-card" target="_blank">
-      <div class="project-tag">Python · Data</div>
-      <div class="project-name">Scientific Visualizer</div>
-      <p class="project-desc">Interactive data analysis tool — runs live in the browser via Pyodide. No server required.</p>
+    <a href="/evo/" class="project-card">
+      <div class="project-tag">Simulation · Strategy</div>
+      <div class="project-name">Evo</div>
+      <p class="project-desc">Evolution simulation featuring Velothrix aurantis. Population dynamics, trait mutation, and natural selection — expanding into a strategy game.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">JavaScript</span>
+          <span class="stack-tag">Canvas</span>
+          <span class="stack-tag">Simulation</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/dither/" class="project-card">
+      <div class="project-tag">Canvas · Image Processing</div>
+      <div class="project-name">Dithering Studio</div>
+      <p class="project-desc">Retro image dithering with 8 algorithms and curated color palettes. Upload, transform, download — all client-side.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">JavaScript</span>
+          <span class="stack-tag">Canvas</span>
+          <span class="stack-tag">Dithering</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/fractal/" class="project-card">
+      <div class="project-tag">WebGL · Math</div>
+      <div class="project-name">Fractal Explorer</div>
+      <p class="project-desc">GPU-accelerated Mandelbrot & Julia set explorer. Click to see Julia duality. Infinite zoom, 5 palettes, smooth coloring.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">WebGL</span>
+          <span class="stack-tag">GLSL</span>
+          <span class="stack-tag">GPU</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/lorenz/" class="project-card">
+      <div class="project-tag">Pyodide · Simulation</div>
+      <div class="project-name">Lorenz Attractor</div>
+      <p class="project-desc">Real-time 3D strange attractor with parameter sliders. Gold butterfly on black. RK4 integration via Pyodide.</p>
       <div class="project-footer">
         <div class="project-stack">
           <span class="stack-tag">Python</span>
-          <span class="stack-tag">NumPy</span>
-          <span class="stack-tag">Matplotlib</span>
+          <span class="stack-tag">SciPy</span>
+          <span class="stack-tag">Canvas</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/flames/" class="project-card">
+      <div class="project-tag">Canvas · Generative Art</div>
+      <div class="project-name">Fractal Flames</div>
+      <p class="project-desc">IFS fractal flame generator with 21 variation functions. Log-density rendering, 7 presets, 5 palettes.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">JavaScript</span>
+          <span class="stack-tag">Canvas</span>
+          <span class="stack-tag">IFS</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/math/" class="project-card">
+      <div class="project-tag">Pyodide · Math</div>
+      <div class="project-name">Math Scratchpad</div>
+      <p class="project-desc">Client-side symbolic math. Differentiate, integrate, solve, factor — powered by SymPy + MathJax in the browser.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">Python</span>
+          <span class="stack-tag">SymPy</span>
+          <span class="stack-tag">MathJax</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/sort/" class="project-card">
+      <div class="project-tag">Canvas · Education</div>
+      <div class="project-name">Sorting Visualizer</div>
+      <p class="project-desc">Six sorting algorithms racing side by side with sound. Bubble, Selection, Insertion, Merge, Quick, Heap.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">JavaScript</span>
+          <span class="stack-tag">Canvas</span>
+          <span class="stack-tag">Web Audio</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/terrain/" class="project-card">
+      <div class="project-tag">Canvas · Generative</div>
+      <div class="project-name">Terrain Generator</div>
+      <p class="project-desc">Procedural terrain with Perlin noise. 3D isometric view, shareable seeds, FunForrest palette elevation gradient.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">JavaScript</span>
+          <span class="stack-tag">Canvas</span>
+          <span class="stack-tag">Perlin</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/life/" class="project-card">
+      <div class="project-tag">Canvas · Simulation</div>
+      <div class="project-name">Game of Life</div>
+      <p class="project-desc">Conway's Game of Life with gold cells, amber death trails, 12 patterns, zoom, pan, and URL sharing.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">JavaScript</span>
+          <span class="stack-tag">Canvas</span>
+          <span class="stack-tag">Cellular Automata</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/graph/" class="project-card">
+      <div class="project-tag">Canvas · Physics</div>
+      <div class="project-name">Network Graph</div>
+      <p class="project-desc">Force-directed graph playground with 6 generators. Verlet physics, interactive dragging, real-time simulation.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">JavaScript</span>
+          <span class="stack-tag">Canvas</span>
+          <span class="stack-tag">Physics</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/linalg/" class="project-card">
+      <div class="project-tag">Canvas · Education</div>
+      <div class="project-name">Linear Algebra Viz</div>
+      <p class="project-desc">Interactive 2D matrix transformations. Animated basis vectors, eigenvectors, determinant area, unit circle mapping.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">JavaScript</span>
+          <span class="stack-tag">Canvas</span>
+          <span class="stack-tag">Linear Algebra</span>
         </div>
         <span class="project-arrow">↗</span>
       </div>
@@ -105,78 +240,27 @@
   </div>
 </section>
 
-<!-- PYTHON DEMO -->
-<section id="python-demo">
-  <div class="section-header fade-up">
-    <span class="section-num">03 —</span>
-    <h2 class="section-title">Live Demo</h2>
-    <div class="section-rule"></div>
-  </div>
-  <div class="demo-layout fade-up">
-    <div class="demo-info">
-      <h3>Python, running<br><em>in your browser.</em></h3>
-      <p>This is a live instance of my data analysis tool — no server, no backend, no cost. Powered by Pyodide, which compiles Python to WebAssembly and runs it entirely client-side.</p>
-      <p>Adjust the parameters and hit Run to generate a fresh visualization.</p>
-      <div class="pyodide-note">
-        <strong>// tech note</strong><br>
-        Pyodide + NumPy + Matplotlib → WebAssembly<br>
-        Hosted on GitHub Pages — 100% free, zero infra
-      </div>
-      <div class="demo-controls">
-        <div class="control-group">
-          <label>Dataset</label>
-          <select id="dataset-select">
-            <option value="sine">Sine Wave + Noise</option>
-            <option value="scatter">Random Walk</option>
-            <option value="hist">Distribution</option>
-          </select>
-        </div>
-        <div class="control-group">
-          <label>Sample Size — <span id="n-val">200</span> points</label>
-          <input type="range" id="sample-size" min="50" max="500" value="200" step="50">
-        </div>
-        <button class="run-btn" id="run-btn">
-          <span id="run-label">▶ RUN ANALYSIS</span>
-        </button>
-      </div>
-    </div>
-    <div class="demo-output">
-      <div class="output-bar">
-        <div class="output-dot"></div>
-        <div class="output-dot"></div>
-        <div class="output-dot"></div>
-        <span class="output-label">visualizer.py — output</span>
-      </div>
-      <canvas id="plot-canvas"></canvas>
-      <div id="output-placeholder" class="output-placeholder">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-        </svg>
-        <p>AWAITING EXECUTION</p>
-      </div>
-      <div id="status-msg"></div>
-    </div>
-  </div>
-</section>
+<!-- VISUAL BREAK — misty golden forest -->
+<div class="visual-break" style="height: 240px; background: linear-gradient(to bottom, var(--bark), transparent 20%, transparent 80%, var(--bark)), url('https://images.unsplash.com/photo-1473448912268-2022ce9509d8?w=1400&q=80&auto=format&fit=crop') center/cover no-repeat; opacity: 0.6;"></div>
 
 <!-- ABOUT -->
 <section id="about">
   <div class="section-header fade-up">
-    <span class="section-num">04 —</span>
+    <span class="section-num">02 —</span>
     <h2 class="section-title">About</h2>
     <div class="section-rule"></div>
   </div>
   <div class="about-layout fade-up">
     <div class="about-text">
       <p>
-        I'm <strong>Ian Handy</strong> — a developer and photographer with a habit of
-        finding patterns in both data and light. Whether I'm writing Python to visualize
-        scientific datasets or hiking somewhere with a camera, I'm drawn to things that
-        reward close attention.
+        I'm <strong>Ian Handy</strong> — a developer and creative coder drawn to
+        the intersection of math, simulation, and visual craft. Whether I'm building
+        evolution engines, rendering fractal flames, or solving linear algebra problems,
+        I care about things that reward close attention.
       </p>
       <p>
         Currently studying <em>mathematics</em>, building tools that are functional and
-        beautiful, and shooting whatever's in front of me. This site is a living
+        beautiful, and pushing pixels into patterns. This site is a living
         document of that work.
       </p>
       <div class="about-links">
@@ -190,21 +274,16 @@
           <span class="social-name">LinkedIn</span>
           <span class="social-handle">ian-handy</span>
         </a>
-        <a href="mailto:ian@ianhandy.com" class="social-link">
-          <span class="social-icon">✉</span>
-          <span class="social-name">Email</span>
-          <span class="social-handle">ian@ianhandy.com</span>
-        </a>
       </div>
     </div>
     <div class="about-sidebar">
       <div class="stat-block">
-        <div class="stat-num">∞</div>
-        <div class="stat-label">Photos taken</div>
+        <div class="stat-num">10</div>
+        <div class="stat-label">Live projects</div>
       </div>
       <div class="stat-block">
-        <div class="stat-num" id="repo-count">—</div>
-        <div class="stat-label">GitHub Repos</div>
+        <div class="stat-num" id="repo-count">--</div>
+        <div class="stat-label">GitHub repos</div>
       </div>
       <div class="stat-block">
         <div class="stat-num">MTH</div>
@@ -216,11 +295,10 @@
 
 <!-- FOOTER -->
 <footer>
-  <p>© 2026 Ian Handy — Built with HTML, hosted on GitHub Pages</p>
+  <p>&copy; 2026 Ian Handy &mdash; Built by hand, hosted on GitHub Pages</p>
   <p><a href="#">ianhandy.com</a></p>
 </footer>
 
-<!-- PYODIDE (loaded on demand, not on page load) -->
 <script>
   // ── Scroll animations (progressive enhancement only) ──
   if ("IntersectionObserver" in window) {
@@ -232,170 +310,6 @@
       el.classList.add("will-animate");
       observer.observe(el);
     });
-  }
-
-  // ── Cached DOM refs ──
-  const $ = id => document.getElementById(id);
-  const rangeInput = $('sample-size');
-  const nVal = $('n-val');
-  const btn = $('run-btn');
-  const label = $('run-label');
-  const status = $('status-msg');
-  const canvas = $('plot-canvas');
-  const placeholder = $('output-placeholder');
-  const datasetSelect = $('dataset-select');
-
-  rangeInput.addEventListener('input', () => nVal.textContent = rangeInput.value);
-
-  // ── Pyodide ──
-  let pyodide = null;
-  let pyState = 'idle'; // idle | loading | ready | failed
-
-  function showWasmFallback() {
-    document.querySelector('.demo-output').innerHTML = `
-      <div class="output-bar">
-        <div class="output-dot"></div><div class="output-dot"></div><div class="output-dot"></div>
-        <span class="output-label">visualizer.py — unavailable in preview</span>
-      </div>
-      <div style="padding:2.5rem 2rem;font-family:'IBM Plex Mono',monospace;font-size:.7rem;line-height:2;color:var(--fog);">
-        <span style="color:var(--ember)">// WebAssembly blocked in sandboxed iframe</span><br><br>
-        The live demo runs real Python via Pyodide (WebAssembly).<br>
-        This preview environment restricts WASM — it works fine<br>
-        on the actual site.<br><br>
-        <span style="color:var(--straw)">→ Deploy to GitHub Pages to see the full demo.</span>
-      </div>`;
-  }
-
-  window.addEventListener("error", () => {
-    if (pyState === 'loading') {
-      pyState = 'failed';
-      showWasmFallback();
-    }
-  });
-
-  btn.addEventListener('click', () => {
-    if (pyState === 'failed') { showWasmFallback(); return; }
-    if (pyState === 'ready') { runPython(); return; }
-    loadPy();
-  });
-
-  async function loadPy() {
-    if (pyState !== 'idle') return;
-    pyState = 'loading';
-    btn.disabled = true;
-    label.textContent = '⏳ LOADING RUNTIME…';
-    status.textContent = '// fetching pyodide (~10s first load)…';
-
-    try {
-      await new Promise((resolve, reject) => {
-        if (window.loadPyodide) { resolve(); return; }
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js';
-        s.onload = resolve;
-        s.onerror = () => reject(new Error('Pyodide script blocked'));
-        document.head.appendChild(s);
-      });
-      pyodide = await loadPyodide();
-      await pyodide.loadPackage(['numpy', 'matplotlib']);
-      pyState = 'ready';
-      status.textContent = '// runtime ready';
-      btn.disabled = false;
-      label.textContent = '▶ RUN ANALYSIS';
-      runPython();
-    } catch (err) {
-      pyState = 'failed';
-      console.warn('Pyodide unavailable:', err.message);
-      showWasmFallback();
-    }
-  }
-
-  async function runPython() {
-    if (pyState === 'failed') return;
-    if (pyState !== 'ready') { loadPy(); return; }
-
-    btn.disabled = true;
-    label.textContent = '⏳ RUNNING…';
-    status.textContent = '// executing python…';
-
-    const dataset = datasetSelect.value;
-    const n = parseInt(rangeInput.value);
-
-    const colors = {
-      bg: '#1a1008', line: '#d4942a', accent: '#c4581f',
-      grid: '#2c1a0e', text: '#c8b89a', fill: '#8b3a1a'
-    };
-
-    const pyCode = `
-import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import io, base64
-
-np.random.seed(42)
-n = ${n}
-dataset = "${dataset}"
-
-fig, ax = plt.subplots(figsize=(6.5, 4.2))
-fig.patch.set_facecolor('${colors.bg}')
-ax.set_facecolor('${colors.bg}')
-
-for spine in ax.spines.values():
-    spine.set_edgecolor('${colors.grid}')
-
-ax.tick_params(colors='${colors.text}', labelsize=8)
-ax.xaxis.label.set_color('${colors.text}')
-ax.yaxis.label.set_color('${colors.text}')
-ax.grid(color='${colors.grid}', linestyle='--', linewidth=0.5, alpha=0.6)
-
-if dataset == "sine":
-    x = np.linspace(0, 4 * np.pi, n)
-    y = np.sin(x) + np.random.normal(0, 0.15, n)
-    ax.plot(x, y, color='${colors.line}', linewidth=1.4, alpha=0.9)
-    ax.fill_between(x, y, alpha=0.12, color='${colors.fill}')
-    ax.set_title('Sine Wave + Gaussian Noise', color='${colors.text}', fontsize=10, pad=12)
-    ax.set_xlabel('x'); ax.set_ylabel('amplitude')
-elif dataset == "scatter":
-    steps = np.random.randn(n)
-    walk = np.cumsum(steps)
-    ax.plot(walk, color='${colors.line}', linewidth=1, alpha=0.8)
-    ax.scatter(range(n), walk, s=2, color='${colors.accent}', alpha=0.5)
-    ax.set_title('Random Walk', color='${colors.text}', fontsize=10, pad=12)
-    ax.set_xlabel('step'); ax.set_ylabel('value')
-elif dataset == "hist":
-    data = np.random.normal(0, 1, n)
-    ax.hist(data, bins=30, color='${colors.fill}', edgecolor='${colors.line}',
-            linewidth=0.6, alpha=0.85)
-    ax.set_title('Normal Distribution (\\u03bc=0, \\u03c3=1)', color='${colors.text}', fontsize=10, pad=12)
-    ax.set_xlabel('value'); ax.set_ylabel('frequency')
-
-plt.tight_layout()
-buf = io.BytesIO()
-fig.savefig(buf, format='png', dpi=130, bbox_inches='tight',
-            facecolor=fig.get_facecolor())
-plt.close(fig)
-buf.seek(0)
-img_b64 = base64.b64encode(buf.read()).decode('utf-8')
-img_b64
-`;
-
-    try {
-      const result = await pyodide.runPythonAsync(pyCode);
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        canvas.getContext('2d').drawImage(img, 0, 0);
-        placeholder.style.display = 'none';
-      };
-      img.src = 'data:image/png;base64,' + result;
-      status.textContent = `// done — ${n} points`;
-    } catch (err) {
-      status.textContent = '// error: ' + err.message;
-    } finally {
-      btn.disabled = false;
-      label.textContent = '▶ RUN ANALYSIS';
-    }
   }
 </script>
 </body>

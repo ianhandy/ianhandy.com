@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dithering Studio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #241200;
+    --bg-deep: #1A0D00;
+    --gold: #DDC165;
+    --gold-light: #FFE9A3;
+    --orange: #E5591C;
+    --orange-dim: #B34415;
+    --surface: #2E1800;
+    --surface-hover: #3A2000;
+    --border: #4A2E10;
+    --text: #DDC165;
+    --text-dim: #9A8040;
+    --text-bright: #FFE9A3;
+  }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  header {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+    position: relative;
+  }
+
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold-light);
+    text-shadow: 0 0 30px rgba(221,193,101,0.4), 0 0 60px rgba(221,193,101,0.15);
+    margin-bottom: 0.3rem;
+  }
+
+  .subtitle {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  .app {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  /* Controls bar */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .control-group label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+
+  select, button {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--gold);
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  select:hover, button:hover {
+    border-color: var(--gold);
+    box-shadow: 0 0 10px rgba(221,193,101,0.15);
+  }
+
+  select:focus, button:focus {
+    outline: none;
+    border-color: var(--orange);
+    box-shadow: 0 0 12px rgba(229,89,28,0.25);
+  }
+
+  button.primary {
+    background: var(--orange);
+    color: #fff;
+    border-color: var(--orange);
+    font-weight: 500;
+  }
+
+  button.primary:hover {
+    background: #F06A2C;
+    box-shadow: 0 0 20px rgba(229,89,28,0.35);
+  }
+
+  button.glow {
+    animation: btnPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes btnPulse {
+    0%, 100% { box-shadow: 0 0 5px rgba(229,89,28,0.3); }
+    50% { box-shadow: 0 0 20px rgba(229,89,28,0.6); }
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 4rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(221,193,101,0.03) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--gold);
+    background: rgba(221,193,101,0.03);
+  }
+
+  .drop-zone.drag-over {
+    box-shadow: inset 0 0 40px rgba(221,193,101,0.08);
+  }
+
+  .drop-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  .drop-text {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+  }
+
+  .drop-hint {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    opacity: 0.6;
+  }
+
+  .drop-zone.hidden { display: none; }
+
+  /* Canvas area */
+  .canvas-area {
+    display: none;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .canvas-area.active {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .canvas-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .canvas-label {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.75rem;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    z-index: 10;
+    background: rgba(26,13,0,0.8);
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+  }
+
+  .canvas-panel canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+  }
+
+  /* Palette display */
+  .palette-bar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .palette-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    transition: transform 0.2s;
+    position: relative;
+  }
+
+  .palette-swatch:hover {
+    transform: scale(1.3);
+    z-index: 10;
+    box-shadow: 0 0 12px rgba(221,193,101,0.3);
+  }
+
+  .palette-swatch .tooltip {
+    display: none;
+    position: absolute;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    color: var(--text);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.6rem;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+  }
+
+  .palette-swatch:hover .tooltip { display: block; }
+
+  .palette-label {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-right: 0.5rem;
+  }
+
+  /* Stats */
+  .stats {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    padding: 0.75rem;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+
+  .stat-value {
+    color: var(--gold);
+    font-weight: 500;
+  }
+
+  /* Processing overlay */
+  .processing {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,13,0,0.85);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .processing.active { display: flex; }
+
+  .processing-spinner {
+    width: 48px;
+    height: 48px;
+    border: 2px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .processing-text {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    opacity: 0.5;
+  }
+
+  /* Responsive */
+  @media (max-width: 800px) {
+    .canvas-area.active { grid-template-columns: 1fr; }
+    h1 { font-size: 1.5rem; }
+    .controls { flex-direction: column; align-items: stretch; }
+    .control-group { justify-content: space-between; }
+    .drop-zone { padding: 2rem 1rem; }
+  }
+  @media (max-width: 480px) {
+    .controls select, .controls button, .controls input[type="file"] { min-height: 44px; font-size: 14px; }
+    h1 { font-size: 1.2rem; }
+    header { padding: 1.2rem 0.5rem 0.5rem; }
+    .app { padding: 0.5rem; }
+    .stats { gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+    footer { padding: 1rem; }
+  }
+
+  /* Custom palette editor */
+  .palette-section {
+    display: none;
+    margin-bottom: 1.5rem;
+  }
+  .palette-section.active { display: block; }
+
+  .palette-presets {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .preset-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .preset-btn:hover, .preset-btn.active {
+    color: var(--gold);
+    border-color: var(--gold);
+    background: var(--surface-hover);
+  }
+
+  /* Scale slider */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--bg);
+    height: 4px;
+    border-radius: 2px;
+    outline: none;
+    width: 100px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--gold);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 6px rgba(221,193,101,0.4);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Dithering Studio</h1>
+  <div class="subtitle">Retro image processing &middot; FunForrest palette</div>
+</header>
+
+<div class="app">
+
+  <!-- Drop Zone -->
+  <div class="drop-zone" id="dropZone">
+    <div class="drop-icon">&#9635;</div>
+    <div class="drop-text">Drop an image here or click to upload</div>
+    <div class="drop-hint">PNG, JPG, WebP &middot; processed entirely in your browser</div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+  </div>
+
+  <!-- Controls -->
+  <div class="controls" id="controls" style="display:none">
+    <div class="control-group">
+      <label>Algorithm</label>
+      <select id="algorithm">
+        <option value="floyd-steinberg">Floyd-Steinberg</option>
+        <option value="atkinson">Atkinson</option>
+        <option value="ordered-4">Ordered 4×4</option>
+        <option value="ordered-8">Ordered 8×8</option>
+        <option value="stucki">Stucki</option>
+        <option value="burkes">Burkes</option>
+        <option value="sierra">Sierra</option>
+        <option value="threshold">Threshold</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Palette</label>
+      <select id="palette">
+        <option value="funforrest">FunForrest Amber</option>
+        <option value="funforrest-extended">FunForrest Extended</option>
+        <option value="ember">Ember</option>
+        <option value="ocean">Deep Ocean</option>
+        <option value="terminal">Terminal Green</option>
+        <option value="bw">Black & White</option>
+        <option value="gameboy">Game Boy</option>
+        <option value="cga">CGA</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Scale</label>
+      <input type="range" id="scaleSlider" min="0.1" max="1" step="0.05" value="0.5">
+      <span id="scaleLabel" style="font-size:0.75rem;color:var(--gold);min-width:2.5em">50%</span>
+    </div>
+    <button class="primary" id="processBtn">Dither</button>
+    <button id="downloadBtn" style="display:none">Download PNG</button>
+    <button id="resetBtn">New Image</button>
+  </div>
+
+  <!-- Palette preview -->
+  <div class="palette-bar" id="paletteBar" style="display:none">
+    <span class="palette-label">Active Palette</span>
+  </div>
+
+  <!-- Canvas area -->
+  <div class="canvas-area" id="canvasArea">
+    <div class="canvas-panel">
+      <div class="canvas-label">Original</div>
+      <canvas id="originalCanvas"></canvas>
+    </div>
+    <div class="canvas-panel">
+      <div class="canvas-label" id="outputLabel">Dithered</div>
+      <canvas id="outputCanvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats" id="stats" style="display:none">
+    <span>Size: <span class="stat-value" id="statSize">-</span></span>
+    <span>Colors: <span class="stat-value" id="statColors">-</span></span>
+    <span>Time: <span class="stat-value" id="statTime">-</span></span>
+    <span>Algorithm: <span class="stat-value" id="statAlgo">-</span></span>
+  </div>
+
+</div>
+
+<!-- Processing overlay -->
+<div class="processing" id="processing">
+  <div class="processing-spinner"></div>
+  <div class="processing-text">Applying dithering...</div>
+</div>
+
+<footer>
+  Dithering Studio &middot; All processing happens locally in your browser &middot; No data is uploaded
+</footer>
+
+<script>
+// === PALETTES ===
+const PALETTES = {
+  'funforrest': {
+    name: 'FunForrest Amber',
+    colors: [
+      [26, 13, 0],     // #1A0D00 deep black-brown
+      [36, 18, 0],     // #241200 bg
+      [74, 46, 16],    // #4A2E10 dark brown
+      [154, 128, 64],  // #9A8040 dim gold
+      [221, 193, 101], // #DDC165 gold
+      [255, 233, 163], // #FFE9A3 light gold
+    ]
+  },
+  'funforrest-extended': {
+    name: 'FunForrest Extended',
+    colors: [
+      [26, 13, 0],
+      [36, 18, 0],
+      [74, 46, 16],
+      [115, 60, 12],   // warm brown
+      [179, 68, 21],   // #B34415 dark orange
+      [229, 89, 28],   // #E5591C orange
+      [154, 128, 64],
+      [221, 193, 101],
+      [255, 233, 163],
+      [255, 255, 220],
+    ]
+  },
+  'ember': {
+    name: 'Ember',
+    colors: [
+      [10, 5, 2],
+      [40, 10, 5],
+      [100, 20, 10],
+      [180, 50, 15],
+      [229, 89, 28],
+      [255, 160, 50],
+      [255, 210, 100],
+      [255, 240, 180],
+    ]
+  },
+  'ocean': {
+    name: 'Deep Ocean',
+    colors: [
+      [5, 10, 20],
+      [10, 25, 50],
+      [15, 50, 80],
+      [30, 90, 120],
+      [50, 140, 160],
+      [100, 200, 200],
+      [180, 230, 230],
+      [230, 250, 250],
+    ]
+  },
+  'terminal': {
+    name: 'Terminal Green',
+    colors: [
+      [0, 5, 0],
+      [0, 20, 0],
+      [0, 50, 5],
+      [0, 100, 10],
+      [10, 160, 20],
+      [30, 220, 50],
+      [120, 255, 130],
+      [200, 255, 210],
+    ]
+  },
+  'bw': {
+    name: 'Black & White',
+    colors: [
+      [0, 0, 0],
+      [255, 255, 255],
+    ]
+  },
+  'gameboy': {
+    name: 'Game Boy',
+    colors: [
+      [15, 56, 15],
+      [48, 98, 48],
+      [139, 172, 15],
+      [155, 188, 15],
+    ]
+  },
+  'cga': {
+    name: 'CGA',
+    colors: [
+      [0, 0, 0],
+      [0, 170, 170],
+      [170, 0, 170],
+      [170, 170, 170],
+    ]
+  },
+};
+
+// === ORDERED DITHER MATRICES ===
+const BAYER4 = [
+  [ 0,  8,  2, 10],
+  [12,  4, 14,  6],
+  [ 3, 11,  1,  9],
+  [15,  7, 13,  5],
+];
+
+const BAYER8 = [
+  [ 0, 48, 12, 60,  3, 51, 15, 63],
+  [32, 16, 44, 28, 35, 19, 47, 31],
+  [ 8, 56,  4, 52, 11, 59,  7, 55],
+  [40, 24, 36, 20, 43, 27, 39, 23],
+  [ 2, 50, 14, 62,  1, 49, 13, 61],
+  [34, 18, 46, 30, 33, 17, 45, 29],
+  [10, 58,  6, 54,  9, 57,  5, 53],
+  [42, 26, 38, 22, 41, 25, 37, 21],
+];
+
+// === STATE ===
+let sourceImage = null;
+let sourceData = null;
+
+// === DOM ===
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const controls = document.getElementById('controls');
+const canvasArea = document.getElementById('canvasArea');
+const originalCanvas = document.getElementById('originalCanvas');
+const outputCanvas = document.getElementById('outputCanvas');
+const originalCtx = originalCanvas.getContext('2d');
+const outputCtx = outputCanvas.getContext('2d');
+const algorithmSelect = document.getElementById('algorithm');
+const paletteSelect = document.getElementById('palette');
+const scaleSlider = document.getElementById('scaleSlider');
+const scaleLabel = document.getElementById('scaleLabel');
+const processBtn = document.getElementById('processBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const resetBtn = document.getElementById('resetBtn');
+const paletteBar = document.getElementById('paletteBar');
+const processingOverlay = document.getElementById('processing');
+const statsDiv = document.getElementById('stats');
+
+// === FILE HANDLING ===
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadImage(e.target.files[0]);
+});
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
+});
+
+function loadImage(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      showEditor();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function showEditor() {
+  dropZone.classList.add('hidden');
+  controls.style.display = 'flex';
+  canvasArea.classList.add('active');
+  paletteBar.style.display = 'flex';
+  statsDiv.style.display = 'flex';
+  drawOriginal();
+  updatePaletteBar();
+  runDither();
+}
+
+function drawOriginal() {
+  const scale = parseFloat(scaleSlider.value);
+  const w = Math.round(sourceImage.width * scale);
+  const h = Math.round(sourceImage.height * scale);
+  originalCanvas.width = w;
+  originalCanvas.height = h;
+  originalCtx.drawImage(sourceImage, 0, 0, w, h);
+  sourceData = originalCtx.getImageData(0, 0, w, h);
+}
+
+// === PALETTE BAR ===
+function updatePaletteBar() {
+  const pal = PALETTES[paletteSelect.value];
+  paletteBar.innerHTML = '<span class="palette-label">Active Palette</span>';
+  pal.colors.forEach(c => {
+    const hex = '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+    const swatch = document.createElement('div');
+    swatch.className = 'palette-swatch';
+    swatch.style.background = hex;
+    swatch.innerHTML = `<span class="tooltip">${hex}</span>`;
+    paletteBar.appendChild(swatch);
+  });
+}
+
+// === NEAREST COLOR ===
+function nearestColor(r, g, b, palette) {
+  let bestDist = Infinity;
+  let best = palette[0];
+  for (let i = 0; i < palette.length; i++) {
+    const pr = palette[i][0], pg = palette[i][1], pb = palette[i][2];
+    // Weighted Euclidean (perceptual)
+    const dr = r - pr, dg = g - pg, db = b - pb;
+    const dist = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = palette[i];
+    }
+  }
+  return best;
+}
+
+// === DITHERING ALGORITHMS ===
+
+function ditherFloydSteinberg(data, w, h, palette) {
+  const pixels = new Float32Array(data.length);
+  for (let i = 0; i < data.length; i++) pixels[i] = data[i];
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      const r = pixels[idx], g = pixels[idx+1], b = pixels[idx+2];
+      const [nr, ng, nb] = nearestColor(r, g, b, palette);
+      data[idx] = nr; data[idx+1] = ng; data[idx+2] = nb;
+      const er = r - nr, eg = g - ng, eb = b - nb;
+
+      if (x + 1 < w) {
+        const i = idx + 4;
+        pixels[i]   += er * 7/16;
+        pixels[i+1] += eg * 7/16;
+        pixels[i+2] += eb * 7/16;
+      }
+      if (y + 1 < h) {
+        if (x > 0) {
+          const i = idx + (w-1)*4;
+          pixels[i]   += er * 3/16;
+          pixels[i+1] += eg * 3/16;
+          pixels[i+2] += eb * 3/16;
+        }
+        {
+          const i = idx + w*4;
+          pixels[i]   += er * 5/16;
+          pixels[i+1] += eg * 5/16;
+          pixels[i+2] += eb * 5/16;
+        }
+        if (x + 1 < w) {
+          const i = idx + (w+1)*4;
+          pixels[i]   += er * 1/16;
+          pixels[i+1] += eg * 1/16;
+          pixels[i+2] += eb * 1/16;
+        }
+      }
+    }
+  }
+}
+
+function ditherAtkinson(data, w, h, palette) {
+  const pixels = new Float32Array(data.length);
+  for (let i = 0; i < data.length; i++) pixels[i] = data[i];
+
+  const offsets = [[1,0],[2,0],[-1,1],[0,1],[1,1],[0,2]];
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      const r = pixels[idx], g = pixels[idx+1], b = pixels[idx+2];
+      const [nr, ng, nb] = nearestColor(r, g, b, palette);
+      data[idx] = nr; data[idx+1] = ng; data[idx+2] = nb;
+      const er = (r - nr) / 8, eg = (g - ng) / 8, eb = (b - nb) / 8;
+
+      for (const [dx, dy] of offsets) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && nx < w && ny < h) {
+          const i = (ny * w + nx) * 4;
+          pixels[i]   += er;
+          pixels[i+1] += eg;
+          pixels[i+2] += eb;
+        }
+      }
+    }
+  }
+}
+
+function ditherStucki(data, w, h, palette) {
+  const pixels = new Float32Array(data.length);
+  for (let i = 0; i < data.length; i++) pixels[i] = data[i];
+
+  const kernel = [
+    [1,0,8],[2,0,4],
+    [-2,1,2],[-1,1,4],[0,1,8],[1,1,4],[2,1,2],
+    [-2,2,1],[-1,2,2],[0,2,4],[1,2,2],[2,2,1],
+  ];
+  const divisor = 42;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      const r = pixels[idx], g = pixels[idx+1], b = pixels[idx+2];
+      const [nr, ng, nb] = nearestColor(r, g, b, palette);
+      data[idx] = nr; data[idx+1] = ng; data[idx+2] = nb;
+      const er = r - nr, eg = g - ng, eb = b - nb;
+
+      for (const [dx, dy, weight] of kernel) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && nx < w && ny < h) {
+          const i = (ny * w + nx) * 4;
+          pixels[i]   += er * weight / divisor;
+          pixels[i+1] += eg * weight / divisor;
+          pixels[i+2] += eb * weight / divisor;
+        }
+      }
+    }
+  }
+}
+
+function ditherBurkes(data, w, h, palette) {
+  const pixels = new Float32Array(data.length);
+  for (let i = 0; i < data.length; i++) pixels[i] = data[i];
+
+  const kernel = [
+    [1,0,8],[2,0,4],
+    [-2,1,2],[-1,1,4],[0,1,8],[1,1,4],[2,1,2],
+  ];
+  const divisor = 32;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      const r = pixels[idx], g = pixels[idx+1], b = pixels[idx+2];
+      const [nr, ng, nb] = nearestColor(r, g, b, palette);
+      data[idx] = nr; data[idx+1] = ng; data[idx+2] = nb;
+      const er = r - nr, eg = g - ng, eb = b - nb;
+
+      for (const [dx, dy, weight] of kernel) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && nx < w && ny < h) {
+          const i = (ny * w + nx) * 4;
+          pixels[i]   += er * weight / divisor;
+          pixels[i+1] += eg * weight / divisor;
+          pixels[i+2] += eb * weight / divisor;
+        }
+      }
+    }
+  }
+}
+
+function ditherSierra(data, w, h, palette) {
+  const pixels = new Float32Array(data.length);
+  for (let i = 0; i < data.length; i++) pixels[i] = data[i];
+
+  const kernel = [
+    [1,0,5],[2,0,3],
+    [-2,1,2],[-1,1,4],[0,1,5],[1,1,4],[2,1,2],
+    [-1,2,2],[0,2,3],[1,2,2],
+  ];
+  const divisor = 32;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      const r = pixels[idx], g = pixels[idx+1], b = pixels[idx+2];
+      const [nr, ng, nb] = nearestColor(r, g, b, palette);
+      data[idx] = nr; data[idx+1] = ng; data[idx+2] = nb;
+      const er = r - nr, eg = g - ng, eb = b - nb;
+
+      for (const [dx, dy, weight] of kernel) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && nx < w && ny < h) {
+          const i = (ny * w + nx) * 4;
+          pixels[i]   += er * weight / divisor;
+          pixels[i+1] += eg * weight / divisor;
+          pixels[i+2] += eb * weight / divisor;
+        }
+      }
+    }
+  }
+}
+
+function ditherOrdered(data, w, h, palette, matrix) {
+  const n = matrix.length;
+  const maxVal = n * n;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      const threshold = (matrix[y % n][x % n] / maxVal - 0.5) * 64;
+      const r = data[idx] + threshold;
+      const g = data[idx+1] + threshold;
+      const b = data[idx+2] + threshold;
+      const [nr, ng, nb] = nearestColor(r, g, b, palette);
+      data[idx] = nr; data[idx+1] = ng; data[idx+2] = nb;
+    }
+  }
+}
+
+function ditherThreshold(data, w, h, palette) {
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      const [nr, ng, nb] = nearestColor(data[idx], data[idx+1], data[idx+2], palette);
+      data[idx] = nr; data[idx+1] = ng; data[idx+2] = nb;
+    }
+  }
+}
+
+// === PROCESS ===
+function runDither() {
+  if (!sourceImage) return;
+
+  const t0 = performance.now();
+
+  drawOriginal();
+  const scale = parseFloat(scaleSlider.value);
+  const w = Math.round(sourceImage.width * scale);
+  const h = Math.round(sourceImage.height * scale);
+  outputCanvas.width = w;
+  outputCanvas.height = h;
+
+  // Copy source data
+  const imgData = outputCtx.createImageData(w, h);
+  imgData.data.set(sourceData.data);
+
+  const palette = PALETTES[paletteSelect.value].colors;
+  const algo = algorithmSelect.value;
+
+  switch (algo) {
+    case 'floyd-steinberg': ditherFloydSteinberg(imgData.data, w, h, palette); break;
+    case 'atkinson': ditherAtkinson(imgData.data, w, h, palette); break;
+    case 'stucki': ditherStucki(imgData.data, w, h, palette); break;
+    case 'burkes': ditherBurkes(imgData.data, w, h, palette); break;
+    case 'sierra': ditherSierra(imgData.data, w, h, palette); break;
+    case 'ordered-4': ditherOrdered(imgData.data, w, h, palette, BAYER4); break;
+    case 'ordered-8': ditherOrdered(imgData.data, w, h, palette, BAYER8); break;
+    case 'threshold': ditherThreshold(imgData.data, w, h, palette); break;
+  }
+
+  outputCtx.putImageData(imgData, 0, 0);
+
+  const elapsed = (performance.now() - t0).toFixed(1);
+  document.getElementById('statSize').textContent = `${w}×${h}`;
+  document.getElementById('statColors').textContent = palette.length;
+  document.getElementById('statTime').textContent = `${elapsed}ms`;
+  document.getElementById('statAlgo').textContent = algorithmSelect.options[algorithmSelect.selectedIndex].text;
+
+  document.getElementById('outputLabel').textContent = `Dithered — ${algorithmSelect.options[algorithmSelect.selectedIndex].text}`;
+
+  downloadBtn.style.display = 'inline-block';
+}
+
+// === EVENT LISTENERS ===
+processBtn.addEventListener('click', () => {
+  processingOverlay.classList.add('active');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      runDither();
+      processingOverlay.classList.remove('active');
+    });
+  });
+});
+
+algorithmSelect.addEventListener('change', () => {
+  if (sourceImage) runDither();
+});
+
+paletteSelect.addEventListener('change', () => {
+  updatePaletteBar();
+  if (sourceImage) runDither();
+});
+
+scaleSlider.addEventListener('input', () => {
+  scaleLabel.textContent = Math.round(parseFloat(scaleSlider.value) * 100) + '%';
+});
+
+scaleSlider.addEventListener('change', () => {
+  if (sourceImage) runDither();
+});
+
+downloadBtn.addEventListener('click', () => {
+  const link = document.createElement('a');
+  const palName = paletteSelect.value;
+  const algoName = algorithmSelect.value;
+  link.download = `dithered-${palName}-${algoName}.png`;
+  link.href = outputCanvas.toDataURL('image/png');
+  link.click();
+});
+
+resetBtn.addEventListener('click', () => {
+  sourceImage = null;
+  sourceData = null;
+  dropZone.classList.remove('hidden');
+  controls.style.display = 'none';
+  canvasArea.classList.remove('active');
+  paletteBar.style.display = 'none';
+  statsDiv.style.display = 'none';
+  downloadBtn.style.display = 'none';
+  fileInput.value = '';
+});
+
+// === KEYBOARD SHORTCUTS ===
+document.addEventListener('keydown', e => {
+  if (e.key === 'd' && !e.ctrlKey && !e.metaKey && sourceImage) {
+    e.preventDefault();
+    downloadBtn.click();
+  }
+  if (e.key === 'r' && !e.ctrlKey && !e.metaKey && sourceImage) {
+    e.preventDefault();
+    resetBtn.click();
+  }
+  if (e.key === 'Enter' && sourceImage) {
+    e.preventDefault();
+    runDither();
+  }
+});
+</script>
+
+</body>
+</html>

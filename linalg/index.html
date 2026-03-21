@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear Algebra Visualizer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #241200;
+    color: #DDC165;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+  }
+
+  /* Sidebar */
+  #sidebar {
+    width: 320px;
+    min-width: 320px;
+    background: #1A0D00;
+    border-right: 1px solid #3A2200;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    z-index: 10;
+  }
+  h1 {
+    font-size: 18px;
+    color: #FFE9A3;
+    text-shadow: 0 0 10px rgba(221,193,101,0.4);
+    letter-spacing: 1px;
+  }
+  h2 {
+    font-size: 13px;
+    color: #E5591C;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .section {
+    background: rgba(36,18,0,0.6);
+    border: 1px solid #3A2200;
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  /* Matrix Input */
+  .matrix-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .matrix-grid input {
+    background: #241200;
+    border: 1px solid #5A3A10;
+    color: #FFE9A3;
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    text-align: center;
+    padding: 8px;
+    border-radius: 4px;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .matrix-grid input:focus {
+    outline: none;
+    border-color: #DDC165;
+    box-shadow: 0 0 8px rgba(221,193,101,0.3);
+  }
+  .matrix-bracket {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .bracket {
+    font-size: 48px;
+    color: #5A3A10;
+    line-height: 1;
+    user-select: none;
+  }
+
+  /* Info Display */
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 13px;
+  }
+  .info-label { color: #8A6A30; }
+  .info-value { color: #FFE9A3; font-weight: bold; }
+  .info-value.positive { color: #5AE55A; }
+  .info-value.negative { color: #E5591C; }
+  .info-value.zero { color: #8A6A30; }
+  .eigen-display {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .eigen-display .lambda { color: #E5591C; }
+  .eigen-display .vec { color: #5AE5E5; }
+
+  /* Presets */
+  .preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .preset-btn {
+    background: #241200;
+    border: 1px solid #5A3A10;
+    color: #DDC165;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    padding: 6px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .preset-btn:hover {
+    border-color: #DDC165;
+    background: #3A2200;
+    box-shadow: 0 0 8px rgba(221,193,101,0.2);
+  }
+  .preset-btn.active {
+    border-color: #E5591C;
+    color: #FFE9A3;
+    box-shadow: 0 0 8px rgba(229,89,28,0.3);
+  }
+
+  /* Controls */
+  .control-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .control-row label {
+    font-size: 12px;
+    color: #8A6A30;
+    min-width: 70px;
+  }
+  .control-row input[type="range"] {
+    flex: 1;
+    accent-color: #E5591C;
+  }
+  .control-row .val {
+    font-size: 12px;
+    color: #DDC165;
+    min-width: 40px;
+    text-align: right;
+  }
+  button.action-btn {
+    background: #E5591C;
+    border: none;
+    color: #FFE9A3;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  button.action-btn:hover {
+    background: #FF7A3C;
+    box-shadow: 0 0 12px rgba(229,89,28,0.4);
+  }
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-row button { flex: 1; }
+  .toggle-group {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .toggle-btn {
+    background: #241200;
+    border: 1px solid #3A2200;
+    color: #8A6A30;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-btn.on {
+    border-color: #DDC165;
+    color: #DDC165;
+    background: rgba(221,193,101,0.1);
+  }
+
+  /* Canvas */
+  #canvas-wrap {
+    flex: 1;
+    position: relative;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  #hint {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #5A3A10;
+    pointer-events: none;
+  }
+
+  @media (max-width: 768px) {
+    body { flex-direction: column; overflow: auto; height: auto; }
+    #sidebar { width: 100%; min-width: unset; max-height: 45vh; overflow-y: auto; border-right: none; border-bottom: 1px solid #3A2200; }
+    #canvas-wrap { min-height: 50vh; }
+  }
+  @media (max-width: 480px) {
+    #sidebar { padding: 12px; gap: 10px; }
+    h1 { font-size: 15px; }
+    .matrix-grid input { font-size: 14px; padding: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h1>LINEAR ALGEBRA<br>VISUALIZER</h1>
+
+  <div class="section">
+    <h2>Matrix A</h2>
+    <div class="matrix-bracket">
+      <span class="bracket">[</span>
+      <div class="matrix-grid">
+        <input type="number" id="m00" value="1" step="0.1">
+        <input type="number" id="m01" value="0" step="0.1">
+        <input type="number" id="m10" value="0" step="0.1">
+        <input type="number" id="m11" value="1" step="0.1">
+      </div>
+      <span class="bracket">]</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Properties</h2>
+    <div class="info-row">
+      <span class="info-label">det(A)</span>
+      <span class="info-value" id="det-val">1</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">trace(A)</span>
+      <span class="info-value" id="trace-val">2</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">rank</span>
+      <span class="info-value" id="rank-val">2</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">type</span>
+      <span class="info-value" id="type-val">Identity</span>
+    </div>
+    <div id="eigen-section" class="eigen-display">
+      <div id="eigen-info"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Presets</h2>
+    <div class="preset-grid" id="preset-grid"></div>
+  </div>
+
+  <div class="section">
+    <h2>Display</h2>
+    <div class="toggle-group">
+      <button class="toggle-btn on" data-toggle="grid">Grid</button>
+      <button class="toggle-btn on" data-toggle="basis">Basis</button>
+      <button class="toggle-btn on" data-toggle="eigen">Eigen</button>
+      <button class="toggle-btn on" data-toggle="det">Det Area</button>
+      <button class="toggle-btn on" data-toggle="unitCircle">Unit Circle</button>
+      <button class="toggle-btn" data-toggle="dots">Dot Grid</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Animation</h2>
+    <div class="control-row">
+      <label>Speed</label>
+      <input type="range" id="speed-slider" min="0.1" max="3" step="0.1" value="1">
+      <span class="val" id="speed-val">1.0×</span>
+    </div>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="action-btn" id="animate-btn">Animate</button>
+      <button class="action-btn" id="reset-btn" style="background:#5A3A10">Reset</button>
+    </div>
+    <div class="btn-row" style="margin-top:6px">
+      <button class="action-btn" id="compose-btn" style="background:#3A2200;font-size:10px">Apply (compose)</button>
+    </div>
+  </div>
+</div>
+
+<div id="canvas-wrap">
+  <canvas id="canvas"></canvas>
+  <div id="hint">Scroll to zoom · Drag to pan · Edit matrix or pick a preset</div>
+</div>
+
+<script>
+// ── State ──
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+let cx, cy; // center in pixels
+let scale = 60; // pixels per unit
+let panX = 0, panY = 0;
+
+// Matrix
+let matrix = [1, 0, 0, 1]; // [a, b, c, d] row-major: [[a,b],[c,d]]
+let animT = 1; // 0 = identity, 1 = full transform
+let animating = false;
+let animDir = 1;
+let animSpeed = 1;
+
+// Current composed transform (for the compose button)
+let composed = [1, 0, 0, 1];
+
+// Display toggles
+const show = { grid: true, basis: true, eigen: true, det: true, unitCircle: true, dots: false };
+
+// ── Presets ──
+const presets = [
+  { name: 'Identity', m: [1,0,0,1] },
+  { name: 'Rotate 45°', m: [Math.cos(Math.PI/4), -Math.sin(Math.PI/4), Math.sin(Math.PI/4), Math.cos(Math.PI/4)] },
+  { name: 'Rotate 90°', m: [0,-1,1,0] },
+  { name: 'Scale 2×', m: [2,0,0,2] },
+  { name: 'Scale X', m: [2,0,0,1] },
+  { name: 'Shear X', m: [1,1,0,1] },
+  { name: 'Shear Y', m: [1,0,1,1] },
+  { name: 'Reflect X', m: [1,0,0,-1] },
+  { name: 'Reflect Y', m: [-1,0,0,1] },
+  { name: 'Reflect y=x', m: [0,1,1,0] },
+  { name: 'Projection X', m: [1,0,0,0] },
+  { name: 'Squeeze', m: [2,0,0,0.5] },
+  { name: 'Spiral', m: [0.8,-0.6,0.6,0.8] },
+  { name: 'Singular', m: [1,2,2,4] },
+];
+
+const presetGrid = document.getElementById('preset-grid');
+presets.forEach((p, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'preset-btn';
+  btn.textContent = p.name;
+  btn.addEventListener('click', () => {
+    setMatrix(p.m);
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+  presetGrid.appendChild(btn);
+});
+
+// ── Matrix Input ──
+const inputs = ['m00','m01','m10','m11'].map(id => document.getElementById(id));
+function readMatrix() {
+  matrix = inputs.map(inp => parseFloat(inp.value) || 0);
+  updateInfo();
+}
+function setMatrix(m) {
+  matrix = [...m];
+  inputs[0].value = round(m[0]); inputs[1].value = round(m[1]);
+  inputs[2].value = round(m[2]); inputs[3].value = round(m[3]);
+  animT = 1;
+  animating = false;
+  updateInfo();
+}
+inputs.forEach(inp => inp.addEventListener('input', () => {
+  readMatrix();
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+}));
+
+function round(v) { return Math.round(v * 1000) / 1000; }
+
+// ── Eigenvalues ──
+function computeEigen(a, b, c, d) {
+  // Characteristic polynomial: λ² - (a+d)λ + (ad-bc) = 0
+  const tr = a + d;
+  const det = a*d - b*c;
+  const disc = tr*tr - 4*det;
+
+  if (disc >= 0) {
+    const sqrtDisc = Math.sqrt(disc);
+    const l1 = (tr + sqrtDisc) / 2;
+    const l2 = (tr - sqrtDisc) / 2;
+
+    // Eigenvectors: (A - λI)v = 0
+    const ev1 = eigenVec(a, b, c, d, l1);
+    const ev2 = eigenVec(a, b, c, d, l2);
+
+    return { real: true, l1, l2, v1: ev1, v2: ev2 };
+  } else {
+    const realPart = tr / 2;
+    const imagPart = Math.sqrt(-disc) / 2;
+    return { real: false, re: realPart, im: imagPart };
+  }
+}
+
+function eigenVec(a, b, c, d, lambda) {
+  // (A - λI)v = 0
+  const r0c0 = a - lambda;
+  const r0c1 = b;
+  const r1c0 = c;
+  const r1c1 = d - lambda;
+
+  if (Math.abs(r0c1) > 1e-10) {
+    return normalize([-r0c1, r0c0]);
+  } else if (Math.abs(r1c1) > 1e-10) {
+    return normalize([-r1c1, r1c0]);
+  } else if (Math.abs(r0c0) > 1e-10) {
+    return [0, 1];
+  } else {
+    return [1, 0];
+  }
+}
+
+function normalize(v) {
+  const len = Math.sqrt(v[0]*v[0] + v[1]*v[1]);
+  if (len < 1e-10) return [1, 0];
+  return [v[0]/len, v[1]/len];
+}
+
+// ── Info ──
+function updateInfo() {
+  const [a, b, c, d] = matrix;
+  const det = a*d - b*c;
+  const tr = a + d;
+
+  const detEl = document.getElementById('det-val');
+  detEl.textContent = round(det);
+  detEl.className = 'info-value ' + (det > 0.001 ? 'positive' : det < -0.001 ? 'negative' : 'zero');
+
+  document.getElementById('trace-val').textContent = round(tr);
+
+  // Rank
+  const rank = Math.abs(det) > 1e-10 ? 2 : (Math.abs(a)+Math.abs(b)+Math.abs(c)+Math.abs(d) > 1e-10 ? 1 : 0);
+  document.getElementById('rank-val').textContent = rank;
+
+  // Type classification
+  let type = [];
+  if (Math.abs(det - 1) < 0.01 && Math.abs(a*a+c*c-1) < 0.01 && Math.abs(b*b+d*d-1) < 0.01) {
+    if (det > 0) type.push('Rotation');
+    else type.push('Reflection');
+  }
+  if (Math.abs(b) < 0.01 && Math.abs(c) < 0.01 && Math.abs(a-d) < 0.01 && Math.abs(a) > 0.01) type.push('Uniform Scale');
+  else if (Math.abs(b) < 0.01 && Math.abs(c) < 0.01) type.push('Diagonal');
+  if ((Math.abs(b) > 0.01 && Math.abs(c) < 0.01) || (Math.abs(c) > 0.01 && Math.abs(b) < 0.01)) type.push('Shear');
+  if (Math.abs(det) < 0.01) type.push('Singular');
+  if (Math.abs(a-1)<0.01 && Math.abs(b)<0.01 && Math.abs(c)<0.01 && Math.abs(d-1)<0.01) type = ['Identity'];
+  document.getElementById('type-val').textContent = type.length ? type.join(', ') : 'General';
+
+  // Eigenvalues
+  const eigen = computeEigen(a, b, c, d);
+  const eigenEl = document.getElementById('eigen-info');
+  if (eigen.real) {
+    let html = `<span class="lambda">λ₁</span> = ${round(eigen.l1)}`;
+    if (eigen.v1) html += `  <span class="vec">v₁</span> = (${round(eigen.v1[0])}, ${round(eigen.v1[1])})`;
+    html += `<br><span class="lambda">λ₂</span> = ${round(eigen.l2)}`;
+    if (eigen.v2) html += `  <span class="vec">v₂</span> = (${round(eigen.v2[0])}, ${round(eigen.v2[1])})`;
+    eigenEl.innerHTML = html;
+  } else {
+    eigenEl.innerHTML = `<span class="lambda">λ</span> = ${round(eigen.re)} ± ${round(eigen.im)}i<br><span style="color:#8A6A30">Complex — rotation component</span>`;
+  }
+}
+
+// ── Toggle buttons ──
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.toggle;
+    show[key] = !show[key];
+    btn.classList.toggle('on');
+  });
+});
+
+// ── Speed ──
+const speedSlider = document.getElementById('speed-slider');
+const speedVal = document.getElementById('speed-val');
+speedSlider.addEventListener('input', () => {
+  animSpeed = parseFloat(speedSlider.value);
+  speedVal.textContent = animSpeed.toFixed(1) + '×';
+});
+
+// ── Buttons ──
+document.getElementById('animate-btn').addEventListener('click', () => {
+  if (animating) {
+    animating = false;
+    return;
+  }
+  animT = 0;
+  animDir = 1;
+  animating = true;
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  setMatrix([1,0,0,1]);
+  composed = [1,0,0,1];
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+});
+
+document.getElementById('compose-btn').addEventListener('click', () => {
+  // Apply current matrix to the composed transform
+  const [a,b,c,d] = matrix;
+  const [e,f,g,h] = composed;
+  composed = [
+    a*e + b*g, a*f + b*h,
+    c*e + d*g, c*f + d*h
+  ];
+});
+
+// ── Canvas resize ──
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const wrap = document.getElementById('canvas-wrap');
+  W = wrap.clientWidth;
+  H = wrap.clientHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cx = W / 2 + panX;
+  cy = H / 2 + panY;
+}
+window.addEventListener('resize', resize);
+
+// ── Pan & Zoom ──
+let dragging = false, dragStart = [0,0], panStart = [0,0];
+
+canvas.addEventListener('mousedown', e => {
+  dragging = true;
+  dragStart = [e.clientX, e.clientY];
+  panStart = [panX, panY];
+});
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  panX = panStart[0] + (e.clientX - dragStart[0]);
+  panY = panStart[1] + (e.clientY - dragStart[1]);
+  cx = W / 2 + panX;
+  cy = H / 2 + panY;
+});
+window.addEventListener('mouseup', () => dragging = false);
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY > 0 ? 0.9 : 1.1;
+  scale *= factor;
+  scale = Math.max(10, Math.min(300, scale));
+}, { passive: false });
+
+// Touch support
+let lastTouchDist = 0;
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    dragging = true;
+    dragStart = [e.touches[0].clientX, e.touches[0].clientY];
+    panStart = [panX, panY];
+  } else if (e.touches.length === 2) {
+    lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+  }
+  e.preventDefault();
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 1 && dragging) {
+    panX = panStart[0] + (e.touches[0].clientX - dragStart[0]);
+    panY = panStart[1] + (e.touches[0].clientY - dragStart[1]);
+    cx = W / 2 + panX;
+    cy = H / 2 + panY;
+  } else if (e.touches.length === 2) {
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    scale *= d / lastTouchDist;
+    scale = Math.max(10, Math.min(300, scale));
+    lastTouchDist = d;
+  }
+  e.preventDefault();
+}, { passive: false });
+canvas.addEventListener('touchend', () => dragging = false);
+
+// ── Transform helpers ──
+function toScreen(x, y) {
+  return [cx + x * scale, cy - y * scale];
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function lerpMatrix(t) {
+  // Interpolate from identity to matrix
+  return [
+    lerp(1, matrix[0], t),
+    lerp(0, matrix[1], t),
+    lerp(0, matrix[2], t),
+    lerp(1, matrix[3], t)
+  ];
+}
+
+function applyMatrix(m, x, y) {
+  return [m[0]*x + m[1]*y, m[2]*x + m[3]*y];
+}
+
+// ── Draw ──
+function drawGridLines(m, alpha, color, lineWidth) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.globalAlpha = alpha;
+
+  const range = Math.ceil(Math.max(W, H) / scale) + 2;
+
+  // Vertical lines (constant x)
+  for (let i = -range; i <= range; i++) {
+    const [x1, y1] = applyMatrix(m, i, -range);
+    const [x2, y2] = applyMatrix(m, i, range);
+    const [sx1, sy1] = toScreen(x1, y1);
+    const [sx2, sy2] = toScreen(x2, y2);
+    ctx.beginPath();
+    ctx.moveTo(sx1, sy1);
+    ctx.lineTo(sx2, sy2);
+    ctx.stroke();
+  }
+
+  // Horizontal lines (constant y)
+  for (let i = -range; i <= range; i++) {
+    const [x1, y1] = applyMatrix(m, -range, i);
+    const [x2, y2] = applyMatrix(m, range, i);
+    const [sx1, sy1] = toScreen(x1, y1);
+    const [sx2, sy2] = toScreen(x2, y2);
+    ctx.beginPath();
+    ctx.moveTo(sx1, sy1);
+    ctx.lineTo(sx2, sy2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawDotGrid(m, alpha) {
+  ctx.globalAlpha = alpha;
+  const range = Math.ceil(Math.max(W, H) / scale) + 2;
+  for (let i = -range; i <= range; i++) {
+    for (let j = -range; j <= range; j++) {
+      const [x, y] = applyMatrix(m, i, j);
+      const [sx, sy] = toScreen(x, y);
+      if (sx < -10 || sx > W+10 || sy < -10 || sy > H+10) continue;
+      const r = (i === 0 && j === 0) ? 4 : 2;
+      ctx.fillStyle = (i === 0 && j === 0) ? '#FFE9A3' : '#DDC165';
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawArrow(x1, y1, x2, y2, color, width, headSize) {
+  const [sx1, sy1] = toScreen(x1, y1);
+  const [sx2, sy2] = toScreen(x2, y2);
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(sx1, sy1);
+  ctx.lineTo(sx2, sy2);
+  ctx.stroke();
+
+  // Arrowhead
+  const angle = Math.atan2(sy2 - sy1, sx2 - sx1);
+  ctx.beginPath();
+  ctx.moveTo(sx2, sy2);
+  ctx.lineTo(sx2 - headSize * Math.cos(angle - 0.4), sy2 - headSize * Math.sin(angle - 0.4));
+  ctx.lineTo(sx2 - headSize * Math.cos(angle + 0.4), sy2 - headSize * Math.sin(angle + 0.4));
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawUnitCircle(m, color, alpha) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = alpha;
+
+  const steps = 120;
+  ctx.beginPath();
+  for (let i = 0; i <= steps; i++) {
+    const theta = (i / steps) * Math.PI * 2;
+    const ux = Math.cos(theta);
+    const uy = Math.sin(theta);
+    const [tx, ty] = applyMatrix(m, ux, uy);
+    const [sx, sy] = toScreen(tx, ty);
+    if (i === 0) ctx.moveTo(sx, sy);
+    else ctx.lineTo(sx, sy);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawDetArea(m) {
+  const [a, b, c, d] = m;
+  const det = a*d - b*c;
+  if (Math.abs(det) < 0.001) return;
+
+  // Draw parallelogram formed by e1, e2 transformed
+  const [e1x, e1y] = applyMatrix(m, 1, 0);
+  const [e2x, e2y] = applyMatrix(m, 0, 1);
+
+  const [s0x, s0y] = toScreen(0, 0);
+  const [s1x, s1y] = toScreen(e1x, e1y);
+  const [s2x, s2y] = toScreen(e1x + e2x, e1y + e2y);
+  const [s3x, s3y] = toScreen(e2x, e2y);
+
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = det > 0 ? '#5AE55A' : '#E5591C';
+  ctx.beginPath();
+  ctx.moveTo(s0x, s0y);
+  ctx.lineTo(s1x, s1y);
+  ctx.lineTo(s2x, s2y);
+  ctx.lineTo(s3x, s3y);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.globalAlpha = 0.6;
+  ctx.strokeStyle = det > 0 ? '#5AE55A' : '#E5591C';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Label
+  ctx.globalAlpha = 0.8;
+  ctx.font = '12px Courier New';
+  ctx.fillStyle = det > 0 ? '#5AE55A' : '#E5591C';
+  const labelX = (s0x + s2x) / 2;
+  const labelY = (s0y + s2y) / 2;
+  ctx.fillText(`det = ${round(det)}`, labelX + 5, labelY - 5);
+
+  ctx.globalAlpha = 1;
+}
+
+function drawEigenVectors(m) {
+  const [a, b, c, d] = m;
+  const eigen = computeEigen(a, b, c, d);
+  if (!eigen.real) return;
+
+  const colors = ['#5AE5E5', '#E55AE5'];
+  const lambdas = [eigen.l1, eigen.l2];
+  const vecs = [eigen.v1, eigen.v2];
+
+  for (let i = 0; i < 2; i++) {
+    if (!vecs[i]) continue;
+    const [vx, vy] = vecs[i];
+    const lambda = lambdas[i];
+
+    // Draw eigenvector direction (long line)
+    const extent = 20;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = colors[i];
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.3;
+    const [sx1, sy1] = toScreen(-vx * extent, -vy * extent);
+    const [sx2, sy2] = toScreen(vx * extent, vy * extent);
+    ctx.beginPath();
+    ctx.moveTo(sx1, sy1);
+    ctx.lineTo(sx2, sy2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // Draw the eigenvector arrow (pre-transform)
+    drawArrow(0, 0, vx, vy, colors[i], 2.5, 10);
+
+    // Draw where it maps to (scaled by eigenvalue)
+    if (Math.abs(lambda) > 0.01) {
+      ctx.globalAlpha = 0.5;
+      drawArrow(0, 0, vx * lambda, vy * lambda, colors[i], 1.5, 8);
+      ctx.globalAlpha = 1;
+
+      // Label
+      const [lsx, lsy] = toScreen(vx * lambda, vy * lambda);
+      ctx.font = '11px Courier New';
+      ctx.fillStyle = colors[i];
+      ctx.fillText(`λ=${round(lambda)}`, lsx + 8, lsy - 5);
+    }
+  }
+}
+
+function drawAxes() {
+  // Subtle axis lines
+  ctx.strokeStyle = '#5A3A10';
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
+
+  // X axis
+  ctx.beginPath();
+  ctx.moveTo(0, cy);
+  ctx.lineTo(W, cy);
+  ctx.stroke();
+
+  // Y axis
+  ctx.beginPath();
+  ctx.moveTo(cx, 0);
+  ctx.lineTo(cx, H);
+  ctx.stroke();
+
+  // Tick marks
+  ctx.globalAlpha = 0.3;
+  ctx.font = '10px Courier New';
+  ctx.fillStyle = '#5A3A10';
+  const range = Math.ceil(Math.max(W, H) / scale) + 1;
+  for (let i = -range; i <= range; i++) {
+    if (i === 0) continue;
+    const [sx, sy] = toScreen(i, 0);
+    if (sx > 10 && sx < W - 10) {
+      ctx.beginPath();
+      ctx.moveTo(sx, cy - 3);
+      ctx.lineTo(sx, cy + 3);
+      ctx.stroke();
+      ctx.fillText(i, sx - 4, cy + 14);
+    }
+    const [sx2, sy2] = toScreen(0, i);
+    if (sy2 > 10 && sy2 < H - 10) {
+      ctx.beginPath();
+      ctx.moveTo(cx - 3, sy2);
+      ctx.lineTo(cx + 3, sy2);
+      ctx.stroke();
+      ctx.fillText(i, cx + 6, sy2 + 4);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Main Loop ──
+let lastTime = 0;
+function frame(time) {
+  const dt = Math.min((time - lastTime) / 1000, 0.05);
+  lastTime = time;
+
+  // Animation
+  if (animating) {
+    animT += dt * animSpeed * animDir;
+    if (animT >= 1) { animT = 1; animDir = -1; }
+    if (animT <= 0) { animT = 0; animDir = 1; }
+  }
+
+  const currentM = lerpMatrix(animT);
+
+  // Clear
+  ctx.fillStyle = '#241200';
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle vignette
+  const grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H) * 0.7);
+  grad.addColorStop(0, 'transparent');
+  grad.addColorStop(1, 'rgba(0,0,0,0.4)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw axes
+  drawAxes();
+
+  // Original grid (ghost)
+  if (show.grid && animT < 1) {
+    drawGridLines([1,0,0,1], 0.08, '#5A3A10', 0.5);
+  }
+
+  // Transformed grid
+  if (show.grid) {
+    drawGridLines(currentM, 0.25, '#DDC165', 0.8);
+  }
+
+  // Dot grid
+  if (show.dots) {
+    if (animT < 1) drawDotGrid([1,0,0,1], 0.15);
+    drawDotGrid(currentM, 0.7);
+  }
+
+  // Unit circle
+  if (show.unitCircle) {
+    if (animT < 1) drawUnitCircle([1,0,0,1], '#5A3A10', 0.15);
+    drawUnitCircle(currentM, '#DDC165', 0.5);
+  }
+
+  // Determinant area
+  if (show.det) {
+    drawDetArea(currentM);
+  }
+
+  // Basis vectors (original ghost)
+  if (show.basis && animT < 1) {
+    ctx.globalAlpha = 0.2;
+    drawArrow(0, 0, 1, 0, '#E5591C', 2, 8);
+    drawArrow(0, 0, 0, 1, '#5AE55A', 2, 8);
+    ctx.globalAlpha = 1;
+  }
+
+  // Basis vectors (transformed)
+  if (show.basis) {
+    const [e1x, e1y] = applyMatrix(currentM, 1, 0);
+    const [e2x, e2y] = applyMatrix(currentM, 0, 1);
+
+    // Glow
+    ctx.shadowColor = '#E5591C';
+    ctx.shadowBlur = 12;
+    drawArrow(0, 0, e1x, e1y, '#E5591C', 3, 12);
+    ctx.shadowColor = '#5AE55A';
+    drawArrow(0, 0, e2x, e2y, '#5AE55A', 3, 12);
+    ctx.shadowBlur = 0;
+
+    // Labels
+    const [ls1x, ls1y] = toScreen(e1x, e1y);
+    const [ls2x, ls2y] = toScreen(e2x, e2y);
+    ctx.font = 'bold 13px Courier New';
+    ctx.fillStyle = '#E5591C';
+    ctx.fillText('e₁', ls1x + 8, ls1y - 8);
+    ctx.fillStyle = '#5AE55A';
+    ctx.fillText('e₂', ls2x + 8, ls2y - 8);
+  }
+
+  // Eigenvectors
+  if (show.eigen && animT >= 0.99) {
+    drawEigenVectors(matrix);
+  }
+
+  // Origin glow
+  const [ox, oy] = toScreen(0, 0);
+  ctx.shadowColor = '#FFE9A3';
+  ctx.shadowBlur = 15;
+  ctx.fillStyle = '#FFE9A3';
+  ctx.beginPath();
+  ctx.arc(ox, oy, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  requestAnimationFrame(frame);
+}
+
+// ── Init ──
+resize();
+updateInfo();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

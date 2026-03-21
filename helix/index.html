@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Temporal Helix</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #241200;
+    color: #DDC165;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  #canvas-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+
+  canvas { display: block; }
+
+  #controls {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 270px;
+    background: rgba(26, 13, 0, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(221, 193, 101, 0.15);
+    border-radius: 12px;
+    padding: 18px;
+    z-index: 10;
+    font-size: 13px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(221,193,101,0.2) transparent;
+  }
+
+  #controls::-webkit-scrollbar { width: 4px; }
+  #controls::-webkit-scrollbar-track { background: transparent; }
+  #controls::-webkit-scrollbar-thumb { background: rgba(221,193,101,0.2); border-radius: 2px; }
+
+  #controls h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+    color: #FFE9A3;
+  }
+
+  .subtitle {
+    font-size: 10px;
+    color: rgba(221, 193, 101, 0.45);
+    margin-bottom: 14px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: rgba(221, 193, 101, 0.35);
+    margin: 14px 0 8px;
+    border-top: 1px solid rgba(221,193,101,0.08);
+    padding-top: 10px;
+  }
+
+  .control-group {
+    margin-bottom: 10px;
+  }
+
+  .control-group label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: rgba(221, 193, 101, 0.55);
+    margin-bottom: 4px;
+  }
+
+  .control-group label .val {
+    color: #DDC165;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+  }
+
+  .control-group select,
+  .control-group input[type="file"] {
+    width: 100%;
+    background: rgba(36, 18, 0, 0.8);
+    border: 1px solid rgba(221, 193, 101, 0.2);
+    border-radius: 6px;
+    color: #DDC165;
+    padding: 6px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .control-group select option {
+    background: #1A0D00;
+    color: #DDC165;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(221, 193, 101, 0.15);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #DDC165;
+    cursor: pointer;
+    border: 2px solid #241200;
+  }
+
+  .btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 6px;
+  }
+
+  .btn {
+    flex: 1;
+    min-width: 55px;
+    padding: 6px 4px;
+    background: rgba(221, 193, 101, 0.08);
+    border: 1px solid rgba(221, 193, 101, 0.2);
+    border-radius: 6px;
+    color: #DDC165;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn:hover {
+    background: rgba(221, 193, 101, 0.15);
+    border-color: rgba(221, 193, 101, 0.4);
+  }
+
+  .btn.active {
+    background: rgba(229, 89, 28, 0.25);
+    border-color: #E5591C;
+    color: #FFE9A3;
+  }
+
+  #tooltip {
+    position: fixed;
+    display: none;
+    background: rgba(26, 13, 0, 0.95);
+    border: 1px solid rgba(221, 193, 101, 0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #FFE9A3;
+    pointer-events: none;
+    z-index: 20;
+    white-space: nowrap;
+  }
+
+  #tooltip .tt-date { color: rgba(221,193,101,0.6); font-size: 10px; }
+  #tooltip .tt-val { font-size: 13px; margin-top: 2px; }
+
+  .tray-tab { display: none; }
+
+  @media (max-width: 768px) {
+    #controls {
+      position: fixed;
+      bottom: 0; left: 0; right: 0; top: auto;
+      width: 100%; max-height: 55vh;
+      border-radius: 0;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      z-index: 100;
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+    #controls.tray-open {
+      transform: translateY(0);
+    }
+    .tray-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: fixed;
+      bottom: 0;
+      right: 16px;
+      z-index: 101;
+      background: rgba(26,13,0,0.95);
+      border: 1px solid rgba(221,193,101,0.25);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      padding: 7px 14px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: bottom 0.3s ease;
+      font-family: inherit;
+    }
+    .tray-tab-label {
+      font-size: 11px;
+      color: rgba(221,193,101,0.7);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .tray-tab-chevron {
+      font-size: 10px;
+      color: rgba(221,193,101,0.5);
+      transition: transform 0.3s ease;
+      line-height: 1;
+    }
+    .tray-tab.tab-active .tray-tab-chevron {
+      transform: rotate(180deg);
+    }
+  }
+
+  @media (max-width: 480px) {
+    #controls {
+      padding: 12px;
+      padding-bottom: 16px;
+    }
+    #controls h1 { font-size: 13px; }
+    .section-label { font-size: 9px; margin: 10px 0 6px; }
+    .control-group label { font-size: 10px; }
+    .control-group select { font-size: 10px; padding: 5px 6px; }
+    .btn { font-size: 9px; padding: 5px 3px; }
+    .subtitle { font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<div id="controls">
+  <h1>TEMPORAL HELIX</h1>
+  <div class="subtitle">time series on a spiral</div>
+
+  <div class="section-label">Dataset</div>
+  <div class="btn-row" id="dataset-btns">
+    <button class="btn active" data-ds="temperature">Temp</button>
+    <button class="btn" data-ds="stock">Stock</button>
+    <button class="btn" data-ds="traffic">Traffic</button>
+    <button class="btn" data-ds="ecg">ECG</button>
+  </div>
+  <div class="control-group">
+    <label>CSV Upload</label>
+    <input type="file" id="csv-upload" accept=".csv">
+  </div>
+
+  <div class="section-label">Camera</div>
+  <div class="btn-row" id="camera-btns">
+    <button class="btn active" data-cam="side">Side</button>
+    <button class="btn" data-cam="top">Top</button>
+    <button class="btn" data-cam="through">Through</button>
+    <button class="btn" data-cam="free">Free</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn" id="btn-rotate">Auto-Rotate</button>
+    <button class="btn" id="btn-save">Save PNG</button>
+  </div>
+
+  <div class="section-label">Helix Shape</div>
+  <div class="control-group">
+    <label>Radius <span class="val" id="v-radius">3.0</span></label>
+    <input type="range" id="s-radius" min="0.5" max="8" step="0.1" value="3">
+  </div>
+  <div class="control-group">
+    <label>Pitch <span class="val" id="v-pitch">1.5</span></label>
+    <input type="range" id="s-pitch" min="0.2" max="5" step="0.1" value="1.5">
+  </div>
+  <div class="control-group">
+    <label>Line Width <span class="val" id="v-linewidth">2.0</span></label>
+    <input type="range" id="s-linewidth" min="0.5" max="6" step="0.1" value="2">
+  </div>
+  <div class="control-group">
+    <label>Smoothing <span class="val" id="v-smooth">5</span></label>
+    <input type="range" id="s-smooth" min="0" max="20" step="1" value="5">
+  </div>
+  <div class="control-group">
+    <label>Data Thickness <span class="val" id="v-thickness">1.0</span></label>
+    <input type="range" id="s-thickness" min="0.1" max="3" step="0.1" value="1">
+  </div>
+
+  <div class="section-label">Effects</div>
+  <div class="control-group">
+    <label>Glow <span class="val" id="v-glow">0.8</span></label>
+    <input type="range" id="s-glow" min="0" max="3" step="0.05" value="0.8">
+  </div>
+  <div class="control-group">
+    <label>Cycle Period</label>
+    <select id="s-cycle">
+      <option value="365">Year (365 days)</option>
+      <option value="30">Month (30 days)</option>
+      <option value="7">Week (7 days)</option>
+      <option value="1">Day</option>
+    </select>
+  </div>
+</div>
+
+<div id="tooltip">
+  <div class="tt-date" id="tt-date"></div>
+  <div class="tt-val" id="tt-val"></div>
+</div>
+
+<!-- Three.js r128 — regular script tags, no modules -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<!-- Shaders and dependencies loaded BEFORE passes -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── Preset Datasets ──────────────────────────────────────
+
+  function generateTemperature() {
+    const data = [];
+    const start = new Date('2020-01-01');
+    for (let i = 0; i < 1095; i++) {
+      const d = new Date(start.getTime() + i * 86400000);
+      const season = Math.sin((i / 365) * Math.PI * 2 - Math.PI / 2) * 15;
+      const daily = Math.sin((i / 7) * Math.PI * 2) * 2;
+      const noise = (Math.random() - 0.5) * 4;
+      data.push({ date: new Date(d), value: 15 + season + daily + noise });
+    }
+    return data;
+  }
+
+  function generateStock() {
+    const data = [];
+    const start = new Date('2021-01-01');
+    let price = 100;
+    for (let i = 0; i < 730; i++) {
+      const d = new Date(start.getTime() + i * 86400000);
+      const trend = 0.05;
+      const cycle = Math.sin((i / 365) * Math.PI * 2) * 8;
+      const noise = (Math.random() - 0.5) * 5;
+      price += trend + noise * 0.5;
+      data.push({ date: new Date(d), value: price + cycle });
+    }
+    return data;
+  }
+
+  function generateTraffic() {
+    const data = [];
+    const start = new Date('2022-01-01');
+    for (let i = 0; i < 730; i++) {
+      const d = new Date(start.getTime() + i * 86400000);
+      const weekly = Math.sin((i / 7) * Math.PI * 2) * 300;
+      const yearly = Math.sin((i / 365) * Math.PI * 2) * 500;
+      const base = 2000;
+      const noise = (Math.random() - 0.5) * 200;
+      data.push({ date: new Date(d), value: base + weekly + yearly + noise });
+    }
+    return data;
+  }
+
+  function generateECG() {
+    const data = [];
+    const start = new Date('2024-01-01T00:00:00');
+    for (let i = 0; i < 2000; i++) {
+      const d = new Date(start.getTime() + i * 5); // 5ms per sample
+      const t = (i % 200) / 200;
+      let v = 0;
+      // P wave
+      if (t > 0.05 && t < 0.15) v = 0.15 * Math.sin((t - 0.05) / 0.1 * Math.PI);
+      // QRS complex
+      if (t > 0.2 && t < 0.22) v = -0.2 * Math.sin((t - 0.2) / 0.02 * Math.PI);
+      if (t > 0.22 && t < 0.28) v = 1.0 * Math.sin((t - 0.22) / 0.06 * Math.PI);
+      if (t > 0.28 && t < 0.31) v = -0.3 * Math.sin((t - 0.28) / 0.03 * Math.PI);
+      // T wave
+      if (t > 0.35 && t < 0.5) v = 0.25 * Math.sin((t - 0.35) / 0.15 * Math.PI);
+      v += (Math.random() - 0.5) * 0.03;
+      data.push({ date: new Date(d), value: v });
+    }
+    return data;
+  }
+
+  const presets = {
+    temperature: generateTemperature,
+    stock: generateStock,
+    traffic: generateTraffic,
+    ecg: generateECG
+  };
+
+  // ── State ──────────────────────────────────────────────
+
+  let currentData = [];
+  let helixMesh = null;
+  let ringMarkers = null;
+  let gridGroup = null;
+  let particleSystem = null;
+  let dataPoints = []; // for raycasting tooltip
+
+  // ── Three.js Setup ────────────────────────────────────
+
+  const container = document.getElementById('canvas-container');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x241200);
+  scene.fog = new THREE.FogExp2(0x241200, 0.02);
+
+  const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(8, 5, 8);
+
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    preserveDrawingBuffer: true
+  });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  container.appendChild(renderer.domElement);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.autoRotate = false;
+  controls.autoRotateSpeed = 1.0;
+
+  // ── Post-processing ───────────────────────────────────
+
+  const composer = new THREE.EffectComposer(renderer);
+  const renderPass = new THREE.RenderPass(scene, camera);
+  composer.addPass(renderPass);
+
+  const bloomPass = new THREE.UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    0.8, 0.4, 0.85
+  );
+  composer.addPass(bloomPass);
+
+  // ── Lighting ──────────────────────────────────────────
+
+  const ambient = new THREE.AmbientLight(0xDDC165, 0.3);
+  scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0xFFE9A3, 0.6);
+  dirLight.position.set(5, 10, 5);
+  scene.add(dirLight);
+
+  // ── Particles ─────────────────────────────────────────
+
+  function createParticles() {
+    if (particleSystem) scene.remove(particleSystem);
+    const count = 400;
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 40;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 30;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 40;
+      const gold = new THREE.Color(0xDDC165);
+      colors[i * 3] = gold.r;
+      colors[i * 3 + 1] = gold.g;
+      colors[i * 3 + 2] = gold.b;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const mat = new THREE.PointsMaterial({
+      size: 0.06,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.4,
+      sizeAttenuation: true
+    });
+    particleSystem = new THREE.Points(geo, mat);
+    scene.add(particleSystem);
+  }
+  createParticles();
+
+  // ── Grid & Axis ───────────────────────────────────────
+
+  function createGrid() {
+    if (gridGroup) scene.remove(gridGroup);
+    gridGroup = new THREE.Group();
+
+    // ground grid
+    const gridHelper = new THREE.GridHelper(20, 20, 0x3A2200, 0x2A1600);
+    gridHelper.position.y = -6;
+    gridHelper.material.opacity = 0.3;
+    gridHelper.material.transparent = true;
+    gridGroup.add(gridHelper);
+
+    // vertical axis line
+    const axisGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -6, 0),
+      new THREE.Vector3(0, 20, 0)
+    ]);
+    const axisMat = new THREE.LineBasicMaterial({
+      color: 0xDDC165,
+      transparent: true,
+      opacity: 0.12
+    });
+    gridGroup.add(new THREE.Line(axisGeo, axisMat));
+
+    scene.add(gridGroup);
+  }
+  createGrid();
+
+  // ── Smoothing ─────────────────────────────────────────
+
+  function smooth(values, window) {
+    if (window < 1) return values.slice();
+    const result = [];
+    for (let i = 0; i < values.length; i++) {
+      let sum = 0, count = 0;
+      for (let j = Math.max(0, i - window); j <= Math.min(values.length - 1, i + window); j++) {
+        sum += values[j];
+        count++;
+      }
+      result.push(sum / count);
+    }
+    return result;
+  }
+
+  // ── Color mapping ─────────────────────────────────────
+
+  function valueToColor(t) {
+    // t: 0 (low/blue) → 0.5 (gold) → 1.0 (orange)
+    const blue = new THREE.Color(0x2266AA);
+    const gold = new THREE.Color(0xDDC165);
+    const orange = new THREE.Color(0xE5591C);
+    if (t < 0.5) {
+      return blue.clone().lerp(gold, t * 2);
+    } else {
+      return gold.clone().lerp(orange, (t - 0.5) * 2);
+    }
+  }
+
+  // ── Build Helix (THE ONE build function) ──────────────
+
+  function buildHelix() {
+    // Remove old objects
+    if (helixMesh) {
+      scene.remove(helixMesh);
+      helixMesh = null;
+    }
+    if (ringMarkers) {
+      scene.remove(ringMarkers);
+      ringMarkers = null;
+    }
+
+    if (currentData.length === 0) return;
+
+    // Read controls
+    const radius = parseFloat(document.getElementById('s-radius').value);
+    const pitch = parseFloat(document.getElementById('s-pitch').value);
+    const smoothWindow = parseInt(document.getElementById('s-smooth').value);
+    const thickness = parseFloat(document.getElementById('s-thickness').value);
+    const cyclePeriod = parseInt(document.getElementById('s-cycle').value);
+
+    // Extract and smooth values
+    const rawValues = currentData.map(d => d.value);
+    const smoothed = smooth(rawValues, smoothWindow);
+
+    const minVal = Math.min(...smoothed);
+    const maxVal = Math.max(...smoothed);
+    const range = maxVal - minVal || 1;
+
+    // Build helix points and colors
+    const positions = [];
+    const colors = [];
+    dataPoints = [];
+
+    const totalCycles = currentData.length / cyclePeriod;
+
+    for (let i = 0; i < smoothed.length; i++) {
+      const fraction = i / currentData.length;
+      const angle = (i / cyclePeriod) * Math.PI * 2;
+      const y = (i / cyclePeriod) * pitch;
+
+      const norm = (smoothed[i] - minVal) / range;
+      const r = radius + (norm - 0.5) * thickness * 2;
+
+      const x = Math.cos(angle) * r;
+      const z = Math.sin(angle) * r;
+
+      positions.push(x, y, z);
+
+      const col = valueToColor(norm);
+      colors.push(col.r, col.g, col.b);
+
+      dataPoints.push({
+        pos: new THREE.Vector3(x, y, z),
+        date: currentData[i].date,
+        value: currentData[i].value,
+        smoothedValue: smoothed[i]
+      });
+    }
+
+    // Create line geometry
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+    const material = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      linewidth: 1 // WebGL limitation — actual width controlled by tube below
+    });
+
+    // For thicker lines, use a tube
+    const lineWidth = parseFloat(document.getElementById('s-linewidth').value);
+    if (lineWidth > 1.5) {
+      // Build a CatmullRom curve from points
+      const curvePoints = [];
+      for (let i = 0; i < positions.length; i += 3) {
+        curvePoints.push(new THREE.Vector3(positions[i], positions[i+1], positions[i+2]));
+      }
+      // Downsample for performance if needed
+      const step = Math.max(1, Math.floor(curvePoints.length / 2000));
+      const sampledPoints = [];
+      for (let i = 0; i < curvePoints.length; i += step) {
+        sampledPoints.push(curvePoints[i]);
+      }
+      if (sampledPoints.length > 1) {
+        const curve = new THREE.CatmullRomCurve3(sampledPoints);
+        const tubeGeo = new THREE.TubeGeometry(curve, sampledPoints.length * 2, lineWidth * 0.02, 6, false);
+
+        // Apply vertex colors to tube
+        const tubeColors = new Float32Array(tubeGeo.attributes.position.count * 3);
+        for (let i = 0; i < tubeGeo.attributes.position.count; i++) {
+          const pos = new THREE.Vector3().fromBufferAttribute(tubeGeo.attributes.position, i);
+          // Find nearest curve point for color
+          let bestT = 0;
+          let bestDist = Infinity;
+          const testSteps = 200;
+          for (let t = 0; t <= testSteps; t++) {
+            const frac = t / testSteps;
+            const cp = curve.getPoint(frac);
+            const dist = pos.distanceTo(cp);
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestT = frac;
+            }
+          }
+          const dataIdx = Math.floor(bestT * (smoothed.length - 1));
+          const norm = (smoothed[dataIdx] - minVal) / range;
+          const col = valueToColor(norm);
+          tubeColors[i * 3] = col.r;
+          tubeColors[i * 3 + 1] = col.g;
+          tubeColors[i * 3 + 2] = col.b;
+        }
+        tubeGeo.setAttribute('color', new THREE.BufferAttribute(tubeColors, 3));
+
+        const tubeMat = new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          emissive: new THREE.Color(0xDDC165),
+          emissiveIntensity: 0.15,
+          roughness: 0.5,
+          metalness: 0.2
+        });
+        helixMesh = new THREE.Mesh(tubeGeo, tubeMat);
+      }
+    }
+
+    if (!helixMesh) {
+      helixMesh = new THREE.Line(geometry, material);
+    }
+
+    scene.add(helixMesh);
+
+    // ── Ring markers (year/cycle boundaries) ──────────
+
+    ringMarkers = new THREE.Group();
+    const numCycles = Math.ceil(currentData.length / cyclePeriod);
+    for (let c = 0; c <= numCycles; c++) {
+      const y = c * pitch;
+      const ringGeo = new THREE.RingGeometry(radius - 0.15, radius + 0.15, 64);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0xDDC165,
+        transparent: true,
+        opacity: 0.12,
+        side: THREE.DoubleSide
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = y;
+      ringMarkers.add(ring);
+
+      // Label
+      if (c < numCycles && currentData[c * cyclePeriod]) {
+        const d = currentData[c * cyclePeriod].date;
+        const label = formatDateShort(d);
+        const sprite = makeTextSprite(label);
+        sprite.position.set(radius + 0.8, y, 0);
+        sprite.scale.set(1.5, 0.5, 1);
+        ringMarkers.add(sprite);
+      }
+    }
+    scene.add(ringMarkers);
+
+    // Center camera vertically
+    const midY = (numCycles * pitch) / 2;
+    controls.target.set(0, midY, 0);
+    controls.update();
+  }
+
+  function formatDateShort(d) {
+    if (!(d instanceof Date) || isNaN(d.getTime())) return '—';
+    const ms = d.getTime();
+    // If dates are very close together (sub-second data like ECG), show time
+    if (currentData.length > 1) {
+      const span = currentData[currentData.length-1].date.getTime() - currentData[0].date.getTime();
+      if (span < 86400000) { // less than a day
+        return d.toLocaleTimeString();
+      }
+    }
+    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  }
+
+  function makeTextSprite(text) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.font = '28px JetBrains Mono, monospace';
+    ctx.fillStyle = 'rgba(221, 193, 101, 0.5)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 128, 32);
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    return new THREE.Sprite(mat);
+  }
+
+  // ── Load Dataset ──────────────────────────────────────
+
+  function loadDataset(name) {
+    if (presets[name]) {
+      currentData = presets[name]();
+      buildHelix();
+    }
+  }
+
+  // ── CSV Parsing ───────────────────────────────────────
+
+  function parseCSV(text) {
+    const lines = text.trim().split('\n');
+    const data = [];
+    // Skip header
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(',');
+      if (parts.length >= 2) {
+        const date = new Date(parts[0].trim());
+        const value = parseFloat(parts[1].trim());
+        if (!isNaN(date.getTime()) && !isNaN(value)) {
+          data.push({ date, value });
+        }
+      }
+    }
+    return data;
+  }
+
+  // ── Tooltip / Raycasting ──────────────────────────────
+
+  const raycaster = new THREE.Raycaster();
+  raycaster.params.Line = { threshold: 0.3 };
+  const mouse = new THREE.Vector2();
+  const tooltip = document.getElementById('tooltip');
+  const ttDate = document.getElementById('tt-date');
+  const ttVal = document.getElementById('tt-val');
+
+  function onMouseMove(e) {
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    // Find nearest data point to ray
+    let bestDist = 0.5;
+    let bestPoint = null;
+
+    for (let i = 0; i < dataPoints.length; i++) {
+      const dist = raycaster.ray.distanceToPoint(dataPoints[i].pos);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestPoint = dataPoints[i];
+      }
+    }
+
+    if (bestPoint) {
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX + 15) + 'px';
+      tooltip.style.top = (e.clientY - 10) + 'px';
+
+      let dateStr = '—';
+      if (bestPoint.date instanceof Date && !isNaN(bestPoint.date.getTime())) {
+        const span = currentData.length > 1 ?
+          currentData[currentData.length-1].date.getTime() - currentData[0].date.getTime() : Infinity;
+        if (span < 86400000) {
+          dateStr = bestPoint.date.toLocaleTimeString();
+        } else {
+          dateStr = bestPoint.date.toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric'
+          });
+        }
+      }
+      ttDate.textContent = dateStr;
+      ttVal.textContent = bestPoint.value.toFixed(2);
+    } else {
+      tooltip.style.display = 'none';
+    }
+  }
+
+  renderer.domElement.addEventListener('mousemove', onMouseMove);
+
+  // ── Camera Presets ────────────────────────────────────
+
+  function setCameraPreset(name) {
+    const cyclePeriod = parseInt(document.getElementById('s-cycle').value);
+    const pitch = parseFloat(document.getElementById('s-pitch').value);
+    const numCycles = Math.ceil(currentData.length / cyclePeriod);
+    const midY = (numCycles * pitch) / 2;
+
+    switch (name) {
+      case 'side':
+        camera.position.set(12, midY, 0);
+        controls.target.set(0, midY, 0);
+        break;
+      case 'top':
+        camera.position.set(0, midY + 15, 0.01);
+        controls.target.set(0, midY, 0);
+        break;
+      case 'through':
+        camera.position.set(0, -2, 0.01);
+        controls.target.set(0, midY, 0);
+        break;
+      case 'free':
+        // Don't change position, just let OrbitControls take over
+        break;
+    }
+    controls.update();
+  }
+
+  // ── Event Listeners ───────────────────────────────────
+
+  // Dataset buttons
+  document.querySelectorAll('#dataset-btns .btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#dataset-btns .btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+      loadDataset(btn.getAttribute('data-ds'));
+    });
+  });
+
+  // Camera buttons
+  document.querySelectorAll('#camera-btns .btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#camera-btns .btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+      setCameraPreset(btn.getAttribute('data-cam'));
+    });
+  });
+
+  // Auto-Rotate
+  document.getElementById('btn-rotate').addEventListener('click', function() {
+    controls.autoRotate = !controls.autoRotate;
+    this.classList.toggle('active', controls.autoRotate);
+  });
+
+  // Save PNG
+  document.getElementById('btn-save').addEventListener('click', function() {
+    composer.render();
+    const link = document.createElement('a');
+    link.download = 'temporal-helix.png';
+    link.href = renderer.domElement.toDataURL('image/png');
+    link.click();
+  });
+
+  // CSV Upload
+  document.getElementById('csv-upload').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const data = parseCSV(evt.target.result);
+      if (data.length > 0) {
+        currentData = data;
+        // Clear active dataset button
+        document.querySelectorAll('#dataset-btns .btn').forEach(function(b) {
+          b.classList.remove('active');
+        });
+        buildHelix();
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // Sliders — update display values and rebuild
+  const sliders = [
+    { id: 's-radius', display: 'v-radius' },
+    { id: 's-pitch', display: 'v-pitch' },
+    { id: 's-linewidth', display: 'v-linewidth' },
+    { id: 's-smooth', display: 'v-smooth' },
+    { id: 's-thickness', display: 'v-thickness' },
+    { id: 's-glow', display: 'v-glow' }
+  ];
+
+  sliders.forEach(function(s) {
+    var el = document.getElementById(s.id);
+    el.addEventListener('input', function() {
+      document.getElementById(s.display).textContent = this.value;
+      if (s.id === 's-glow') {
+        bloomPass.strength = parseFloat(this.value);
+      } else {
+        buildHelix();
+      }
+    });
+  });
+
+  // Cycle period dropdown
+  document.getElementById('s-cycle').addEventListener('change', function() {
+    buildHelix();
+  });
+
+  // ── Resize ────────────────────────────────────────────
+
+  window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ── Animate ───────────────────────────────────────────
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+
+    // Subtle particle drift
+    if (particleSystem) {
+      const pos = particleSystem.geometry.attributes.position.array;
+      for (let i = 0; i < pos.length; i += 3) {
+        pos[i + 1] += Math.sin(Date.now() * 0.0003 + i) * 0.001;
+      }
+      particleSystem.geometry.attributes.position.needsUpdate = true;
+    }
+
+    composer.render();
+  }
+
+  // ── Init ──────────────────────────────────────────────
+
+  loadDataset('temperature');
+  animate();
+
+})();
+</script>
+<script>
+(function() {
+  var tray = document.getElementById('controls');
+  if (!tray) return;
+  var tab = document.createElement('div');
+  tab.className = 'tray-tab';
+  tab.innerHTML = '<span class="tray-tab-label">Controls</span><span class="tray-tab-chevron">&#9650;</span>';
+  tray.parentNode.insertBefore(tab, tray.nextSibling);
+  var isOpen = false;
+  function toggle() {
+    isOpen = !isOpen;
+    tray.classList.toggle('tray-open', isOpen);
+    tab.classList.toggle('tab-active', isOpen);
+    tab.style.bottom = isOpen ? tray.offsetHeight + 'px' : '0';
+  }
+  tab.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); toggle(); });
+  document.addEventListener('click', function(e) {
+    if (isOpen && !tray.contains(e.target) && !tab.contains(e.target)) toggle();
+  });
+  var startY = 0;
+  tray.addEventListener('touchstart', function(e) { startY = e.touches[0].clientY; }, { passive: true });
+  tray.addEventListener('touchend', function(e) {
+    if (e.changedTouches[0].clientY - startY > 50 && isOpen) toggle();
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>

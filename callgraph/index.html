@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Call Graph — Interactive Function Dependency Visualizer</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-dark: #241200;
+  --bg-darker: #1A0D00;
+  --gold: #DDC165;
+  --gold-light: #FFE9A3;
+  --orange: #E5591C;
+  --orange-dim: #B34415;
+  --amber: #C4943A;
+  --text: #E8D5B5;
+  --text-dim: #8A7A65;
+  --panel-bg: rgba(26, 13, 0, 0.92);
+  --border: rgba(221, 193, 101, 0.15);
+  --glow-gold: rgba(221, 193, 101, 0.4);
+  --glow-orange: rgba(229, 89, 28, 0.4);
+}
+
+body {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  background: var(--bg-dark);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-darker);
+  border-bottom: 1px solid var(--border);
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.header h1 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 12px var(--glow-gold);
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  background: rgba(221, 193, 101, 0.08);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn:hover {
+  background: rgba(221, 193, 101, 0.18);
+  border-color: var(--gold);
+  box-shadow: 0 0 8px var(--glow-gold);
+}
+.btn.active {
+  background: rgba(229, 89, 28, 0.2);
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.editor-panel {
+  width: 360px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--bg-darker);
+}
+
+.editor-panel.collapsed {
+  width: 0;
+  overflow: hidden;
+  border-right: none;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.lang-select {
+  display: flex;
+  gap: 4px;
+}
+
+.lang-btn {
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lang-btn.active {
+  color: var(--gold);
+  border-color: var(--border);
+  background: rgba(221, 193, 101, 0.1);
+}
+
+.preset-bar {
+  display: flex;
+  gap: 4px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.preset-btn:hover {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+textarea#codeInput {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  tab-size: 2;
+}
+textarea#codeInput::placeholder {
+  color: var(--text-dim);
+}
+
+.analyze-bar {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.analyze-btn {
+  padding: 6px 16px;
+  border: 1px solid var(--gold);
+  background: rgba(221, 193, 101, 0.15);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-shadow: 0 0 8px var(--glow-gold);
+}
+.analyze-btn:hover {
+  background: rgba(221, 193, 101, 0.3);
+  box-shadow: 0 0 16px var(--glow-gold);
+}
+
+.stats {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.graph-panel {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+canvas#graph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+canvas#graph.dragging { cursor: grabbing; }
+
+.info-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  min-width: 200px;
+  max-width: 300px;
+  font-size: 11px;
+  display: none;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+.info-panel.visible { display: block; }
+
+.info-panel h3 {
+  color: var(--gold);
+  font-size: 13px;
+  margin-bottom: 8px;
+  text-shadow: 0 0 8px var(--glow-gold);
+}
+
+.info-section {
+  margin-bottom: 8px;
+}
+.info-section label {
+  color: var(--text-dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.info-section ul {
+  list-style: none;
+  margin-top: 4px;
+}
+.info-section li {
+  padding: 2px 0;
+  color: var(--amber);
+  cursor: pointer;
+}
+.info-section li:hover {
+  color: var(--gold);
+  text-shadow: 0 0 6px var(--glow-gold);
+}
+
+.controls-overlay {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.ctrl-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  transition: all 0.15s;
+}
+.ctrl-btn:hover {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+.depth-control {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 10px;
+  backdrop-filter: blur(8px);
+  display: none;
+}
+.depth-control.visible { display: flex; gap: 8px; align-items: center; }
+
+.depth-control label { color: var(--text-dim); }
+.depth-control input[type="range"] {
+  width: 80px;
+  accent-color: var(--gold);
+}
+.depth-control span { color: var(--gold); min-width: 16px; text-align: center; }
+
+.toggle-panel-btn {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 40px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  z-index: 5;
+}
+.toggle-panel-btn:hover { color: var(--gold); }
+
+.legend {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 10px;
+  backdrop-filter: blur(8px);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>CODE CALL GRAPH</h1>
+  <div class="header-actions">
+    <button class="btn" id="exportBtn" title="Export as PNG">Export PNG</button>
+    <button class="btn" id="resetBtn" title="Reset view">Reset</button>
+    <a href="https://ianhandy.com" class="btn" style="text-decoration:none; color:var(--text-dim); font-size:10px;">ianhandy.com</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="editor-panel" id="editorPanel">
+    <div class="panel-header">
+      <span>CODE INPUT</span>
+      <div class="lang-select">
+        <button class="lang-btn active" data-lang="javascript">JS</button>
+        <button class="lang-btn" data-lang="python">Python</button>
+      </div>
+    </div>
+    <div class="preset-bar">
+      <button class="preset-btn" data-preset="recursive">Recursive</button>
+      <button class="preset-btn" data-preset="mvc">MVC Pattern</button>
+      <button class="preset-btn" data-preset="pipeline">Data Pipeline</button>
+      <button class="preset-btn" data-preset="eventbus">Event Bus</button>
+      <button class="preset-btn" data-preset="tree">Tree Walker</button>
+    </div>
+    <textarea id="codeInput" placeholder="Paste your JavaScript or Python code here...&#10;&#10;Functions and their call relationships will be visualized as an interactive graph." spellcheck="false"></textarea>
+    <div class="analyze-bar">
+      <button class="analyze-btn" id="analyzeBtn">Analyze</button>
+      <span class="stats" id="stats"></span>
+    </div>
+  </div>
+
+  <div class="graph-panel" id="graphPanel">
+    <button class="toggle-panel-btn" id="togglePanel">&lsaquo;</button>
+    <canvas id="graph"></canvas>
+
+    <div class="legend" id="legend" style="display:none;">
+      <div class="legend-item"><div class="legend-dot" style="background:#DDC165;"></div><span style="color:var(--text-dim)">Function</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#E5591C;"></div><span style="color:var(--text-dim)">Entry point</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#C4943A;"></div><span style="color:var(--text-dim)">Leaf (no calls)</span></div>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+      <h3 id="infoName"></h3>
+      <div class="info-section">
+        <label>Line</label>
+        <div id="infoLine" style="color:var(--text); margin-top:2px;"></div>
+      </div>
+      <div class="info-section" id="callsSection">
+        <label>Calls &rarr;</label>
+        <ul id="infoCalls"></ul>
+      </div>
+      <div class="info-section" id="calledBySection">
+        <label>Called by &larr;</label>
+        <ul id="infoCalledBy"></ul>
+      </div>
+    </div>
+
+    <div class="controls-overlay">
+      <button class="ctrl-btn" id="zoomIn" title="Zoom in">+</button>
+      <button class="ctrl-btn" id="zoomOut" title="Zoom out">&minus;</button>
+      <button class="ctrl-btn" id="fitBtn" title="Fit to screen">&#x26F6;</button>
+    </div>
+
+    <div class="depth-control" id="depthControl">
+      <label>Depth</label>
+      <input type="range" id="depthSlider" min="1" max="10" value="10">
+      <span id="depthValue">All</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Code Parsing ───────────────────────────────────────────────
+
+function parseJavaScript(code) {
+  const functions = new Map();
+  const lines = code.split('\n');
+
+  // Match function declarations, expressions, arrow functions, methods
+  const funcPatterns = [
+    /function\s+(\w+)\s*\(/g,                          // function foo(
+    /(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?function/g,  // const foo = function
+    /(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\(/g,        // const foo = (
+    /(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\w+\s*=>/g,  // const foo = x =>
+    /(\w+)\s*\(.*\)\s*\{/g,                            // method shorthand in objects/classes
+    /(?:async\s+)?(\w+)\s*=\s*(?:async\s+)?\(.*\)\s*=>/g, // class field arrows
+  ];
+
+  // Collect all function names with line numbers
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    for (const pattern of funcPatterns) {
+      pattern.lastIndex = 0;
+      let m;
+      while ((m = pattern.exec(line)) !== null) {
+        const name = m[1];
+        if (name && !isJSKeyword(name) && name.length > 1) {
+          if (!functions.has(name)) {
+            functions.set(name, { name, line: i + 1, calls: new Set(), calledBy: new Set(), body: '' });
+          }
+        }
+      }
+    }
+  }
+
+  // Extract function bodies (simple brace/indent matching)
+  const funcNames = [...functions.keys()];
+  for (const name of funcNames) {
+    const fn = functions.get(name);
+    const startLine = fn.line - 1;
+    let braceCount = 0;
+    let started = false;
+    let bodyLines = [];
+
+    for (let i = startLine; i < lines.length; i++) {
+      const line = lines[i];
+      for (const ch of line) {
+        if (ch === '{') { braceCount++; started = true; }
+        if (ch === '}') braceCount--;
+      }
+      bodyLines.push(line);
+      if (started && braceCount <= 0) break;
+    }
+    fn.body = bodyLines.join('\n');
+  }
+
+  // Detect calls within each function body
+  for (const fn of functions.values()) {
+    for (const other of funcNames) {
+      if (other === fn.name) continue;
+      // Match function calls: name( or name.call( or await name(
+      const callRe = new RegExp('\\b' + escapeRegex(other) + '\\s*\\(', 'g');
+      if (callRe.test(fn.body)) {
+        fn.calls.add(other);
+        if (functions.has(other)) {
+          functions.get(other).calledBy.add(fn.name);
+        }
+      }
+    }
+  }
+
+  return functions;
+}
+
+function parsePython(code) {
+  const functions = new Map();
+  const lines = code.split('\n');
+
+  // Match def statements
+  const defRe = /^(\s*)(?:async\s+)?def\s+(\w+)\s*\(/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(defRe);
+    if (m) {
+      const indent = m[1].length;
+      const name = m[2];
+      if (name && !isPythonBuiltin(name)) {
+        functions.set(name, { name, line: i + 1, indent, calls: new Set(), calledBy: new Set(), body: '' });
+      }
+    }
+  }
+
+  // Extract bodies via indentation
+  const funcNames = [...functions.keys()];
+  for (const name of funcNames) {
+    const fn = functions.get(name);
+    const startLine = fn.line; // 0-indexed: fn.line - 1, body starts at fn.line
+    let bodyLines = [];
+    for (let i = startLine; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.trim() === '') { bodyLines.push(line); continue; }
+      const lineIndent = line.match(/^(\s*)/)[1].length;
+      if (lineIndent <= fn.indent && i > startLine) break;
+      bodyLines.push(line);
+    }
+    fn.body = bodyLines.join('\n');
+  }
+
+  // Detect calls
+  for (const fn of functions.values()) {
+    for (const other of funcNames) {
+      if (other === fn.name) continue;
+      const callRe = new RegExp('\\b' + escapeRegex(other) + '\\s*\\(', 'g');
+      if (callRe.test(fn.body)) {
+        fn.calls.add(other);
+        if (functions.has(other)) {
+          functions.get(other).calledBy.add(fn.name);
+        }
+      }
+    }
+  }
+
+  return functions;
+}
+
+function isJSKeyword(name) {
+  return ['if','else','for','while','do','switch','case','break','continue','return',
+    'try','catch','finally','throw','new','delete','typeof','instanceof','void','in',
+    'of','class','extends','super','import','export','default','from','as','let',
+    'const','var','function','async','await','yield','this','true','false','null',
+    'undefined','with','debugger','get','set','static'].includes(name);
+}
+
+function isPythonBuiltin(name) {
+  return ['__init__','__str__','__repr__','__len__','__getitem__','__setitem__',
+    '__delitem__','__iter__','__next__','__enter__','__exit__','__call__',
+    'print','len','range','enumerate','zip','map','filter','sorted','reversed',
+    'isinstance','issubclass','type','super','property','staticmethod','classmethod'
+  ].includes(name);
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ─── Force-Directed Graph ───────────────────────────────────────
+
+class Graph {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.nodes = [];
+    this.edges = [];
+    this.width = 0;
+    this.height = 0;
+    this.scale = 1;
+    this.offsetX = 0;
+    this.offsetY = 0;
+    this.selectedNode = null;
+    this.hoveredNode = null;
+    this.dragNode = null;
+    this.isPanning = false;
+    this.panStart = null;
+    this.animating = false;
+    this.alpha = 1; // simulation temperature
+
+    this.resize();
+    this.setupEvents();
+  }
+
+  resize() {
+    const rect = this.canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    this.width = rect.width;
+    this.height = rect.height;
+    this.canvas.width = rect.width * dpr;
+    this.canvas.height = rect.height * dpr;
+    this.canvas.style.width = rect.width + 'px';
+    this.canvas.style.height = rect.height + 'px';
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  setData(functions) {
+    this.nodes = [];
+    this.edges = [];
+    this.selectedNode = null;
+    this.hoveredNode = null;
+
+    const funcArr = [...functions.values()];
+    const nameToIdx = new Map();
+
+    funcArr.forEach((fn, i) => {
+      nameToIdx.set(fn.name, i);
+      const isEntry = fn.calledBy.size === 0;
+      const isLeaf = fn.calls.size === 0;
+      this.nodes.push({
+        name: fn.name,
+        line: fn.line,
+        calls: [...fn.calls],
+        calledBy: [...fn.calledBy],
+        x: this.width / 2 + (Math.random() - 0.5) * 300,
+        y: this.height / 2 + (Math.random() - 0.5) * 300,
+        vx: 0, vy: 0,
+        radius: 8 + Math.min(fn.calls.size + fn.calledBy.size, 12) * 2,
+        isEntry, isLeaf,
+        pinned: false,
+        depth: -1,
+      });
+    });
+
+    // Build edges
+    funcArr.forEach((fn, i) => {
+      for (const callName of fn.calls) {
+        const j = nameToIdx.get(callName);
+        if (j !== undefined) {
+          this.edges.push({ source: i, target: j });
+        }
+      }
+    });
+
+    // Compute depths from entry points via BFS
+    const entries = this.nodes.filter(n => n.isEntry);
+    for (const entry of entries) entry.depth = 0;
+    const queue = entries.map(n => this.nodes.indexOf(n));
+    while (queue.length > 0) {
+      const idx = queue.shift();
+      const node = this.nodes[idx];
+      for (const edge of this.edges) {
+        if (edge.source === idx) {
+          const target = this.nodes[edge.target];
+          if (target.depth === -1 || target.depth > node.depth + 1) {
+            target.depth = node.depth + 1;
+            queue.push(edge.target);
+          }
+        }
+      }
+    }
+    // Assign depth 0 to unreachable nodes
+    for (const n of this.nodes) if (n.depth === -1) n.depth = 0;
+
+    this.alpha = 1;
+    this.fitToScreen();
+    this.startSimulation();
+  }
+
+  startSimulation() {
+    if (this.animating) return;
+    this.animating = true;
+    this.alpha = 1;
+    const tick = () => {
+      if (!this.animating) return;
+      this.simulate();
+      this.draw();
+      if (this.alpha > 0.001 || this.dragNode) {
+        requestAnimationFrame(tick);
+      } else {
+        this.animating = false;
+        this.draw();
+      }
+    };
+    requestAnimationFrame(tick);
+  }
+
+  simulate() {
+    const nodes = this.nodes;
+    const edges = this.edges;
+    const n = nodes.length;
+    if (n === 0) return;
+
+    this.alpha *= 0.995;
+    const alpha = Math.max(this.alpha, 0.001);
+
+    // Repulsion (all pairs)
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        let dx = nodes[j].x - nodes[i].x;
+        let dy = nodes[j].y - nodes[i].y;
+        let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        let force = -2000 * alpha / (dist * dist);
+        let fx = (dx / dist) * force;
+        let fy = (dy / dist) * force;
+        if (!nodes[i].pinned) { nodes[i].vx -= fx; nodes[i].vy -= fy; }
+        if (!nodes[j].pinned) { nodes[j].vx += fx; nodes[j].vy += fy; }
+      }
+    }
+
+    // Attraction (edges)
+    for (const edge of edges) {
+      const a = nodes[edge.source];
+      const b = nodes[edge.target];
+      let dx = b.x - a.x;
+      let dy = b.y - a.y;
+      let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      let force = (dist - 120) * 0.05 * alpha;
+      let fx = (dx / dist) * force;
+      let fy = (dy / dist) * force;
+      if (!a.pinned) { a.vx += fx; a.vy += fy; }
+      if (!b.pinned) { b.vx -= fx; b.vy -= fy; }
+    }
+
+    // Center gravity
+    const cx = this.width / 2, cy = this.height / 2;
+    for (const node of nodes) {
+      if (node.pinned) continue;
+      node.vx += (cx - node.x) * 0.001 * alpha;
+      node.vy += (cy - node.y) * 0.001 * alpha;
+    }
+
+    // Apply velocity with damping
+    for (const node of nodes) {
+      if (node.pinned) continue;
+      node.vx *= 0.6;
+      node.vy *= 0.6;
+      node.x += node.vx;
+      node.y += node.vy;
+    }
+  }
+
+  draw() {
+    const ctx = this.ctx;
+    const w = this.width, h = this.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Background
+    ctx.fillStyle = '#241200';
+    ctx.fillRect(0, 0, w, h);
+
+    // Subtle grid
+    ctx.save();
+    ctx.translate(this.offsetX, this.offsetY);
+    ctx.scale(this.scale, this.scale);
+
+    const maxDepth = Math.max(...this.nodes.map(n => n.depth), 1);
+    const depthFilter = parseInt(document.getElementById('depthSlider').value);
+
+    // Draw edges
+    for (const edge of this.edges) {
+      const a = this.nodes[edge.source];
+      const b = this.nodes[edge.target];
+      if (depthFilter < 10 && (a.depth > depthFilter || b.depth > depthFilter)) continue;
+
+      const isHighlighted = this.selectedNode &&
+        (edge.source === this.nodes.indexOf(this.selectedNode) ||
+         edge.target === this.nodes.indexOf(this.selectedNode));
+
+      const isHoverHighlighted = this.hoveredNode && !this.selectedNode &&
+        (edge.source === this.nodes.indexOf(this.hoveredNode) ||
+         edge.target === this.nodes.indexOf(this.hoveredNode));
+
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+
+      // Curved edges
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const nx = -dy * 0.1;
+      const ny = dx * 0.1;
+      ctx.quadraticCurveTo(mx + nx, my + ny, b.x, b.y);
+
+      if (isHighlighted) {
+        ctx.strokeStyle = '#E5591C';
+        ctx.lineWidth = 2.5 / this.scale;
+        ctx.shadowColor = 'rgba(229, 89, 28, 0.6)';
+        ctx.shadowBlur = 8;
+      } else if (isHoverHighlighted) {
+        ctx.strokeStyle = 'rgba(221, 193, 101, 0.5)';
+        ctx.lineWidth = 1.5 / this.scale;
+        ctx.shadowColor = 'rgba(221, 193, 101, 0.3)';
+        ctx.shadowBlur = 4;
+      } else {
+        ctx.strokeStyle = 'rgba(196, 148, 58, 0.15)';
+        ctx.lineWidth = 1 / this.scale;
+        ctx.shadowBlur = 0;
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Arrow
+      if (isHighlighted || isHoverHighlighted) {
+        const angle = Math.atan2(b.y - (my + ny), b.x - (mx + nx));
+        const arrowLen = 8 / this.scale;
+        const ax1 = b.x - Math.cos(angle - 0.3) * (b.radius + arrowLen);
+        const ay1 = b.y - Math.sin(angle - 0.3) * (b.radius + arrowLen);
+        const ax2 = b.x - Math.cos(angle + 0.3) * (b.radius + arrowLen);
+        const ay2 = b.y - Math.sin(angle + 0.3) * (b.radius + arrowLen);
+        const atx = b.x - Math.cos(angle) * b.radius;
+        const aty = b.y - Math.sin(angle) * b.radius;
+        ctx.beginPath();
+        ctx.moveTo(atx, aty);
+        ctx.lineTo(ax1, ay1);
+        ctx.lineTo(ax2, ay2);
+        ctx.closePath();
+        ctx.fillStyle = isHighlighted ? '#E5591C' : 'rgba(221, 193, 101, 0.5)';
+        ctx.fill();
+      }
+    }
+
+    // Draw nodes
+    for (const node of this.nodes) {
+      if (depthFilter < 10 && node.depth > depthFilter) continue;
+
+      const isSelected = this.selectedNode === node;
+      const isHovered = this.hoveredNode === node;
+      const isConnected = this.selectedNode && (
+        this.selectedNode.calls.includes(node.name) ||
+        this.selectedNode.calledBy.includes(node.name)
+      );
+      const isHoverConnected = this.hoveredNode && !this.selectedNode && (
+        this.hoveredNode.calls.includes(node.name) ||
+        this.hoveredNode.calledBy.includes(node.name)
+      );
+
+      const dimmed = (this.selectedNode && !isSelected && !isConnected) ||
+                     (this.hoveredNode && !this.selectedNode && !isHovered && !isHoverConnected);
+
+      // Node glow
+      if (isSelected || isHovered) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.radius + 12, 0, Math.PI * 2);
+        const grad = ctx.createRadialGradient(node.x, node.y, node.radius, node.x, node.y, node.radius + 12);
+        grad.addColorStop(0, isSelected ? 'rgba(229, 89, 28, 0.4)' : 'rgba(221, 193, 101, 0.3)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+
+      // Node circle
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+
+      let color;
+      if (node.isEntry) color = '#E5591C';
+      else if (node.isLeaf) color = '#C4943A';
+      else color = '#DDC165';
+
+      if (dimmed) {
+        ctx.fillStyle = hexToRgba(color, 0.15);
+        ctx.strokeStyle = hexToRgba(color, 0.2);
+      } else if (isSelected) {
+        ctx.fillStyle = hexToRgba(color, 0.9);
+        ctx.strokeStyle = '#FFE9A3';
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 16;
+      } else if (isConnected) {
+        ctx.fillStyle = hexToRgba(color, 0.7);
+        ctx.strokeStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 8;
+      } else {
+        ctx.fillStyle = hexToRgba(color, 0.5);
+        ctx.strokeStyle = hexToRgba(color, 0.6);
+      }
+
+      ctx.lineWidth = (isSelected ? 2.5 : 1.5) / this.scale;
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Label
+      const fontSize = Math.max(10, 11 / this.scale);
+      ctx.font = `${dimmed ? '400' : '600'} ${fontSize}px 'SF Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+
+      if (dimmed) {
+        ctx.fillStyle = 'rgba(138, 122, 101, 0.3)';
+      } else if (isSelected) {
+        ctx.fillStyle = '#FFE9A3';
+        ctx.shadowColor = 'rgba(255, 233, 163, 0.5)';
+        ctx.shadowBlur = 6;
+      } else {
+        ctx.fillStyle = dimmed ? 'rgba(232, 213, 181, 0.3)' : '#E8D5B5';
+      }
+      ctx.fillText(node.name, node.x, node.y + node.radius + 4);
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.restore();
+  }
+
+  fitToScreen() {
+    if (this.nodes.length === 0) return;
+    const padding = 80;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const n of this.nodes) {
+      minX = Math.min(minX, n.x - n.radius);
+      maxX = Math.max(maxX, n.x + n.radius);
+      minY = Math.min(minY, n.y - n.radius);
+      maxY = Math.max(maxY, n.y + n.radius);
+    }
+    const gw = maxX - minX || 1;
+    const gh = maxY - minY || 1;
+    this.scale = Math.min((this.width - padding * 2) / gw, (this.height - padding * 2) / gh, 2);
+    this.offsetX = (this.width - gw * this.scale) / 2 - minX * this.scale;
+    this.offsetY = (this.height - gh * this.scale) / 2 - minY * this.scale;
+  }
+
+  screenToWorld(sx, sy) {
+    return {
+      x: (sx - this.offsetX) / this.scale,
+      y: (sy - this.offsetY) / this.scale
+    };
+  }
+
+  nodeAt(wx, wy) {
+    const depthFilter = parseInt(document.getElementById('depthSlider').value);
+    for (let i = this.nodes.length - 1; i >= 0; i--) {
+      const n = this.nodes[i];
+      if (depthFilter < 10 && n.depth > depthFilter) continue;
+      const dx = n.x - wx, dy = n.y - wy;
+      if (dx * dx + dy * dy < (n.radius + 5) * (n.radius + 5)) return n;
+    }
+    return null;
+  }
+
+  setupEvents() {
+    const canvas = this.canvas;
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const { x, y } = this.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+      const node = this.nodeAt(x, y);
+
+      if (node) {
+        this.dragNode = node;
+        node.pinned = true;
+        this.dragOffsetX = node.x - x;
+        this.dragOffsetY = node.y - y;
+        canvas.classList.add('dragging');
+      } else {
+        this.isPanning = true;
+        this.panStart = { x: e.clientX, y: e.clientY, ox: this.offsetX, oy: this.offsetY };
+        canvas.classList.add('dragging');
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const { x, y } = this.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+
+      if (this.dragNode) {
+        this.dragNode.x = x + this.dragOffsetX;
+        this.dragNode.y = y + this.dragOffsetY;
+        this.dragNode.vx = 0;
+        this.dragNode.vy = 0;
+        if (!this.animating) { this.animating = true; this.alpha = 0.1; this.startSimulation(); }
+        return;
+      }
+
+      if (this.isPanning) {
+        this.offsetX = this.panStart.ox + (e.clientX - this.panStart.x);
+        this.offsetY = this.panStart.oy + (e.clientY - this.panStart.y);
+        this.draw();
+        return;
+      }
+
+      const node = this.nodeAt(x, y);
+      if (node !== this.hoveredNode) {
+        this.hoveredNode = node;
+        canvas.style.cursor = node ? 'pointer' : 'grab';
+        this.draw();
+      }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (this.dragNode) {
+        this.dragNode.pinned = false;
+        this.dragNode = null;
+      }
+      if (this.isPanning) {
+        this.isPanning = false;
+      }
+      canvas.classList.remove('dragging');
+    });
+
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const { x, y } = this.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+      const node = this.nodeAt(x, y);
+
+      if (node) {
+        this.selectedNode = (this.selectedNode === node) ? null : node;
+        showInfoPanel(this.selectedNode);
+      } else {
+        this.selectedNode = null;
+        showInfoPanel(null);
+      }
+      this.draw();
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+      const newScale = Math.max(0.1, Math.min(5, this.scale * zoomFactor));
+
+      this.offsetX = mx - (mx - this.offsetX) * (newScale / this.scale);
+      this.offsetY = my - (my - this.offsetY) * (newScale / this.scale);
+      this.scale = newScale;
+
+      this.draw();
+    }, { passive: false });
+
+    window.addEventListener('resize', () => {
+      this.resize();
+      this.draw();
+    });
+  }
+
+  export() {
+    const dpr = 2;
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = this.width * dpr;
+    exportCanvas.height = this.height * dpr;
+    const ctx = exportCanvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Draw background
+    ctx.fillStyle = '#241200';
+    ctx.fillRect(0, 0, this.width, this.height);
+
+    // Save current state, draw with current transform
+    const origCtx = this.ctx;
+    this.ctx = ctx;
+    ctx.save();
+    ctx.translate(this.offsetX, this.offsetY);
+    ctx.scale(this.scale, this.scale);
+
+    // Temporarily unselect for clean export
+    const sel = this.selectedNode;
+    const hov = this.hoveredNode;
+    this.selectedNode = null;
+    this.hoveredNode = null;
+
+    // Redraw edges
+    for (const edge of this.edges) {
+      const a = this.nodes[edge.source];
+      const b = this.nodes[edge.target];
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      ctx.quadraticCurveTo(mx - dy * 0.1, my + dx * 0.1, b.x, b.y);
+      ctx.strokeStyle = 'rgba(196, 148, 58, 0.3)';
+      ctx.lineWidth = 1 / this.scale;
+      ctx.stroke();
+
+      // Arrow
+      const angle = Math.atan2(b.y - (my + dx * 0.1), b.x - (mx - dy * 0.1));
+      const arrowLen = 6 / this.scale;
+      ctx.beginPath();
+      ctx.moveTo(b.x - Math.cos(angle) * b.radius, b.y - Math.sin(angle) * b.radius);
+      ctx.lineTo(b.x - Math.cos(angle - 0.3) * (b.radius + arrowLen), b.y - Math.sin(angle - 0.3) * (b.radius + arrowLen));
+      ctx.lineTo(b.x - Math.cos(angle + 0.3) * (b.radius + arrowLen), b.y - Math.sin(angle + 0.3) * (b.radius + arrowLen));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(196, 148, 58, 0.4)';
+      ctx.fill();
+    }
+
+    // Redraw nodes
+    for (const node of this.nodes) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+      const color = node.isEntry ? '#E5591C' : node.isLeaf ? '#C4943A' : '#DDC165';
+      ctx.fillStyle = hexToRgba(color, 0.6);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5 / this.scale;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      const fontSize = Math.max(10, 11 / this.scale);
+      ctx.font = `600 ${fontSize}px 'SF Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = '#E8D5B5';
+      ctx.fillText(node.name, node.x, node.y + node.radius + 4);
+    }
+
+    ctx.restore();
+
+    // Watermark
+    ctx.font = '11px SF Mono, monospace';
+    ctx.fillStyle = 'rgba(221, 193, 101, 0.3)';
+    ctx.textAlign = 'right';
+    ctx.fillText('ianhandy.com/callgraph', this.width - 12, this.height - 12);
+
+    this.ctx = origCtx;
+    this.selectedNode = sel;
+    this.hoveredNode = hov;
+
+    const link = document.createElement('a');
+    link.download = 'callgraph.png';
+    link.href = exportCanvas.toDataURL('image/png');
+    link.click();
+  }
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ─── UI ─────────────────────────────────────────────────────────
+
+const graph = new Graph(document.getElementById('graph'));
+let currentLang = 'javascript';
+
+function showInfoPanel(node) {
+  const panel = document.getElementById('infoPanel');
+  if (!node) {
+    panel.classList.remove('visible');
+    return;
+  }
+  panel.classList.add('visible');
+  document.getElementById('infoName').textContent = node.name + '()';
+  document.getElementById('infoLine').textContent = 'Line ' + node.line;
+
+  const callsList = document.getElementById('infoCalls');
+  callsList.innerHTML = '';
+  if (node.calls.length === 0) {
+    callsList.innerHTML = '<li style="color:var(--text-dim); cursor:default;">none (leaf)</li>';
+  } else {
+    for (const c of node.calls) {
+      const li = document.createElement('li');
+      li.textContent = c + '()';
+      li.onclick = () => {
+        const target = graph.nodes.find(n => n.name === c);
+        if (target) { graph.selectedNode = target; showInfoPanel(target); graph.draw(); }
+      };
+      callsList.appendChild(li);
+    }
+  }
+
+  const calledByList = document.getElementById('infoCalledBy');
+  calledByList.innerHTML = '';
+  if (node.calledBy.length === 0) {
+    calledByList.innerHTML = '<li style="color:var(--text-dim); cursor:default;">none (entry point)</li>';
+  } else {
+    for (const c of node.calledBy) {
+      const li = document.createElement('li');
+      li.textContent = c + '()';
+      li.onclick = () => {
+        const target = graph.nodes.find(n => n.name === c);
+        if (target) { graph.selectedNode = target; showInfoPanel(target); graph.draw(); }
+      };
+      calledByList.appendChild(li);
+    }
+  }
+
+  document.getElementById('callsSection').style.display = node.calls.length >= 0 ? 'block' : 'none';
+  document.getElementById('calledBySection').style.display = node.calledBy.length >= 0 ? 'block' : 'none';
+}
+
+function analyze() {
+  const code = document.getElementById('codeInput').value.trim();
+  if (!code) return;
+
+  const functions = currentLang === 'javascript' ? parseJavaScript(code) : parsePython(code);
+
+  if (functions.size === 0) {
+    document.getElementById('stats').textContent = 'No functions found';
+    return;
+  }
+
+  let edgeCount = 0;
+  for (const fn of functions.values()) edgeCount += fn.calls.size;
+
+  document.getElementById('stats').textContent = `${functions.size} functions, ${edgeCount} calls`;
+  document.getElementById('legend').style.display = 'block';
+  document.getElementById('depthControl').classList.add('visible');
+
+  const maxDepth = Math.max(...[...functions.values()].map(fn => fn.calls.size + fn.calledBy.size), 1);
+  document.getElementById('depthSlider').max = Math.min(maxDepth + 2, 10);
+  document.getElementById('depthSlider').value = 10;
+  document.getElementById('depthValue').textContent = 'All';
+
+  graph.setData(functions);
+}
+
+// Language selection
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentLang = btn.dataset.lang;
+  });
+});
+
+// Analyze button
+document.getElementById('analyzeBtn').addEventListener('click', analyze);
+
+// Keyboard shortcut
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    analyze();
+  }
+});
+
+// Export
+document.getElementById('exportBtn').addEventListener('click', () => graph.export());
+
+// Reset
+document.getElementById('resetBtn').addEventListener('click', () => {
+  graph.fitToScreen();
+  graph.selectedNode = null;
+  showInfoPanel(null);
+  graph.draw();
+});
+
+// Zoom controls
+document.getElementById('zoomIn').addEventListener('click', () => {
+  graph.scale = Math.min(5, graph.scale * 1.3);
+  graph.draw();
+});
+document.getElementById('zoomOut').addEventListener('click', () => {
+  graph.scale = Math.max(0.1, graph.scale / 1.3);
+  graph.draw();
+});
+document.getElementById('fitBtn').addEventListener('click', () => {
+  graph.fitToScreen();
+  graph.draw();
+});
+
+// Toggle panel
+document.getElementById('togglePanel').addEventListener('click', () => {
+  const panel = document.getElementById('editorPanel');
+  const btn = document.getElementById('togglePanel');
+  panel.classList.toggle('collapsed');
+  btn.innerHTML = panel.classList.contains('collapsed') ? '&rsaquo;' : '&lsaquo;';
+  setTimeout(() => { graph.resize(); graph.draw(); }, 50);
+});
+
+// Depth slider
+document.getElementById('depthSlider').addEventListener('input', (e) => {
+  const val = parseInt(e.target.value);
+  document.getElementById('depthValue').textContent = val >= 10 ? 'All' : val;
+  graph.draw();
+});
+
+// ─── Presets ────────────────────────────────────────────────────
+
+const presets = {
+  recursive: {
+    lang: 'javascript',
+    code: `function fibonacci(n) {
+  if (n <= 1) return n;
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+function factorial(n) {
+  if (n <= 1) return 1;
+  return n * factorial(n - 1);
+}
+
+function mergeSort(arr) {
+  if (arr.length <= 1) return arr;
+  const mid = Math.floor(arr.length / 2);
+  const left = mergeSort(arr.slice(0, mid));
+  const right = mergeSort(arr.slice(mid));
+  return merge(left, right);
+}
+
+function merge(left, right) {
+  const result = [];
+  while (left.length && right.length) {
+    result.push(left[0] <= right[0] ? left.shift() : right.shift());
+  }
+  return result.concat(left, right);
+}
+
+function quickSort(arr) {
+  if (arr.length <= 1) return arr;
+  const pivot = arr[0];
+  const parts = partition(arr.slice(1), pivot);
+  return quickSort(parts.left).concat(pivot, quickSort(parts.right));
+}
+
+function partition(arr, pivot) {
+  const left = arr.filter(x => x <= pivot);
+  const right = arr.filter(x => x > pivot);
+  return { left, right };
+}
+
+function binarySearch(arr, target) {
+  return binarySearchHelper(arr, target, 0, arr.length - 1);
+}
+
+function binarySearchHelper(arr, target, low, high) {
+  if (low > high) return -1;
+  const mid = Math.floor((low + high) / 2);
+  if (arr[mid] === target) return mid;
+  if (arr[mid] < target) return binarySearchHelper(arr, target, mid + 1, high);
+  return binarySearchHelper(arr, target, low, mid - 1);
+}
+
+function main() {
+  const fib = fibonacci(10);
+  const fact = factorial(5);
+  const sorted = mergeSort([3, 1, 4, 1, 5]);
+  const qsorted = quickSort([9, 2, 6, 5, 3]);
+  const idx = binarySearch(sorted, 4);
+  printResults(fib, fact, sorted, qsorted, idx);
+}
+
+function printResults(fib, fact, sorted, qsorted, idx) {
+  console.log({ fib, fact, sorted, qsorted, idx });
+}`
+  },
+
+  mvc: {
+    lang: 'javascript',
+    code: `// Model
+function createUser(name, email) {
+  const user = { name, email, id: generateId() };
+  validateUser(user);
+  return user;
+}
+
+function validateUser(user) {
+  if (!user.name) throw new Error('Name required');
+  if (!user.email) throw new Error('Email required');
+  validateEmail(user.email);
+}
+
+function validateEmail(email) {
+  if (!email.includes('@')) throw new Error('Invalid email');
+}
+
+function generateId() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+function saveUser(user) {
+  const data = serializeUser(user);
+  writeToStorage(data);
+  logAction('save', user.id);
+}
+
+function serializeUser(user) {
+  return JSON.stringify(user);
+}
+
+function writeToStorage(data) {
+  localStorage.setItem('users', data);
+}
+
+// Controller
+function handleCreateUser(req) {
+  const user = createUser(req.name, req.email);
+  saveUser(user);
+  sendResponse(formatUserResponse(user));
+  notifyAdmin(user);
+}
+
+function handleGetUser(req) {
+  const user = loadUser(req.id);
+  sendResponse(formatUserResponse(user));
+}
+
+function loadUser(id) {
+  const data = readFromStorage(id);
+  return deserializeUser(data);
+}
+
+function readFromStorage(id) {
+  return localStorage.getItem(id);
+}
+
+function deserializeUser(data) {
+  return JSON.parse(data);
+}
+
+// View
+function formatUserResponse(user) {
+  return renderTemplate('user', user);
+}
+
+function renderTemplate(name, data) {
+  return '<div>' + escapeHtml(data.name) + '</div>';
+}
+
+function escapeHtml(str) {
+  return str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function sendResponse(html) {
+  document.body.innerHTML = html;
+}
+
+// Utilities
+function logAction(action, id) {
+  formatLog(action, id);
+}
+
+function formatLog(action, id) {
+  console.log(action + ': ' + id);
+}
+
+function notifyAdmin(user) {
+  sendEmail('admin@example.com', formatNotification(user));
+}
+
+function sendEmail(to, body) {
+  console.log('Email to ' + to + ': ' + body);
+}
+
+function formatNotification(user) {
+  return 'New user: ' + user.name;
+}`
+  },
+
+  pipeline: {
+    lang: 'python',
+    code: `def main():
+    data = load_data("input.csv")
+    cleaned = clean_data(data)
+    features = extract_features(cleaned)
+    normalized = normalize_features(features)
+    model = train_model(normalized)
+    results = evaluate_model(model, normalized)
+    save_results(results)
+    generate_report(results)
+
+def load_data(path):
+    raw = read_csv(path)
+    validated = validate_schema(raw)
+    return validated
+
+def read_csv(path):
+    with open(path) as f:
+        return parse_lines(f.readlines())
+
+def parse_lines(lines):
+    return [split_fields(line) for line in lines]
+
+def split_fields(line):
+    return line.strip().split(',')
+
+def validate_schema(data):
+    check_columns(data)
+    check_types(data)
+    return data
+
+def check_columns(data):
+    assert len(data[0]) == 5
+
+def check_types(data):
+    for row in data:
+        for val in row:
+            assert isinstance(val, str)
+
+def clean_data(data):
+    no_nulls = remove_nulls(data)
+    no_dupes = remove_duplicates(no_nulls)
+    trimmed = trim_outliers(no_dupes)
+    return trimmed
+
+def remove_nulls(data):
+    return [row for row in data if all(row)]
+
+def remove_duplicates(data):
+    seen = set()
+    return [row for row in data if tuple(row) not in seen and not seen.add(tuple(row))]
+
+def trim_outliers(data):
+    stats = compute_stats(data)
+    return [row for row in data if within_bounds(row, stats)]
+
+def compute_stats(data):
+    return {"mean": 0, "std": 1}
+
+def within_bounds(row, stats):
+    return True
+
+def extract_features(data):
+    basic = basic_features(data)
+    derived = derived_features(basic)
+    combined = combine_features(basic, derived)
+    return combined
+
+def basic_features(data):
+    return data
+
+def derived_features(data):
+    ratios = compute_ratios(data)
+    interactions = compute_interactions(data)
+    return ratios + interactions
+
+def compute_ratios(data):
+    return []
+
+def compute_interactions(data):
+    return []
+
+def combine_features(basic, derived):
+    return basic + derived
+
+def normalize_features(features):
+    scaled = min_max_scale(features)
+    return scaled
+
+def min_max_scale(features):
+    return features
+
+def train_model(data):
+    splits = split_data(data)
+    model = fit_model(splits)
+    return model
+
+def split_data(data):
+    return {"train": data, "test": data}
+
+def fit_model(splits):
+    return {"weights": []}
+
+def evaluate_model(model, data):
+    predictions = predict(model, data)
+    metrics = compute_metrics(predictions)
+    return metrics
+
+def predict(model, data):
+    return []
+
+def compute_metrics(predictions):
+    accuracy = compute_accuracy(predictions)
+    precision = compute_precision(predictions)
+    return {"accuracy": accuracy, "precision": precision}
+
+def compute_accuracy(predictions):
+    return 0.95
+
+def compute_precision(predictions):
+    return 0.93
+
+def save_results(results):
+    formatted = format_results(results)
+    write_json(formatted)
+
+def format_results(results):
+    return results
+
+def write_json(data):
+    pass
+
+def generate_report(results):
+    summary = summarize(results)
+    charts = create_charts(results)
+    render_html(summary, charts)
+
+def summarize(results):
+    return "Summary"
+
+def create_charts(results):
+    return []
+
+def render_html(summary, charts):
+    pass`
+  },
+
+  eventbus: {
+    lang: 'javascript',
+    code: `// Event Bus Architecture
+function createEventBus() {
+  const bus = { listeners: {} };
+  return bus;
+}
+
+function subscribe(bus, event, callback) {
+  if (!bus.listeners[event]) bus.listeners[event] = [];
+  bus.listeners[event].push(callback);
+  logSubscription(event);
+}
+
+function publish(bus, event, data) {
+  const listeners = bus.listeners[event] || [];
+  listeners.forEach(cb => invokeHandler(cb, data));
+  logEvent(event, data);
+}
+
+function invokeHandler(handler, data) {
+  try {
+    handler(data);
+  } catch (err) {
+    handleError(err);
+  }
+}
+
+function handleError(err) {
+  logError(err);
+  notifyErrorService(err);
+}
+
+function logError(err) {
+  formatLogMessage('ERROR', err.message);
+}
+
+function logEvent(event, data) {
+  formatLogMessage('EVENT', event);
+}
+
+function logSubscription(event) {
+  formatLogMessage('SUB', event);
+}
+
+function formatLogMessage(level, msg) {
+  const timestamp = getTimestamp();
+  console.log(timestamp + ' [' + level + '] ' + msg);
+}
+
+function getTimestamp() {
+  return new Date().toISOString();
+}
+
+function notifyErrorService(err) {
+  const payload = serializeError(err);
+  sendToEndpoint('/errors', payload);
+}
+
+function serializeError(err) {
+  return JSON.stringify({ message: err.message, stack: err.stack });
+}
+
+function sendToEndpoint(url, data) {
+  fetch(url, { method: 'POST', body: data });
+}
+
+// Application modules
+function initApp() {
+  const bus = createEventBus();
+  setupAuthModule(bus);
+  setupCartModule(bus);
+  setupAnalytics(bus);
+  startApp(bus);
+}
+
+function setupAuthModule(bus) {
+  subscribe(bus, 'login', handleLogin);
+  subscribe(bus, 'logout', handleLogout);
+}
+
+function setupCartModule(bus) {
+  subscribe(bus, 'addToCart', handleAddToCart);
+  subscribe(bus, 'checkout', handleCheckout);
+}
+
+function setupAnalytics(bus) {
+  subscribe(bus, 'login', trackLogin);
+  subscribe(bus, 'addToCart', trackCartAdd);
+  subscribe(bus, 'checkout', trackCheckout);
+}
+
+function handleLogin(data) {
+  validateCredentials(data);
+  createSession(data.userId);
+}
+
+function handleLogout(data) {
+  destroySession(data.userId);
+}
+
+function handleAddToCart(data) {
+  validateProduct(data.productId);
+  updateCartState(data);
+}
+
+function handleCheckout(data) {
+  processPayment(data);
+  sendConfirmation(data);
+}
+
+function validateCredentials(data) {}
+function createSession(userId) {}
+function destroySession(userId) {}
+function validateProduct(productId) {}
+function updateCartState(data) {}
+function processPayment(data) {}
+function sendConfirmation(data) {}
+function trackLogin(data) {}
+function trackCartAdd(data) {}
+function trackCheckout(data) {}
+
+function startApp(bus) {
+  publish(bus, 'appReady', {});
+}`
+  },
+
+  tree: {
+    lang: 'javascript',
+    code: `// Tree data structure with traversals
+function createNode(value) {
+  return { value, left: null, right: null };
+}
+
+function insert(root, value) {
+  if (!root) return createNode(value);
+  if (value < root.value) {
+    root.left = insert(root.left, value);
+  } else {
+    root.right = insert(root.right, value);
+  }
+  rebalance(root);
+  return root;
+}
+
+function search(root, value) {
+  if (!root) return null;
+  if (root.value === value) return root;
+  if (value < root.value) return search(root.left, value);
+  return search(root.right, value);
+}
+
+function remove(root, value) {
+  if (!root) return null;
+  if (value < root.value) {
+    root.left = remove(root.left, value);
+  } else if (value > root.value) {
+    root.right = remove(root.right, value);
+  } else {
+    if (!root.left) return root.right;
+    if (!root.right) return root.left;
+    const successor = findMin(root.right);
+    root.value = successor.value;
+    root.right = remove(root.right, successor.value);
+  }
+  rebalance(root);
+  return root;
+}
+
+function findMin(node) {
+  while (node.left) node = node.left;
+  return node;
+}
+
+function findMax(node) {
+  while (node.right) node = node.right;
+  return node;
+}
+
+function getHeight(node) {
+  if (!node) return 0;
+  return 1 + Math.max(getHeight(node.left), getHeight(node.right));
+}
+
+function rebalance(node) {
+  const balance = getBalanceFactor(node);
+  if (Math.abs(balance) > 1) {
+    if (balance > 1) rotateRight(node);
+    else rotateLeft(node);
+  }
+}
+
+function getBalanceFactor(node) {
+  return getHeight(node.left) - getHeight(node.right);
+}
+
+function rotateLeft(node) {
+  const temp = node.right;
+  node.right = temp.left;
+  temp.left = node;
+  return temp;
+}
+
+function rotateRight(node) {
+  const temp = node.left;
+  node.left = temp.right;
+  temp.right = node;
+  return temp;
+}
+
+// Traversals
+function inorder(node, visit) {
+  if (!node) return;
+  inorder(node.left, visit);
+  visit(node);
+  inorder(node.right, visit);
+}
+
+function preorder(node, visit) {
+  if (!node) return;
+  visit(node);
+  preorder(node.left, visit);
+  preorder(node.right, visit);
+}
+
+function postorder(node, visit) {
+  if (!node) return;
+  postorder(node.left, visit);
+  postorder(node.right, visit);
+  visit(node);
+}
+
+function levelOrder(root, visit) {
+  const queue = [root];
+  while (queue.length > 0) {
+    const node = dequeue(queue);
+    visit(node);
+    if (node.left) enqueue(queue, node.left);
+    if (node.right) enqueue(queue, node.right);
+  }
+}
+
+function enqueue(queue, item) {
+  queue.push(item);
+}
+
+function dequeue(queue) {
+  return queue.shift();
+}
+
+// Utilities
+function serialize(root) {
+  if (!root) return 'null';
+  return root.value + ',' + serialize(root.left) + ',' + serialize(root.right);
+}
+
+function printTree(root) {
+  const lines = formatTree(root, 0);
+  lines.forEach(line => console.log(line));
+}
+
+function formatTree(node, depth) {
+  if (!node) return [];
+  const indent = getIndent(depth);
+  const lines = [indent + node.value];
+  return lines.concat(formatTree(node.left, depth + 1), formatTree(node.right, depth + 1));
+}
+
+function getIndent(depth) {
+  return '  '.repeat(depth);
+}
+
+function main() {
+  let root = null;
+  const values = [5, 3, 7, 1, 4, 6, 8];
+  for (const v of values) {
+    root = insert(root, v);
+  }
+  inorder(root, printNode);
+  preorder(root, printNode);
+  levelOrder(root, printNode);
+  const found = search(root, 4);
+  root = remove(root, 3);
+  printTree(root);
+  const s = serialize(root);
+  console.log(s);
+}
+
+function printNode(node) {
+  console.log(node.value);
+}`
+  }
+};
+
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const preset = presets[btn.dataset.preset];
+    if (!preset) return;
+    document.getElementById('codeInput').value = preset.code;
+    currentLang = preset.lang;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.lang-btn[data-lang="${preset.lang}"]`).classList.add('active');
+    analyze();
+  });
+});
+
+// Load default preset
+document.getElementById('codeInput').value = presets.mvc.code;
+setTimeout(analyze, 100);
+</script>
+</body>
+</html>

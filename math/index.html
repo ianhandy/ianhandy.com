@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math Scratchpad — Symbolic Math in the Browser</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.4/full/pyodide.js"></script>
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+  svg: { fontCache: 'global' },
+  startup: { typeset: false }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #241200;
+  --bg-deep: #1A0D00;
+  --gold: #DDC165;
+  --gold-light: #FFE9A3;
+  --orange: #E5591C;
+  --text: #e8dcc8;
+  --text-dim: #9a8b72;
+  --panel: rgba(36, 18, 0, 0.85);
+  --border: rgba(221, 193, 101, 0.15);
+  --border-focus: rgba(221, 193, 101, 0.4);
+  --glow: rgba(221, 193, 101, 0.25);
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Ambient background */
+body::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at 30% 20%, rgba(229, 89, 28, 0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 80%, rgba(221, 193, 101, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 300;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-shadow: 0 0 30px var(--glow);
+  margin-bottom: 8px;
+}
+
+.header .subtitle {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-deep);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: opacity 0.6s ease;
+}
+
+.loading-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 2px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 24px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+  color: var(--gold);
+  font-size: 1rem;
+  letter-spacing: 2px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.loading-sub {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  margin-top: 8px;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+/* Input area */
+.input-section {
+  margin-bottom: 32px;
+}
+
+.input-row {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.input-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--gold-light);
+  font-family: inherit;
+  font-size: 1.15rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.input-wrapper input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 20px var(--glow), inset 0 0 10px rgba(221, 193, 101, 0.05);
+}
+
+.input-wrapper input::placeholder {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.eval-btn {
+  padding: 16px 28px;
+  background: linear-gradient(135deg, var(--orange), #c94a15);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.eval-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(229, 89, 28, 0.4);
+}
+
+.eval-btn:active {
+  transform: translateY(0);
+}
+
+.eval-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Quick actions */
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.quick-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(221, 193, 101, 0.05);
+}
+
+/* Variable input */
+.var-section {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  align-items: center;
+}
+
+.var-section label {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.var-section input {
+  width: 120px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--gold-light);
+  font-family: inherit;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.var-section input:focus {
+  border-color: var(--border-focus);
+}
+
+/* Operations bar */
+.ops-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.op-btn {
+  padding: 10px 18px;
+  background: rgba(221, 193, 101, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+}
+
+.op-btn:hover {
+  background: rgba(221, 193, 101, 0.12);
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(221, 193, 101, 0.1);
+}
+
+.op-btn .op-icon {
+  margin-right: 6px;
+}
+
+/* Results area */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.result-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  animation: cardIn 0.4s ease;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: rgba(221, 193, 101, 0.04);
+  border-bottom: 1px solid var(--border);
+}
+
+.result-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.result-input-echo {
+  font-size: 0.8rem;
+  color: var(--orange);
+}
+
+.result-body {
+  padding: 24px 20px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.result-body .math-output {
+  font-size: 1.3rem;
+  color: var(--gold-light);
+  text-align: center;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.result-body .math-output mjx-container {
+  color: var(--gold-light) !important;
+}
+
+.result-body .text-output {
+  color: var(--text);
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+  width: 100%;
+}
+
+.result-actions {
+  display: flex;
+  gap: 6px;
+  padding: 0 20px 14px;
+}
+
+.result-action-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.result-action-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* Error state */
+.error-card {
+  border-color: rgba(229, 89, 28, 0.3);
+}
+
+.error-card .result-header {
+  background: rgba(229, 89, 28, 0.08);
+}
+
+.error-card .result-body {
+  color: var(--orange);
+}
+
+/* History panel */
+.history-section {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.history-title {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-item:hover {
+  background: rgba(221, 193, 101, 0.05);
+}
+
+.history-expr {
+  color: var(--gold);
+  font-size: 0.85rem;
+}
+
+.history-result {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  margin-top: 60px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.footer a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  transition: color 0.2s;
+}
+
+.footer a:hover {
+  color: var(--gold);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .container { padding: 20px 16px; }
+  .header h1 { font-size: 1.4rem; }
+  .input-row { flex-direction: column; }
+  .eval-btn { padding: 14px; }
+  .ops-bar { gap: 6px; }
+  .op-btn { padding: 8px 12px; font-size: 0.75rem; }
+}
+
+/* MathJax SVG color override */
+mjx-container svg { color: var(--gold-light) !important; }
+mjx-container[jax="SVG"] { color: var(--gold-light) !important; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Initializing SymPy</div>
+  <div class="loading-sub">Loading Python math engine in your browser...</div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <h1>Math Scratchpad</h1>
+    <div class="subtitle">Symbolic math powered by SymPy — runs entirely in your browser</div>
+  </div>
+
+  <div class="input-section">
+    <div class="input-row">
+      <div class="input-wrapper">
+        <input type="text" id="exprInput" placeholder="x**2 + 3*x + 2" autocomplete="off" spellcheck="false" disabled>
+      </div>
+      <button class="eval-btn" id="evalBtn" onclick="evaluate()" disabled>Evaluate</button>
+    </div>
+
+    <div class="var-section">
+      <label>Variable:</label>
+      <input type="text" id="varInput" value="x" placeholder="x" disabled>
+      <label style="margin-left: 12px;">With respect to:</label>
+      <input type="text" id="wrtInput" value="x" placeholder="x" disabled>
+    </div>
+
+    <div class="ops-bar" id="opsBar">
+      <button class="op-btn" onclick="doOp('simplify')"><span class="op-icon">◈</span>Simplify</button>
+      <button class="op-btn" onclick="doOp('expand')"><span class="op-icon">⟐</span>Expand</button>
+      <button class="op-btn" onclick="doOp('factor')"><span class="op-icon">⊞</span>Factor</button>
+      <button class="op-btn" onclick="doOp('diff')"><span class="op-icon">∂</span>Differentiate</button>
+      <button class="op-btn" onclick="doOp('integrate')"><span class="op-icon">∫</span>Integrate</button>
+      <button class="op-btn" onclick="doOp('solve')"><span class="op-icon">⊜</span>Solve = 0</button>
+      <button class="op-btn" onclick="doOp('series')"><span class="op-icon">Σ</span>Series</button>
+      <button class="op-btn" onclick="doOp('limit')"><span class="op-icon">→</span>Limit</button>
+      <button class="op-btn" onclick="doOp('matrix')"><span class="op-icon">▦</span>Matrix</button>
+    </div>
+
+    <div class="quick-actions">
+      <button class="quick-btn" onclick="setExpr('x**2 + 3*x + 2')">x² + 3x + 2</button>
+      <button class="quick-btn" onclick="setExpr('sin(x)**2 + cos(x)**2')">sin²x + cos²x</button>
+      <button class="quick-btn" onclick="setExpr('exp(x)*sin(x)')">eˣ sin x</button>
+      <button class="quick-btn" onclick="setExpr('1/(x**2 - 1)')">1/(x²−1)</button>
+      <button class="quick-btn" onclick="setExpr('Matrix([[1,2],[3,4]])')">[[1,2],[3,4]]</button>
+      <button class="quick-btn" onclick="setExpr('sqrt(x**2 + y**2)')">√(x²+y²)</button>
+      <button class="quick-btn" onclick="setExpr('Sum(1/n**2, (n, 1, oo))')">Σ 1/n²</button>
+      <button class="quick-btn" onclick="setExpr('diff(x**3*exp(-x), x)')">d/dx(x³e⁻ˣ)</button>
+      <button class="quick-btn" onclick="setExpr('integrate(x**2*sin(x), x)')">∫x²sin(x)dx</button>
+      <button class="quick-btn" onclick="setExpr('limit(sin(x)/x, x, 0)')">lim sin(x)/x</button>
+    </div>
+  </div>
+
+  <div class="results" id="results"></div>
+
+  <div class="history-section" id="historySection" style="display: none;">
+    <div class="history-title">History</div>
+    <div id="historyList"></div>
+  </div>
+
+  <div class="footer">
+    <a href="https://ianhandy.com">ianhandy.com</a>
+  </div>
+</div>
+
+<script>
+let pyodide = null;
+const history = [];
+
+async function initPyodide() {
+  try {
+    pyodide = await loadPyodide();
+    await pyodide.loadPackage('sympy');
+
+    await pyodide.runPythonAsync(`
+from sympy import *
+from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
+import json
+
+# Common symbols
+x, y, z, t, n, k, m, a, b, c = symbols('x y z t n k m a b c')
+
+transformations = standard_transformations + (implicit_multiplication_application, convert_xor)
+
+def safe_parse(expr_str):
+    """Parse expression with implicit multiplication and common transformations."""
+    local_dict = {
+        'x': x, 'y': y, 'z': z, 't': t, 'n': n, 'k': k, 'm': m,
+        'a': a, 'b': b, 'c': c,
+        'pi': pi, 'e': E, 'E': E, 'I': I, 'oo': oo,
+        'inf': oo, 'infinity': oo
+    }
+    return parse_expr(expr_str, local_dict=local_dict, transformations=transformations)
+
+def to_latex_safe(expr):
+    """Convert expression to LaTeX string."""
+    return latex(expr)
+
+def do_evaluate(expr_str):
+    """Parse and return LaTeX of expression."""
+    expr = safe_parse(expr_str)
+    return json.dumps({
+        'latex': to_latex_safe(expr),
+        'text': str(expr),
+        'type': type(expr).__name__
+    })
+
+def do_simplify(expr_str):
+    expr = safe_parse(expr_str)
+    result = simplify(expr)
+    return json.dumps({
+        'latex': to_latex_safe(result),
+        'text': str(result)
+    })
+
+def do_expand(expr_str):
+    expr = safe_parse(expr_str)
+    result = expand(expr)
+    return json.dumps({
+        'latex': to_latex_safe(result),
+        'text': str(result)
+    })
+
+def do_factor(expr_str):
+    expr = safe_parse(expr_str)
+    result = factor(expr)
+    return json.dumps({
+        'latex': to_latex_safe(result),
+        'text': str(result)
+    })
+
+def do_diff(expr_str, var_str):
+    expr = safe_parse(expr_str)
+    var = Symbol(var_str)
+    result = diff(expr, var)
+    return json.dumps({
+        'latex': to_latex_safe(result),
+        'text': str(result)
+    })
+
+def do_integrate(expr_str, var_str):
+    expr = safe_parse(expr_str)
+    var = Symbol(var_str)
+    result = integrate(expr, var)
+    return json.dumps({
+        'latex': to_latex_safe(result),
+        'text': str(result)
+    })
+
+def do_solve(expr_str, var_str):
+    expr = safe_parse(expr_str)
+    var = Symbol(var_str)
+    result = solve(expr, var)
+    if isinstance(result, list):
+        latex_parts = [to_latex_safe(r) for r in result]
+        text_parts = [str(r) for r in result]
+        return json.dumps({
+            'latex': ', \\\\; '.join(latex_parts),
+            'text': ', '.join(text_parts),
+            'count': len(result)
+        })
+    return json.dumps({
+        'latex': to_latex_safe(result),
+        'text': str(result)
+    })
+
+def do_series(expr_str, var_str, point='0', n_terms='6'):
+    expr = safe_parse(expr_str)
+    var = Symbol(var_str)
+    pt = safe_parse(point)
+    nt = int(n_terms)
+    result = series(expr, var, pt, n=nt)
+    return json.dumps({
+        'latex': to_latex_safe(result),
+        'text': str(result)
+    })
+
+def do_limit(expr_str, var_str, point='0'):
+    expr = safe_parse(expr_str)
+    var = Symbol(var_str)
+    pt = safe_parse(point)
+    result = limit(expr, var, pt)
+    return json.dumps({
+        'latex': to_latex_safe(result),
+        'text': str(result)
+    })
+
+def do_matrix(expr_str):
+    """Evaluate matrix expressions — eigenvalues, determinant, inverse, rref."""
+    expr = safe_parse(expr_str)
+    if not isinstance(expr, MatrixBase):
+        return json.dumps({'error': 'Expression is not a matrix. Use Matrix([[a,b],[c,d]]) syntax.'})
+
+    results = {}
+    results['matrix'] = to_latex_safe(expr)
+    results['det'] = to_latex_safe(expr.det()) if expr.is_square else 'N/A (not square)'
+
+    if expr.is_square:
+        try:
+            results['inverse'] = to_latex_safe(expr.inv())
+        except:
+            results['inverse'] = 'Singular (no inverse)'
+        try:
+            eigenvals = expr.eigenvals()
+            ev_parts = []
+            for val, mult in eigenvals.items():
+                s = to_latex_safe(val)
+                if mult > 1:
+                    s += f' \\\\text{{(mult. {mult})}}'
+                ev_parts.append(s)
+            results['eigenvalues'] = ', \\\\; '.join(ev_parts)
+        except:
+            results['eigenvalues'] = 'Could not compute'
+
+    rref_matrix, pivots = expr.rref()
+    results['rref'] = to_latex_safe(rref_matrix)
+    results['rank'] = str(len(pivots))
+    results['nullity'] = str(expr.cols - len(pivots))
+    results['text'] = f"det={expr.det() if expr.is_square else 'N/A'}, rank={len(pivots)}"
+
+    return json.dumps(results)
+`);
+
+    // Enable inputs
+    document.getElementById('exprInput').disabled = false;
+    document.getElementById('exprInput').focus();
+    document.getElementById('evalBtn').disabled = false;
+    document.getElementById('varInput').disabled = false;
+    document.getElementById('wrtInput').disabled = false;
+
+    // Hide loading
+    document.getElementById('loadingOverlay').classList.add('hidden');
+
+  } catch (err) {
+    document.querySelector('.loading-text').textContent = 'Failed to load';
+    document.querySelector('.loading-sub').textContent = err.message;
+    console.error(err);
+  }
+}
+
+function setExpr(expr) {
+  document.getElementById('exprInput').value = expr;
+  document.getElementById('exprInput').focus();
+}
+
+async function evaluate() {
+  const expr = document.getElementById('exprInput').value.trim();
+  if (!expr) return;
+  await runOp('evaluate', 'EXPRESSION', expr, `do_evaluate(${JSON.stringify(expr)})`);
+}
+
+async function doOp(op) {
+  const expr = document.getElementById('exprInput').value.trim();
+  if (!expr) return;
+
+  const wrt = document.getElementById('wrtInput').value.trim() || 'x';
+  let pyCall, label;
+
+  switch (op) {
+    case 'simplify':
+      label = 'SIMPLIFY'; pyCall = `do_simplify(${JSON.stringify(expr)})`; break;
+    case 'expand':
+      label = 'EXPAND'; pyCall = `do_expand(${JSON.stringify(expr)})`; break;
+    case 'factor':
+      label = 'FACTOR'; pyCall = `do_factor(${JSON.stringify(expr)})`; break;
+    case 'diff':
+      label = `d/d${wrt}`; pyCall = `do_diff(${JSON.stringify(expr)}, ${JSON.stringify(wrt)})`; break;
+    case 'integrate':
+      label = `∫ d${wrt}`; pyCall = `do_integrate(${JSON.stringify(expr)}, ${JSON.stringify(wrt)})`; break;
+    case 'solve':
+      label = `SOLVE (${wrt})`; pyCall = `do_solve(${JSON.stringify(expr)}, ${JSON.stringify(wrt)})`; break;
+    case 'series':
+      label = `SERIES (${wrt}→0)`; pyCall = `do_series(${JSON.stringify(expr)}, ${JSON.stringify(wrt)})`; break;
+    case 'limit':
+      label = `LIMIT (${wrt}→0)`; pyCall = `do_limit(${JSON.stringify(expr)}, ${JSON.stringify(wrt)})`; break;
+    case 'matrix':
+      label = 'MATRIX'; pyCall = `do_matrix(${JSON.stringify(expr)})`; break;
+  }
+
+  await runOp(op, label, expr, pyCall);
+}
+
+async function runOp(op, label, expr, pyCall) {
+  const evalBtn = document.getElementById('evalBtn');
+  evalBtn.disabled = true;
+  evalBtn.textContent = '...';
+
+  try {
+    const resultJson = await pyodide.runPythonAsync(pyCall);
+    const result = JSON.parse(resultJson);
+
+    if (result.error) {
+      addErrorCard(label, expr, result.error);
+    } else if (op === 'matrix') {
+      addMatrixCard(label, expr, result);
+    } else {
+      addResultCard(label, expr, result.latex, result.text);
+    }
+
+    addHistory(expr, result.text || result.det || '');
+  } catch (err) {
+    addErrorCard(label, expr, err.message.split('\n').pop());
+  }
+
+  evalBtn.disabled = false;
+  evalBtn.textContent = 'Evaluate';
+}
+
+function addResultCard(label, inputExpr, latex, text) {
+  const results = document.getElementById('results');
+  const card = document.createElement('div');
+  card.className = 'result-card';
+  card.innerHTML = `
+    <div class="result-header">
+      <span class="result-label">${label}</span>
+      <span class="result-input-echo">${escapeHtml(inputExpr)}</span>
+    </div>
+    <div class="result-body">
+      <div class="math-output">$$${latex}$$</div>
+    </div>
+    <div class="result-actions">
+      <button class="result-action-btn" onclick="copyText('${escapeForAttr(text)}')">Copy</button>
+      <button class="result-action-btn" onclick="copyText('${escapeForAttr(latex)}')">Copy LaTeX</button>
+      <button class="result-action-btn" onclick="useAsInput('${escapeForAttr(text)}')">Use as Input</button>
+    </div>
+  `;
+  results.prepend(card);
+  typesetCard(card);
+}
+
+function addMatrixCard(label, inputExpr, result) {
+  const results = document.getElementById('results');
+  const card = document.createElement('div');
+  card.className = 'result-card';
+
+  let sections = `<div class="math-output" style="margin-bottom: 16px;"><div style="color: var(--text-dim); font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">Matrix</div>$$${result.matrix}$$</div>`;
+
+  if (result.det && result.det !== 'N/A (not square)') {
+    sections += `<div class="math-output" style="margin-bottom: 16px;"><div style="color: var(--text-dim); font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">Determinant</div>$$${result.det}$$</div>`;
+  }
+
+  if (result.eigenvalues) {
+    sections += `<div class="math-output" style="margin-bottom: 16px;"><div style="color: var(--text-dim); font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">Eigenvalues</div>$$${result.eigenvalues}$$</div>`;
+  }
+
+  if (result.inverse && result.inverse !== 'Singular (no inverse)') {
+    sections += `<div class="math-output" style="margin-bottom: 16px;"><div style="color: var(--text-dim); font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">Inverse</div>$$${result.inverse}$$</div>`;
+  }
+
+  sections += `<div class="math-output" style="margin-bottom: 16px;"><div style="color: var(--text-dim); font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">RREF (rank ${result.rank}, nullity ${result.nullity})</div>$$${result.rref}$$</div>`;
+
+  card.innerHTML = `
+    <div class="result-header">
+      <span class="result-label">${label}</span>
+      <span class="result-input-echo">${escapeHtml(inputExpr)}</span>
+    </div>
+    <div class="result-body" style="flex-direction: column; align-items: stretch;">
+      ${sections}
+    </div>
+    <div class="result-actions">
+      <button class="result-action-btn" onclick="copyText('${escapeForAttr(result.text)}')">Copy</button>
+    </div>
+  `;
+  results.prepend(card);
+  typesetCard(card);
+}
+
+function addErrorCard(label, inputExpr, message) {
+  const results = document.getElementById('results');
+  const card = document.createElement('div');
+  card.className = 'result-card error-card';
+  card.innerHTML = `
+    <div class="result-header">
+      <span class="result-label">${label}</span>
+      <span class="result-input-echo">${escapeHtml(inputExpr)}</span>
+    </div>
+    <div class="result-body">
+      <div class="text-output" style="color: var(--orange);">${escapeHtml(message)}</div>
+    </div>
+  `;
+  results.prepend(card);
+}
+
+function typesetCard(card) {
+  if (window.MathJax && MathJax.typesetPromise) {
+    MathJax.typesetPromise([card]).catch(err => console.warn('MathJax typeset error:', err));
+  }
+}
+
+function addHistory(expr, result) {
+  history.unshift({ expr, result });
+  if (history.length > 20) history.pop();
+
+  const section = document.getElementById('historySection');
+  const list = document.getElementById('historyList');
+  section.style.display = 'block';
+  list.innerHTML = '';
+
+  for (const item of history.slice(0, 10)) {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `
+      <span class="history-expr">${escapeHtml(item.expr)}</span>
+      <span class="history-result">→ ${escapeHtml(item.result.substring(0, 40))}</span>
+    `;
+    div.onclick = () => setExpr(item.expr);
+    list.appendChild(div);
+  }
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    // Brief visual feedback
+  }).catch(() => {
+    // Fallback: select text
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+}
+
+function useAsInput(text) {
+  document.getElementById('exprInput').value = text;
+  document.getElementById('exprInput').focus();
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function escapeForAttr(str) {
+  return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+// Keyboard shortcuts
+document.getElementById('exprInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (e.shiftKey) {
+      doOp('simplify');
+    } else if (e.ctrlKey || e.metaKey) {
+      doOp('diff');
+    } else {
+      evaluate();
+    }
+  }
+});
+
+// Init
+initPyodide();
+</script>
+</body>
+</html>

@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lorenz Attractor Explorer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #241200;
+    color: #DDC165;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  #canvas {
+    display: block;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    cursor: grab;
+  }
+  #canvas:active { cursor: grabbing; }
+
+  #controls {
+    position: fixed;
+    top: 20px; left: 20px;
+    background: rgba(26,13,0,0.85);
+    border: 1px solid rgba(221,193,101,0.2);
+    border-radius: 8px;
+    padding: 16px;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    min-width: 240px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    transition: transform 0.3s ease;
+  }
+
+  #controls.collapsed {
+    transform: translateX(calc(-100% + 40px));
+  }
+
+  #controls h2 {
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #DDC165;
+    margin-bottom: 12px;
+    text-shadow: 0 0 10px rgba(221,193,101,0.3);
+  }
+
+  .param-group {
+    margin-bottom: 10px;
+  }
+
+  .param-group label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: rgba(221,193,101,0.7);
+    margin-bottom: 4px;
+  }
+
+  .param-group label span.val {
+    color: #E5591C;
+    font-weight: bold;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(221,193,101,0.15);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #E5591C;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(229,89,28,0.6);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  button {
+    flex: 1;
+    padding: 6px 10px;
+    background: rgba(229,89,28,0.15);
+    border: 1px solid rgba(229,89,28,0.4);
+    color: #DDC165;
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  button:hover {
+    background: rgba(229,89,28,0.3);
+    border-color: #E5591C;
+    box-shadow: 0 0 12px rgba(229,89,28,0.3);
+  }
+
+  #info {
+    position: fixed;
+    bottom: 20px; left: 20px;
+    font-size: 0.7rem;
+    color: rgba(221,193,101,0.4);
+    z-index: 100;
+  }
+
+  #title-overlay {
+    position: fixed;
+    top: 20px; right: 20px;
+    text-align: right;
+    z-index: 100;
+  }
+  #title-overlay h1 {
+    font-size: 1.1rem;
+    color: #DDC165;
+    text-shadow: 0 0 15px rgba(221,193,101,0.4);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  #title-overlay p {
+    font-size: 0.65rem;
+    color: rgba(221,193,101,0.4);
+    margin-top: 4px;
+  }
+
+  .preset-row {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .preset-btn {
+    flex: none;
+    padding: 3px 8px;
+    font-size: 0.6rem;
+  }
+
+  #trail-control {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(221,193,101,0.1);
+  }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .checkbox-row input[type="checkbox"] {
+    accent-color: #E5591C;
+  }
+  .checkbox-row label {
+    font-size: 0.7rem;
+    color: rgba(221,193,101,0.7);
+    cursor: pointer;
+  }
+
+  .tray-tab { display: none; }
+
+  /* ── Mobile tool tray ── */
+  @media (max-width: 768px) {
+    #controls {
+      position: fixed;
+      bottom: 0; left: 0; right: 0; top: auto;
+      width: 100%; max-height: 55vh;
+      border-radius: 0;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      z-index: 100;
+      overflow-y: auto;
+      padding-bottom: 20px;
+      min-width: unset;
+    }
+    #controls.collapsed {
+      transform: translateY(100%);
+    }
+    #controls.tray-open {
+      transform: translateY(0);
+    }
+    .tray-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: fixed;
+      bottom: 0;
+      right: 16px;
+      z-index: 101;
+      background: rgba(26,13,0,0.95);
+      border: 1px solid rgba(221,193,101,0.25);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      padding: 7px 14px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: bottom 0.3s ease;
+      font-family: inherit;
+    }
+    .tray-tab-label {
+      font-size: 11px;
+      color: rgba(221,193,101,0.7);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .tray-tab-chevron {
+      font-size: 10px;
+      color: rgba(221,193,101,0.5);
+      transition: transform 0.3s ease;
+      line-height: 1;
+    }
+    .tray-tab.tab-active .tray-tab-chevron {
+      transform: rotate(180deg);
+    }
+    #info {
+      bottom: 52px;
+    }
+  }
+  @media (max-width: 480px) {
+    #controls {
+      padding: 10px;
+      padding-bottom: 16px;
+    }
+    #controls h2 {
+      font-size: 0.75rem;
+      margin-bottom: 8px;
+    }
+    .param-group label {
+      font-size: 0.65rem;
+    }
+    button {
+      font-size: 0.6rem;
+      padding: 5px 8px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="controls">
+  <h2>Parameters</h2>
+
+  <div class="param-group">
+    <label>σ (sigma) <span class="val" id="sigma-val">10.0</span></label>
+    <input type="range" id="sigma" min="0" max="30" step="0.1" value="10">
+  </div>
+
+  <div class="param-group">
+    <label>ρ (rho) <span class="val" id="rho-val">28.0</span></label>
+    <input type="range" id="rho" min="0" max="60" step="0.1" value="28">
+  </div>
+
+  <div class="param-group">
+    <label>β (beta) <span class="val" id="beta-val">2.667</span></label>
+    <input type="range" id="beta" min="0" max="10" step="0.01" value="2.667">
+  </div>
+
+  <div class="param-group">
+    <label>Speed <span class="val" id="speed-val">1.0</span></label>
+    <input type="range" id="speed" min="0.1" max="5" step="0.1" value="1">
+  </div>
+
+  <div class="param-group">
+    <label>Trail Length <span class="val" id="trail-val">2000</span></label>
+    <input type="range" id="trail" min="200" max="8000" step="100" value="2000">
+  </div>
+
+  <div class="preset-row">
+    <button class="preset-btn" onclick="setPreset('classic')">Classic</button>
+    <button class="preset-btn" onclick="setPreset('chaos')">Chaos</button>
+    <button class="preset-btn" onclick="setPreset('gentle')">Gentle</button>
+    <button class="preset-btn" onclick="setPreset('tight')">Tight</button>
+  </div>
+
+  <div id="trail-control">
+    <div class="checkbox-row">
+      <input type="checkbox" id="glow-toggle" checked>
+      <label for="glow-toggle">Glow effect</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="fade-toggle" checked>
+      <label for="fade-toggle">Trail fade</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="multi-toggle">
+      <label for="multi-toggle">Multi-particle</label>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button onclick="resetAttractor()">Reset</button>
+    <button onclick="randomize()">Randomize</button>
+  </div>
+  <div class="btn-row">
+    <button id="rotate-toggle" onclick="toggleAutoRotate()">Auto-Rotate: ON</button>
+    <button onclick="savePNG()">Save PNG</button>
+  </div>
+</div>
+
+<div id="title-overlay">
+  <h1>Lorenz Attractor</h1>
+  <p>Drag to rotate · Scroll to zoom</p>
+</div>
+
+<div id="info">
+  <span id="fps">0 FPS</span> · <span id="points">0 pts</span>
+</div>
+
+<script>
+// ── Performance-optimized Lorenz Attractor ──
+// Uses ring buffers (Float64Array) instead of object arrays,
+// batched canvas paths instead of per-segment draw calls,
+// and no Pyodide dependency.
+
+// ── State ──
+const state = {
+  sigma: 10, rho: 28, beta: 2.667,
+  speed: 1, trailLen: 2000,
+  glow: true, fade: true, multi: false,
+  autoRotate: true,
+  // Camera
+  rotX: 0.4, rotY: -0.7, zoom: 8,
+  // Drag
+  dragging: false, lastMX: 0, lastMY: 0,
+  running: true,
+  // Current position for live stepping
+  cx: 1, cy: 1, cz: 1,
+};
+
+// ── Ring buffer for trail points ──
+// Stores x,y,z in flat Float64Arrays with a ring buffer to avoid shift() costs.
+const MAX_TRAIL = 8000; // max value of trail slider
+
+class TrailBuffer {
+  constructor() {
+    this.x = new Float64Array(MAX_TRAIL);
+    this.y = new Float64Array(MAX_TRAIL);
+    this.z = new Float64Array(MAX_TRAIL);
+    this.head = 0;  // next write position
+    this.count = 0; // how many points stored
+  }
+
+  push(px, py, pz) {
+    this.x[this.head] = px;
+    this.y[this.head] = py;
+    this.z[this.head] = pz;
+    this.head = (this.head + 1) % MAX_TRAIL;
+    if (this.count < MAX_TRAIL) this.count++;
+  }
+
+  // Get the i-th point (0 = oldest visible, count-1 = newest)
+  getIndex(i, limit) {
+    // Only show the last `limit` points
+    const visible = Math.min(this.count, limit);
+    const offset = visible - limit;
+    const actualI = i; // i ranges from 0..visible-1
+    const bufIdx = (this.head - visible + actualI + MAX_TRAIL) % MAX_TRAIL;
+    return bufIdx;
+  }
+
+  visibleCount(limit) {
+    return Math.min(this.count, limit);
+  }
+
+  clear() {
+    this.head = 0;
+    this.count = 0;
+  }
+}
+
+const mainTrail = new TrailBuffer();
+const extraTrails = [new TrailBuffer(), new TrailBuffer(), new TrailBuffer()];
+const extras = [
+  { x: 0, y: 0, z: 0 },
+  { x: 0, y: 0, z: 0 },
+  { x: 0, y: 0, z: 0 }
+];
+let extrasActive = false;
+
+// ── Canvas setup ──
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+
+// Pre-allocate a projection cache to avoid repeated trig per point
+let projCache = new Float64Array(MAX_TRAIL * 2); // sx, sy pairs
+
+function resize() {
+  canvas.width = window.innerWidth * devicePixelRatio;
+  canvas.height = window.innerHeight * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── RK4 integration ──
+function lorenzRK4(x, y, z, dt) {
+  const s = state.sigma, r = state.rho, b = state.beta;
+
+  // k1
+  const k1x = s * (y - x);
+  const k1y = x * (r - z) - y;
+  const k1z = x * y - b * z;
+
+  // k2
+  const mx = x + k1x * dt * 0.5;
+  const my = y + k1y * dt * 0.5;
+  const mz = z + k1z * dt * 0.5;
+  const k2x = s * (my - mx);
+  const k2y = mx * (r - mz) - my;
+  const k2z = mx * my - b * mz;
+
+  // k3
+  const nx = x + k2x * dt * 0.5;
+  const ny = y + k2y * dt * 0.5;
+  const nz = z + k2z * dt * 0.5;
+  const k3x = s * (ny - nx);
+  const k3y = nx * (r - nz) - ny;
+  const k3z = nx * ny - b * nz;
+
+  // k4
+  const ox = x + k3x * dt;
+  const oy = y + k3y * dt;
+  const oz = z + k3z * dt;
+  const k4x = s * (oy - ox);
+  const k4y = ox * (r - oz) - oy;
+  const k4z = ox * oy - b * oz;
+
+  return {
+    x: x + (k1x + 2*k2x + 2*k3x + k4x) * dt / 6,
+    y: y + (k1y + 2*k2y + 2*k3y + k4y) * dt / 6,
+    z: z + (k1z + 2*k2z + 2*k3z + k4z) * dt / 6
+  };
+}
+
+// ── Presets ──
+const presets = {
+  classic: { sigma: 10, rho: 28, beta: 2.667 },
+  chaos:   { sigma: 14, rho: 46, beta: 4 },
+  gentle:  { sigma: 6, rho: 18, beta: 1.5 },
+  tight:   { sigma: 10, rho: 15, beta: 2.667 }
+};
+
+function setPreset(name) {
+  const p = presets[name];
+  state.sigma = p.sigma; state.rho = p.rho; state.beta = p.beta;
+  document.getElementById('sigma').value = p.sigma;
+  document.getElementById('rho').value = p.rho;
+  document.getElementById('beta').value = p.beta;
+  document.getElementById('sigma-val').textContent = p.sigma.toFixed(1);
+  document.getElementById('rho-val').textContent = p.rho.toFixed(1);
+  document.getElementById('beta-val').textContent = p.beta.toFixed(3);
+  resetAttractor();
+}
+
+function resetAttractor() {
+  mainTrail.clear();
+  state.cx = 1 + Math.random() * 0.01;
+  state.cy = 1 + Math.random() * 0.01;
+  state.cz = 1 + Math.random() * 0.01;
+  if (state.multi) initExtras();
+  else extrasActive = false;
+}
+
+function randomize() {
+  const s = 5 + Math.random() * 25;
+  const r = 5 + Math.random() * 55;
+  const b = 0.5 + Math.random() * 8;
+  state.sigma = s; state.rho = r; state.beta = b;
+  document.getElementById('sigma').value = s;
+  document.getElementById('rho').value = r;
+  document.getElementById('beta').value = b;
+  document.getElementById('sigma-val').textContent = s.toFixed(1);
+  document.getElementById('rho-val').textContent = r.toFixed(1);
+  document.getElementById('beta-val').textContent = b.toFixed(3);
+  resetAttractor();
+}
+
+function initExtras() {
+  extrasActive = true;
+  for (let i = 0; i < 3; i++) {
+    extras[i].x = state.cx + (Math.random() - 0.5) * 0.5;
+    extras[i].y = state.cy + (Math.random() - 0.5) * 0.5;
+    extras[i].z = state.cz + (Math.random() - 0.5) * 0.5;
+    extraTrails[i].clear();
+  }
+}
+
+// ── Input handling ──
+const sliders = ['sigma', 'rho', 'beta', 'speed', 'trail'];
+sliders.forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    const v = parseFloat(el.value);
+    const valEl = document.getElementById(id + '-val');
+    if (id === 'sigma') { state.sigma = v; valEl.textContent = v.toFixed(1); }
+    else if (id === 'rho') { state.rho = v; valEl.textContent = v.toFixed(1); }
+    else if (id === 'beta') { state.beta = v; valEl.textContent = v.toFixed(3); }
+    else if (id === 'speed') { state.speed = v; valEl.textContent = v.toFixed(1); }
+    else if (id === 'trail') { state.trailLen = v; valEl.textContent = v; }
+  });
+});
+
+document.getElementById('glow-toggle').addEventListener('change', e => state.glow = e.target.checked);
+document.getElementById('fade-toggle').addEventListener('change', e => state.fade = e.target.checked);
+document.getElementById('multi-toggle').addEventListener('change', e => {
+  state.multi = e.target.checked;
+  if (state.multi) initExtras();
+  else extrasActive = false;
+});
+
+// Mouse drag for rotation
+canvas.addEventListener('mousedown', e => {
+  state.dragging = true;
+  state.lastMX = e.clientX;
+  state.lastMY = e.clientY;
+});
+window.addEventListener('mousemove', e => {
+  if (!state.dragging) return;
+  const dx = e.clientX - state.lastMX;
+  const dy = e.clientY - state.lastMY;
+  state.rotY += dx * 0.005;
+  state.rotX += dy * 0.005;
+  state.rotX = Math.max(-Math.PI/2, Math.min(Math.PI/2, state.rotX));
+  state.lastMX = e.clientX;
+  state.lastMY = e.clientY;
+});
+window.addEventListener('mouseup', () => state.dragging = false);
+
+// Touch support
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    state.dragging = true;
+    state.lastMX = e.touches[0].clientX;
+    state.lastMY = e.touches[0].clientY;
+  }
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (!state.dragging || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - state.lastMX;
+  const dy = e.touches[0].clientY - state.lastMY;
+  state.rotY += dx * 0.005;
+  state.rotX += dy * 0.005;
+  state.rotX = Math.max(-Math.PI/2, Math.min(Math.PI/2, state.rotX));
+  state.lastMX = e.touches[0].clientX;
+  state.lastMY = e.touches[0].clientY;
+}, { passive: true });
+canvas.addEventListener('touchend', () => state.dragging = false);
+
+// Scroll to zoom
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  state.zoom *= e.deltaY > 0 ? 0.95 : 1.05;
+  state.zoom = Math.max(1, Math.min(30, state.zoom));
+}, { passive: false });
+
+// ── Color helpers ──
+// Pre-compute color strings to avoid per-segment string allocation
+// We batch segments into color bands and draw each band as one path
+
+function trailColorRGB(t) {
+  // Gradient: deep brown -> burnt orange -> gold -> white-gold
+  const r = 36 + t * (221 - 36);
+  const g = 18 + t * (193 - 18);
+  const b = t * 101;
+  return [r | 0, g | 0, b | 0];
+}
+
+const EXTRA_COLORS = [
+  [229, 89, 28],   // orange
+  [180, 60, 200],  // purple
+  [28, 180, 229],  // cyan
+];
+
+function extraColorRGB(idx, t) {
+  const c = EXTRA_COLORS[idx % 3];
+  return [
+    (c[0] * 0.3 + c[0] * 0.7 * t) | 0,
+    (c[1] * 0.3 + c[1] * 0.7 * t) | 0,
+    (c[2] * 0.3 + c[2] * 0.7 * t) | 0
+  ];
+}
+
+function toggleAutoRotate() {
+  state.autoRotate = !state.autoRotate;
+  document.getElementById('rotate-toggle').textContent = 'Auto-Rotate: ' + (state.autoRotate ? 'ON' : 'OFF');
+}
+
+function savePNG() {
+  const link = document.createElement('a');
+  link.download = 'lorenz-attractor.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// ── Render ──
+let lastTime = 0;
+let frameCount = 0;
+let fpsTime = 0;
+const fpsEl = document.getElementById('fps');
+const ptsEl = document.getElementById('points');
+
+function render(time) {
+  requestAnimationFrame(render);
+
+  const dt = Math.min((time - lastTime) / 1000, 0.05);
+  lastTime = time;
+
+  // FPS counter
+  frameCount++;
+  if (time - fpsTime > 1000) {
+    fpsEl.textContent = frameCount + ' FPS';
+    frameCount = 0;
+    fpsTime = time;
+  }
+
+  // Auto-rotate when not dragging
+  if (!state.dragging && state.autoRotate) {
+    state.rotY += 0.001;
+  }
+
+  // Step simulation
+  const stepsPerFrame = Math.round(4 * state.speed);
+  const simDt = 0.005;
+
+  for (let i = 0; i < stepsPerFrame; i++) {
+    const next = lorenzRK4(state.cx, state.cy, state.cz, simDt);
+    state.cx = next.x; state.cy = next.y; state.cz = next.z;
+    mainTrail.push(next.x, next.y, next.z);
+
+    if (extrasActive) {
+      for (let j = 0; j < 3; j++) {
+        const e = extras[j];
+        const en = lorenzRK4(e.x, e.y, e.z, simDt);
+        e.x = en.x; e.y = en.y; e.z = en.z;
+        extraTrails[j].push(en.x, en.y, en.z);
+      }
+    }
+  }
+
+  const trailLimit = state.trailLen;
+  const visible = mainTrail.visibleCount(trailLimit);
+  ptsEl.textContent = visible + ' pts';
+
+  // Clear
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  ctx.fillStyle = '#241200';
+  ctx.fillRect(0, 0, w, h);
+
+  // Pre-compute rotation matrix values (once per frame, not per point)
+  const cosY = Math.cos(state.rotY), sinY = Math.sin(state.rotY);
+  const cosX = Math.cos(state.rotX), sinX = Math.sin(state.rotX);
+  const scale = state.zoom;
+  const hw = w * 0.5;
+  const hh = h * 0.5;
+
+  // Project all visible points for main trail into cache
+  function projectTrail(trail, limit) {
+    const vis = trail.visibleCount(limit);
+    if (vis < 2) return vis;
+    for (let i = 0; i < vis; i++) {
+      const bufIdx = (trail.head - vis + i + MAX_TRAIL) % MAX_TRAIL;
+      const px = trail.x[bufIdx];
+      const py = trail.y[bufIdx];
+      const pz = trail.z[bufIdx];
+
+      // Rotate Y then X (inlined)
+      const rx = px * cosY - pz * sinY;
+      const rz1 = px * sinY + pz * cosY;
+      const ry = py * cosX - rz1 * sinX;
+
+      projCache[i * 2]     = hw + rx * scale;
+      projCache[i * 2 + 1] = hh - ry * scale;
+    }
+    return vis;
+  }
+
+  // Draw a trail using batched paths grouped by color band
+  // Instead of one beginPath/stroke per segment, we group segments into
+  // bands of similar color and draw each band as a single path.
+  function drawTrail(trail, limit, colorFn) {
+    const vis = projectTrail(trail, limit);
+    if (vis < 2) return;
+
+    const numBands = 32; // number of color bands
+    const bandSize = vis / numBands;
+
+    // Draw glow layer (single pass with reduced detail)
+    if (state.glow) {
+      ctx.save();
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.25;
+      // Draw glow as fewer, thicker segments — skip points for performance
+      const glowStep = Math.max(2, Math.floor(vis / 150));
+      const glowBands = 8;
+      const glowBandSize = vis / glowBands;
+
+      for (let band = 0; band < glowBands; band++) {
+        const bandStart = Math.floor(band * glowBandSize);
+        const bandEnd = Math.min(Math.floor((band + 1) * glowBandSize), vis - 1);
+        if (bandEnd - bandStart < glowStep) continue;
+
+        const t = (bandStart + bandEnd) / (2 * vis);
+        const [r, g, b] = colorFn(t);
+        const alpha = state.fade ? t * 0.5 : 0.5;
+        ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+
+        ctx.beginPath();
+        ctx.moveTo(projCache[bandStart * 2], projCache[bandStart * 2 + 1]);
+        for (let i = bandStart + glowStep; i <= bandEnd; i += glowStep) {
+          ctx.lineTo(projCache[i * 2], projCache[i * 2 + 1]);
+        }
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    // Main trail — draw in color bands, each band is one path
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    for (let band = 0; band < numBands; band++) {
+      const bandStart = Math.floor(band * bandSize);
+      const bandEnd = Math.min(Math.floor((band + 1) * bandSize), vis - 1);
+      if (bandEnd <= bandStart) continue;
+
+      const t = (bandStart + bandEnd) / (2 * vis);
+      const [r, g, b] = colorFn(t);
+      const alpha = state.fade ? (0.05 + t * 0.95) : 1;
+      ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+
+      ctx.beginPath();
+      ctx.moveTo(projCache[bandStart * 2], projCache[bandStart * 2 + 1]);
+      for (let i = bandStart + 1; i <= bandEnd; i++) {
+        ctx.lineTo(projCache[i * 2], projCache[i * 2 + 1]);
+      }
+      ctx.stroke();
+    }
+
+    // Head glow
+    const hx = projCache[(vis - 1) * 2];
+    const hy = projCache[(vis - 1) * 2 + 1];
+    const [hr, hg, hb] = colorFn(1);
+
+    ctx.save();
+    const grad = ctx.createRadialGradient(hx, hy, 0, hx, hy, 12);
+    grad.addColorStop(0, `rgba(${hr},${hg},${hb},1)`);
+    grad.addColorStop(0.5, `rgba(${hr},${hg},${hb},0.4)`);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(hx, hy, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright center dot
+    ctx.fillStyle = '#FFF';
+    ctx.beginPath();
+    ctx.arc(hx, hy, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Draw main trail
+  drawTrail(mainTrail, trailLimit, trailColorRGB);
+
+  // Draw extra trails
+  if (extrasActive) {
+    for (let j = 0; j < 3; j++) {
+      drawTrail(extraTrails[j], trailLimit, (t) => extraColorRGB(j, t));
+    }
+  }
+
+  // Draw subtle reference axes
+  ctx.globalAlpha = 0.08;
+  ctx.strokeStyle = '#DDC165';
+  ctx.lineWidth = 0.5;
+  const axisLen = 50;
+
+  // Inline projection for axis endpoints
+  function projectPt(x, y, z) {
+    const rx = x * cosY - z * sinY;
+    const rz1 = x * sinY + z * cosY;
+    const ry = y * cosX - rz1 * sinX;
+    return [hw + rx * scale, hh - ry * scale];
+  }
+  const origin = projectPt(0, 0, 0);
+  const xEnd = projectPt(axisLen, 0, 0);
+  const yEnd = projectPt(0, axisLen, 0);
+  const zEnd = projectPt(0, 0, axisLen);
+
+  ctx.beginPath();
+  ctx.moveTo(origin[0], origin[1]); ctx.lineTo(xEnd[0], xEnd[1]);
+  ctx.moveTo(origin[0], origin[1]); ctx.lineTo(yEnd[0], yEnd[1]);
+  ctx.moveTo(origin[0], origin[1]); ctx.lineTo(zEnd[0], zEnd[1]);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+// ── Start immediately — no Pyodide needed ──
+requestAnimationFrame(render);
+
+// Mobile tool tray — folder tab
+(function() {
+  var tray = document.getElementById('controls');
+  if (!tray) return;
+
+  var tab = document.createElement('div');
+  tab.className = 'tray-tab';
+  tab.innerHTML = '<span class="tray-tab-label">Controls</span><span class="tray-tab-chevron">&#9650;</span>';
+  tray.parentNode.insertBefore(tab, tray.nextSibling);
+
+  var isOpen = false;
+
+  function toggle() {
+    isOpen = !isOpen;
+    tray.classList.toggle('tray-open', isOpen);
+    tab.classList.toggle('tab-active', isOpen);
+    if (isOpen) {
+      tab.style.bottom = tray.offsetHeight + 'px';
+    } else {
+      tab.style.bottom = '0';
+    }
+  }
+
+  tab.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle();
+  });
+
+  document.addEventListener('click', function(e) {
+    if (isOpen && !tray.contains(e.target) && !tab.contains(e.target)) {
+      toggle();
+    }
+  });
+
+  var startY = 0;
+  tray.addEventListener('touchstart', function(e) {
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  tray.addEventListener('touchend', function(e) {
+    if (e.changedTouches[0].clientY - startY > 50 && isOpen) toggle();
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>

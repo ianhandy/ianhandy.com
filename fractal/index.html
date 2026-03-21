@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Fractal Explorer — ianhandy.com</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#1A0D00;
+  font-family:'SF Mono','Fira Code','Consolas',monospace;color:#DDC165;touch-action:none}
+canvas{display:block;width:100%;height:100%;cursor:crosshair;position:absolute;top:0;left:0}
+
+/* Coordinate readout — bottom-left */
+#coords{position:fixed;bottom:12px;left:12px;font-size:11px;
+  color:rgba(221,193,101,0.5);z-index:10;pointer-events:none;
+  line-height:1.7;text-shadow:0 1px 4px rgba(0,0,0,0.9)}
+
+/* Render indicator */
+#render-status{position:fixed;top:12px;left:12px;font-size:10px;
+  color:#E5591C;z-index:10;pointer-events:none;opacity:0;
+  transition:opacity 0.15s;letter-spacing:0.5px}
+#render-status.active{opacity:1}
+
+/* Julia crosshair indicator */
+#julia-marker{position:fixed;pointer-events:none;z-index:4;display:none;
+  width:16px;height:16px;border:1px solid rgba(229,89,28,0.7);border-radius:50%;
+  transform:translate(-50%,-50%);box-shadow:0 0 8px rgba(229,89,28,0.3)}
+
+/* Toast */
+#toast{position:fixed;bottom:50px;left:50%;transform:translateX(-50%) translateY(40px);
+  background:rgba(26,13,0,0.92);border:1px solid rgba(221,193,101,0.25);
+  color:#DDC165;padding:8px 20px;border-radius:8px;font-size:11px;z-index:100;
+  pointer-events:none;opacity:0;transition:all 0.25s ease;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* ——— Panel (desktop) ——— */
+#panel{position:fixed;top:16px;right:16px;width:260px;z-index:20;
+  background:rgba(26,13,0,0.92);border:1px solid rgba(221,193,101,0.25);
+  border-radius:12px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  padding:20px 18px;overflow-y:auto;max-height:calc(100vh - 32px);
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);scrollbar-width:thin;
+  scrollbar-color:rgba(221,193,101,0.2) transparent}
+#panel::-webkit-scrollbar{width:4px}
+#panel::-webkit-scrollbar-thumb{background:rgba(221,193,101,0.2);border-radius:2px}
+#panel h2{font-size:12px;font-weight:600;color:#FFE9A3;margin-bottom:16px;
+  letter-spacing:1px;text-transform:uppercase}
+
+.ctrl{margin-bottom:14px}
+.ctrl label{display:block;font-size:10px;color:rgba(221,193,101,0.6);
+  text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px}
+.ctrl select,.ctrl input[type=number]{width:100%;background:rgba(36,18,0,0.8);
+  border:1px solid rgba(221,193,101,0.18);color:#DDC165;padding:6px 8px;
+  border-radius:6px;font-family:inherit;font-size:12px;outline:none;
+  transition:border-color 0.2s}
+.ctrl select:focus,.ctrl input[type=number]:focus{border-color:rgba(229,89,28,0.5)}
+.ctrl select option{background:#1A0D00;color:#DDC165}
+
+/* Range slider */
+.ctrl input[type=range]{width:100%;-webkit-appearance:none;appearance:none;
+  height:4px;background:rgba(221,193,101,0.12);border-radius:2px;outline:none;margin-top:2px}
+.ctrl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
+  border-radius:50%;background:#E5591C;cursor:pointer;border:2px solid #FFE9A3;
+  box-shadow:0 0 8px rgba(229,89,28,0.4);transition:box-shadow 0.2s}
+.ctrl input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 12px rgba(229,89,28,0.7)}
+.ctrl input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+  background:#E5591C;cursor:pointer;border:2px solid #FFE9A3}
+.ctrl .range-val{float:right;font-size:11px;color:#E5591C;font-weight:600}
+
+/* Julia c inputs */
+.julia-params{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.julia-params input{width:100%}
+.julia-hint{font-size:9px;color:rgba(221,193,101,0.35);margin-top:4px;font-style:italic}
+
+/* Panel coordinates */
+.coord-display{font-size:10px;line-height:1.7;color:rgba(221,193,101,0.5);word-break:break-all}
+
+/* Buttons */
+.btn-row{display:flex;gap:8px;margin-top:16px}
+.btn{flex:1;padding:8px 0;border:1px solid rgba(221,193,101,0.25);
+  background:rgba(36,18,0,0.5);color:#DDC165;border-radius:8px;
+  font-family:inherit;font-size:11px;cursor:pointer;text-transform:uppercase;
+  letter-spacing:0.5px;transition:all 0.2s;text-align:center}
+.btn:hover{background:rgba(229,89,28,0.15);border-color:rgba(229,89,28,0.5);color:#FFE9A3}
+.btn:active{transform:scale(0.97)}
+.btn.primary{background:rgba(229,89,28,0.2);border-color:rgba(229,89,28,0.4);color:#FFE9A3}
+
+/* Separator */
+.sep{height:1px;background:rgba(221,193,101,0.1);margin:14px 0}
+
+/* ——— Mobile tray tab — hidden by default ——— */
+.tray-tab{display:none}
+
+/* ——— Mobile overrides ——— */
+@media(max-width:768px){
+  #panel{position:fixed;top:auto;right:0;bottom:0;left:0;width:100%;
+    max-height:60vh;border-radius:16px 16px 0 0;
+    transform:translateY(calc(100% - 0px));
+    transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    padding:20px 16px 28px;z-index:20}
+  #panel.open{transform:translateY(0)}
+  .tray-tab{display:flex;position:fixed;bottom:0;left:50%;
+    transform:translateX(-50%);z-index:21;width:56px;height:26px;
+    align-items:center;justify-content:center;cursor:pointer;
+    background:rgba(26,13,0,0.92);border:1px solid rgba(221,193,101,0.25);
+    border-radius:12px 12px 0 0;border-bottom:none;
+    transition:bottom 0.35s cubic-bezier(0.4,0,0.2,1)}
+  .tray-tab::after{content:'';width:24px;height:3px;
+    background:rgba(221,193,101,0.35);border-radius:2px}
+  .tray-tab.open{bottom:60vh}
+  #coords{bottom:38px;font-size:10px}
+  #toast{bottom:38px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="render-status">rendering</div>
+<div id="coords"></div>
+<div id="julia-marker"></div>
+<div id="toast"></div>
+
+<div class="tray-tab" id="tray-tab"></div>
+<div id="panel">
+  <h2>Fractal Explorer</h2>
+
+  <div class="ctrl">
+    <label>Fractal Type</label>
+    <select id="fractalType">
+      <option value="mandelbrot">Mandelbrot Set</option>
+      <option value="julia">Julia Set</option>
+    </select>
+  </div>
+
+  <div class="ctrl" id="juliaCtrl" style="display:none">
+    <label>Julia c Parameter</label>
+    <div class="julia-params">
+      <input type="number" id="juliaRe" value="-0.7269" step="0.0001" placeholder="Real">
+      <input type="number" id="juliaIm" value="0.1889" step="0.0001" placeholder="Imag">
+    </div>
+    <div class="julia-hint">Click on Mandelbrot to pick c</div>
+  </div>
+
+  <div class="ctrl">
+    <label>Max Iterations <span class="range-val" id="iterVal">300</span></label>
+    <input type="range" id="maxIter" min="100" max="4000" value="300" step="25">
+  </div>
+
+  <div class="ctrl">
+    <label>Color Palette</label>
+    <select id="palette">
+      <option value="funforrest">FunForrest</option>
+      <option value="ember">Ember</option>
+      <option value="ocean">Ocean</option>
+      <option value="mono">Monochrome</option>
+    </select>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="ctrl">
+    <label>Coordinates</label>
+    <div class="coord-display" id="panelCoords"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" id="btnReset">Reset View</button>
+    <button class="btn primary" id="btnSave">Save PNG</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  FRACTAL EXPLORER — Web Worker + Progressive Rendering
+// ============================================================
+
+// ——— Web Worker source (inline blob) ———
+const WORKER_SRC = `
+'use strict';
+self.onmessage = function(e) {
+  const d = e.data;
+  const {id, canvasW, canvasH, scale, centerX, centerY, zoom, maxIter,
+         paletteId, fractalType, juliaRe, juliaIm,
+         stripY, stripH} = d;
+
+  const w = Math.ceil(canvasW / scale);
+  const fullH = Math.ceil(canvasH / scale);
+  const yStart = Math.floor(stripY / scale);
+  const yEnd = Math.min(Math.ceil((stripY + stripH) / scale), fullH);
+  const h = yEnd - yStart;
+  if (h <= 0) { self.postMessage({id, buf: new Uint8ClampedArray(0), w:0, h:0, scale, yStart}); return; }
+
+  const buf = new Uint8ClampedArray(w * h * 4);
+  const aspect = canvasW / canvasH;
+  const rangeY = 1.0 / zoom;
+  const rangeX = rangeY * aspect;
+  const xMin = centerX - rangeX;
+  const yMin = centerY - rangeY;
+  const dx = (rangeX * 2.0) / w;
+  const dy = (rangeY * 2.0) / fullH;
+  const bailout = 65536.0;
+  const log2 = Math.log(2);
+
+  for (let py = 0; py < h; py++) {
+    const ci_m = yMin + (yStart + py) * dy;
+    for (let px = 0; px < w; px++) {
+      const cr_m = xMin + px * dx;
+      let zr, zi, cr, ci;
+      if (fractalType === 'julia') {
+        zr = cr_m; zi = ci_m; cr = juliaRe; ci = juliaIm;
+      } else {
+        zr = 0; zi = 0; cr = cr_m; ci = ci_m;
+      }
+
+      let n = 0, zr2 = 0, zi2 = 0;
+      while (n < maxIter && zr2 + zi2 < bailout) {
+        zi = 2.0 * zr * zi + ci;
+        zr = zr2 - zi2 + cr;
+        zr2 = zr * zr;
+        zi2 = zi * zi;
+        n++;
+      }
+
+      const idx = (py * w + px) * 4;
+      if (n === maxIter) {
+        buf[idx] = 0; buf[idx+1] = 0; buf[idx+2] = 0; buf[idx+3] = 255;
+      } else {
+        const logZn = Math.log(zr2 + zi2) * 0.5;
+        const nu = Math.log(logZn / log2) / log2;
+        const smooth = n + 1.0 - nu;
+        const t = smooth / maxIter;
+        const rgb = mapColor(t, paletteId);
+        buf[idx]   = rgb[0];
+        buf[idx+1] = rgb[1];
+        buf[idx+2] = rgb[2];
+        buf[idx+3] = 255;
+      }
+    }
+  }
+  self.postMessage({id, buf, w, h, scale, yStart}, [buf.buffer]);
+};
+
+function lerp3(a, b, t) {
+  return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+}
+
+function mapColor(t, pid) {
+  t = Math.max(0, Math.min(t, 1));
+  // Cycle for deep-zoom color variety
+  const ct = (t * 12.0) % 1.0;
+
+  let stops;
+  switch(pid) {
+    case 'funforrest':
+      stops = [
+        [0.00, [0,0,0]],
+        [0.10, [26,13,0]],
+        [0.30, [229,89,28]],
+        [0.50, [221,193,101]],
+        [0.70, [255,233,163]],
+        [1.00, [255,255,255]]
+      ];
+      break;
+    case 'ember':
+      stops = [
+        [0.00, [0,0,0]],
+        [0.20, [140,10,0]],
+        [0.40, [229,89,28]],
+        [0.65, [255,210,60]],
+        [1.00, [255,255,255]]
+      ];
+      break;
+    case 'ocean':
+      stops = [
+        [0.00, [0,0,0]],
+        [0.20, [0,20,80]],
+        [0.45, [0,90,170]],
+        [0.70, [0,195,230]],
+        [1.00, [255,255,255]]
+      ];
+      break;
+    case 'mono':
+    default:
+      return [ct * 255, ct * 255, ct * 255];
+  }
+
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (ct <= stops[i+1][0]) {
+      const f = (ct - stops[i][0]) / (stops[i+1][0] - stops[i][0]);
+      return lerp3(stops[i][1], stops[i+1][1], f);
+    }
+  }
+  return stops[stops.length-1][1];
+}
+`;
+
+const blob = new Blob([WORKER_SRC], {type:'application/javascript'});
+const workerURL = URL.createObjectURL(blob);
+const NUM_WORKERS = Math.min(navigator.hardwareConcurrency || 4, 8);
+const workers = [];
+for (let i = 0; i < NUM_WORKERS; i++) workers.push(new Worker(workerURL));
+
+// ——— State ———
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+let centerX = -0.5, centerY = 0, zoom = 0.35;
+let maxIter = 300;
+let fractalType = 'mandelbrot';
+let juliaRe = -0.7269, juliaIm = 0.1889;
+let paletteId = 'funforrest';
+let renderGeneration = 0;
+
+// DOM
+const $type = document.getElementById('fractalType');
+const $juliaCtrl = document.getElementById('juliaCtrl');
+const $juliaRe = document.getElementById('juliaRe');
+const $juliaIm = document.getElementById('juliaIm');
+const $maxIter = document.getElementById('maxIter');
+const $iterVal = document.getElementById('iterVal');
+const $palette = document.getElementById('palette');
+const $coords = document.getElementById('coords');
+const $panelCoords = document.getElementById('panelCoords');
+const $status = document.getElementById('render-status');
+const $panel = document.getElementById('panel');
+const $tab = document.getElementById('tray-tab');
+const $marker = document.getElementById('julia-marker');
+const $toast = document.getElementById('toast');
+
+// ——— Resize ———
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  render();
+}
+window.addEventListener('resize', resize);
+
+// ——— Progressive Render ———
+function render() {
+  renderGeneration++;
+  const gen = renderGeneration;
+  $status.classList.add('active');
+
+  // 3-pass: 1/4 res -> 1/2 res -> full res
+  renderAtScale(gen, 4, () => {
+    if (gen !== renderGeneration) return;
+    renderAtScale(gen, 2, () => {
+      if (gen !== renderGeneration) return;
+      renderAtScale(gen, 1, () => {
+        if (gen !== renderGeneration) return;
+        $status.classList.remove('active');
+      });
+    });
+  });
+  updateCoords();
+}
+
+function renderAtScale(gen, scale, done) {
+  if (gen !== renderGeneration) return;
+  const cw = canvas.width, ch = canvas.height;
+  const strips = Math.min(NUM_WORKERS, Math.max(1, Math.ceil(ch / scale / 64)));
+  const stripH = Math.ceil(ch / strips);
+  let completed = 0;
+
+  for (let s = 0; s < strips; s++) {
+    const yStart = s * stripH;
+    const yEnd = Math.min(yStart + stripH, ch);
+    const h = yEnd - yStart;
+    if (h <= 0) { completed++; if (completed >= strips && done) done(); continue; }
+
+    const worker = workers[s % NUM_WORKERS];
+    const msgId = gen * 10000 + s;
+
+    worker.onmessage = function(e) {
+      const r = e.data;
+      if (r.id !== msgId || gen !== renderGeneration) return;
+      if (r.h <= 0 || r.w <= 0) { completed++; if (completed >= strips && done) done(); return; }
+
+      const imgData = new ImageData(r.buf, r.w, r.h);
+      if (r.scale === 1) {
+        ctx.putImageData(imgData, 0, yStart);
+      } else {
+        const tmp = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(r.w, r.h) : document.createElement('canvas');
+        if (!tmp.width) { tmp.width = r.w; tmp.height = r.h; }
+        const tc = tmp.getContext('2d');
+        tc.putImageData(imgData, 0, 0);
+        ctx.imageSmoothingEnabled = scale > 1;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(tmp, 0, yStart, cw, h);
+      }
+      completed++;
+      if (completed >= strips && done) done();
+    };
+
+    worker.postMessage({
+      id: msgId, canvasW: cw, canvasH: ch, scale,
+      centerX, centerY, zoom, maxIter, paletteId,
+      fractalType, juliaRe, juliaIm,
+      stripY: yStart, stripH: h
+    });
+  }
+}
+
+function updateCoords() {
+  const zs = zoom < 1e4 ? zoom.toFixed(2) : zoom.toExponential(4);
+  $coords.textContent = `x ${centerX.toFixed(14)}\ny ${centerY.toFixed(14)}\nzoom ${zs}`;
+  $panelCoords.innerHTML =
+    `x: ${centerX.toFixed(12)}<br>y: ${centerY.toFixed(12)}<br>zoom: ${zs}`;
+}
+
+// ——— Navigation: Pointer (mouse + touch unified) ———
+let isDragging = false, dragSX, dragSY, dragCX, dragCY, dragMoved;
+
+canvas.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  isDragging = true;
+  dragMoved = false;
+  dragSX = e.clientX; dragSY = e.clientY;
+  dragCX = centerX; dragCY = centerY;
+  canvas.setPointerCapture(e.pointerId);
+  canvas.style.cursor = 'grabbing';
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - dragSX;
+  const dy = e.clientY - dragSY;
+  if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragMoved = true;
+  const aspect = W / H;
+  const rangeX = (1 / zoom) * aspect;
+  const rangeY = 1 / zoom;
+  centerX = dragCX - (dx / W) * rangeX * 2;
+  centerY = dragCY - (dy / H) * rangeY * 2;
+  render();
+});
+
+canvas.addEventListener('pointerup', e => {
+  if (!isDragging) return;
+  isDragging = false;
+  canvas.style.cursor = 'crosshair';
+});
+
+// Wheel zoom centered on cursor
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.18 : 1 / 1.18;
+  zoomAtScreen(e.clientX, e.clientY, factor);
+}, {passive: false});
+
+// Double-click: zoom 3x
+canvas.addEventListener('dblclick', e => {
+  e.preventDefault();
+  zoomAtScreen(e.clientX, e.clientY, 3);
+});
+
+function zoomAtScreen(sx, sy, factor) {
+  const aspect = W / H;
+  const rangeX = (1 / zoom) * aspect;
+  const rangeY = 1 / zoom;
+  // Complex coordinate under cursor
+  const mx = centerX + ((sx / W) - 0.5) * rangeX * 2;
+  const my = centerY + ((sy / H) - 0.5) * rangeY * 2;
+  zoom *= factor;
+  centerX = mx + (centerX - mx) / factor;
+  centerY = my + (centerY - my) / factor;
+  // Auto-bump iterations at deep zoom
+  autoIterations();
+  render();
+}
+
+function autoIterations() {
+  let target = 300;
+  if (zoom > 5e3) target = 600;
+  if (zoom > 5e5) target = 1000;
+  if (zoom > 5e8) target = 2000;
+  if (zoom > 5e11) target = 3500;
+  if (target > maxIter) {
+    maxIter = target;
+    $maxIter.value = maxIter;
+    $iterVal.textContent = maxIter;
+  }
+}
+
+// ——— Pinch zoom (multi-touch) ———
+let activeTouches = new Map();
+let pinchDist0 = 0, pinchZoom0 = 0, pinchCX, pinchCY;
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) activeTouches.set(t.identifier, {x:t.clientX, y:t.clientY});
+  if (activeTouches.size === 2) {
+    const pts = [...activeTouches.values()];
+    pinchDist0 = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    pinchZoom0 = zoom;
+    pinchCX = (pts[0].x + pts[1].x) / 2;
+    pinchCY = (pts[0].y + pts[1].y) / 2;
+  }
+}, {passive: false});
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) activeTouches.set(t.identifier, {x:t.clientX, y:t.clientY});
+  if (activeTouches.size === 2) {
+    const pts = [...activeTouches.values()];
+    const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    if (pinchDist0 > 0) {
+      const newZoom = pinchZoom0 * (dist / pinchDist0);
+      const factor = newZoom / zoom;
+      zoomAtScreen(pinchCX, pinchCY, factor);
+    }
+  }
+}, {passive: false});
+
+canvas.addEventListener('touchend', e => {
+  for (const t of e.changedTouches) activeTouches.delete(t.identifier);
+});
+canvas.addEventListener('touchcancel', e => {
+  for (const t of e.changedTouches) activeTouches.delete(t.identifier);
+});
+
+// ——— Click to set Julia c (when in Mandelbrot mode) ———
+canvas.addEventListener('click', e => {
+  if (dragMoved) return;
+  if (fractalType !== 'mandelbrot') return;
+  const aspect = W / H;
+  const rangeX = (1 / zoom) * aspect;
+  const rangeY = 1 / zoom;
+  const cr = centerX + ((e.clientX / W) - 0.5) * rangeX * 2;
+  const ci = centerY + ((e.clientY / H) - 0.5) * rangeY * 2;
+  juliaRe = cr; juliaIm = ci;
+  $juliaRe.value = cr.toFixed(6);
+  $juliaIm.value = ci.toFixed(6);
+  // Show marker briefly
+  $marker.style.left = e.clientX + 'px';
+  $marker.style.top = e.clientY + 'px';
+  $marker.style.display = 'block';
+  setTimeout(() => $marker.style.display = 'none', 800);
+  showToast('Julia c = ' + cr.toFixed(4) + ' + ' + ci.toFixed(4) + 'i');
+});
+
+// ——— Controls ———
+$type.addEventListener('change', () => {
+  fractalType = $type.value;
+  $juliaCtrl.style.display = fractalType === 'julia' ? '' : 'none';
+  if (fractalType === 'julia') {
+    juliaRe = parseFloat($juliaRe.value);
+    juliaIm = parseFloat($juliaIm.value);
+    centerX = 0; centerY = 0; zoom = 0.35;
+  } else {
+    centerX = -0.5; centerY = 0; zoom = 0.35;
+  }
+  maxIter = 300; $maxIter.value = 300; $iterVal.textContent = '300';
+  render();
+});
+
+$juliaRe.addEventListener('change', () => {
+  juliaRe = parseFloat($juliaRe.value);
+  if (fractalType === 'julia') render();
+});
+$juliaIm.addEventListener('change', () => {
+  juliaIm = parseFloat($juliaIm.value);
+  if (fractalType === 'julia') render();
+});
+
+$maxIter.addEventListener('input', () => {
+  maxIter = parseInt($maxIter.value);
+  $iterVal.textContent = maxIter;
+});
+$maxIter.addEventListener('change', () => render());
+
+$palette.addEventListener('change', () => {
+  paletteId = $palette.value;
+  render();
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  centerX = fractalType === 'julia' ? 0 : -0.5;
+  centerY = 0;
+  zoom = 0.35;
+  maxIter = 300;
+  $maxIter.value = 300;
+  $iterVal.textContent = '300';
+  render();
+  showToast('View reset');
+});
+
+document.getElementById('btnSave').addEventListener('click', () => {
+  // Ensure full-res render before saving
+  const gen = ++renderGeneration;
+  renderAtScale(gen, 1, () => {
+    const link = document.createElement('a');
+    link.download = 'fractal-' + Date.now() + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('PNG saved');
+  });
+});
+
+// ——— Mobile tray toggle ———
+let trayOpen = false;
+$tab.addEventListener('click', () => {
+  trayOpen = !trayOpen;
+  $panel.classList.toggle('open', trayOpen);
+  $tab.classList.toggle('open', trayOpen);
+});
+
+// ——— Toast ———
+let toastTimer;
+function showToast(msg) {
+  $toast.textContent = msg;
+  $toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $toast.classList.remove('show'), 2200);
+}
+
+// ——— Keyboard shortcuts ———
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  switch(e.key) {
+    case 'r': case 'R':
+      document.getElementById('btnReset').click(); break;
+    case 's': case 'S':
+      document.getElementById('btnSave').click(); break;
+    case '+': case '=': case ']':
+      maxIter = Math.min(4000, maxIter + 100);
+      $maxIter.value = maxIter; $iterVal.textContent = maxIter;
+      render(); showToast('Iterations: ' + maxIter); break;
+    case '-': case '[':
+      maxIter = Math.max(100, maxIter - 100);
+      $maxIter.value = maxIter; $iterVal.textContent = maxIter;
+      render(); showToast('Iterations: ' + maxIter); break;
+  }
+});
+
+// ——— Init ———
+resize();
+</script>
+</body>
+</html>
