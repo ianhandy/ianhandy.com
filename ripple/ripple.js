@@ -819,7 +819,7 @@ function resetUIFade() {
     clearTimeout(uiTimer);
     uiPanel.classList.remove('faded');
     titleOverlay.classList.remove('faded');
-    uiTimer = setTimeout(() => { uiPanel.classList.add('faded'); titleOverlay.classList.add('faded'); }, 4000);
+    uiTimer = setTimeout(() => { uiPanel.classList.add('faded'); titleOverlay.classList.add('faded'); }, 2000);
 }
 canvas.addEventListener('pointermove', resetUIFade);
 canvas.addEventListener('pointerdown', resetUIFade);

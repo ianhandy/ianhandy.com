@@ -218,6 +218,98 @@ input[type="range"]::-webkit-slider-thumb {
   pointer-events: none;
 }
 
+/* Save button */
+#save-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 8px 14px;
+  cursor: pointer;
+  z-index: 11;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: opacity 0.3s ease, background 0.2s ease;
+  letter-spacing: 0.5px;
+}
+#save-btn:hover {
+  background: rgba(221, 193, 101, 0.15);
+  border-color: rgba(221, 193, 101, 0.3);
+}
+
+/* Tooltip ? icons */
+.tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 8px;
+  font-weight: 600;
+  cursor: help;
+  position: relative;
+  flex-shrink: 0;
+  margin-left: 4px;
+  transition: border-color 0.2s, color 0.2s;
+}
+.tooltip-trigger:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.tooltip-trigger .tooltip-text {
+  display: none;
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(36, 18, 0, 0.96);
+  border: 1px solid rgba(221, 193, 101, 0.25);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--text);
+  line-height: 1.5;
+  width: 220px;
+  white-space: normal;
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.tooltip-trigger .tooltip-text .cite {
+  display: block;
+  margin-top: 4px;
+  font-size: 8px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.tooltip-trigger:hover .tooltip-text {
+  display: block;
+}
+/* Flip tooltip to left side when near right edge */
+.tooltip-trigger.tip-left .tooltip-text {
+  left: auto;
+  right: calc(100% + 8px);
+}
+
+/* Auto-hide UI */
+.ui-layer {
+  transition: opacity 0.4s ease;
+}
+.ui-layer.ui-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* Screenshot flash */
 .flash {
   position: fixed;
@@ -284,7 +376,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 <canvas id="c"></canvas>
 
-<div id="panel">
+<div id="panel" class="ui-layer">
   <h1>RAY MARCHING</h1>
   <div class="subtitle">Signed Distance Field Playground</div>
 
@@ -293,19 +385,19 @@ input[type="range"]::-webkit-slider-thumb {
   <div class="separator"></div>
 
   <div class="control-group">
-    <label>Animation Speed <span class="val" id="speed-val">1.0x</span></label>
+    <label>Animation Speed <span class="val" id="speed-val">1.0x</span><span class="tooltip-trigger">?<span class="tooltip-text">Controls the time multiplier for SDF animation. Affects how fast shapes morph and rotate. The time uniform is scaled by this factor each frame.<span class="cite">Sphere tracing: Hart, 1996, "Sphere Tracing"</span></span></span></label>
     <input type="range" id="speed" min="0" max="3" step="0.1" value="1">
   </div>
   <div class="control-group">
-    <label>Glow Intensity <span class="val" id="glow-val">0.50</span></label>
+    <label>Glow Intensity <span class="val" id="glow-val">0.50</span><span class="tooltip-trigger">?<span class="tooltip-text">Volumetric glow accumulation along each ray. Near-misses contribute exponential falloff glow, creating an emission-like effect around surface edges.<span class="cite">SDF glow: Inigo Quilez, iquilezles.org/articles/rmshadows/</span></span></span></label>
     <input type="range" id="glow" min="0" max="1" step="0.01" value="0.5">
   </div>
   <div class="control-group">
-    <label>Shadow Softness <span class="val" id="shadow-val">16</span></label>
+    <label>Shadow Softness <span class="val" id="shadow-val">16</span><span class="tooltip-trigger">?<span class="tooltip-text">The k parameter in soft shadow calculation. Higher values produce harder shadows. Uses the ratio min(k*d/t) along the shadow ray to approximate penumbra width.<span class="cite">Soft shadows: Inigo Quilez, iquilezles.org/articles/rmshadows/</span></span></span></label>
     <input type="range" id="shadow" min="2" max="64" step="1" value="16">
   </div>
   <div class="control-group">
-    <label>AO Strength <span class="val" id="ao-val">0.50</span></label>
+    <label>AO Strength <span class="val" id="ao-val">0.50</span><span class="tooltip-trigger">?<span class="tooltip-text">Ambient Occlusion strength. Samples the SDF at increasing distances along the surface normal — if the distance is less than expected, the point is occluded. 5-tap AO with exponential falloff.<span class="cite">SDF AO: Inigo Quilez, iquilezles.org/articles/nvscene2008/</span></span></span></label>
     <input type="range" id="ao" min="0" max="1" step="0.01" value="0.5">
   </div>
 
@@ -316,6 +408,7 @@ input[type="range"]::-webkit-slider-thumb {
     <button class="toggle-btn on" id="btn-ao" onclick="toggleOpt('ao')">AO</button>
     <button class="toggle-btn on" id="btn-glow" onclick="toggleOpt('glow')">Glow</button>
     <button class="toggle-btn" id="btn-animate" onclick="toggleOpt('animate')">Auto-Rotate</button>
+    <span class="tooltip-trigger">?<span class="tooltip-text">Toggle rendering features. Shadows use sphere-traced soft penumbras. AO measures local occlusion via SDF sampling. Glow accumulates near-miss luminance along rays.<span class="cite">SDF primitives: Inigo Quilez, iquilezles.org/articles/distfunctions/</span></span></span>
   </div>
 
   <div class="separator"></div>
@@ -326,9 +419,10 @@ input[type="range"]::-webkit-slider-thumb {
   </div>
 </div>
 
-<button id="toggle-panel" onclick="togglePanel()">&#9776;</button>
+<button id="toggle-panel" class="ui-layer" onclick="togglePanel()">&#9776;</button>
+<button id="save-btn" class="ui-layer" onclick="saveScreenshot()">Save</button>
 
-<div id="help">
+<div id="help" class="ui-layer">
   Drag to orbit &middot; Scroll to zoom<br>
   H — toggle panel &middot; P — screenshot<br>
   1-8 — switch scene &middot; Space — pause
@@ -972,22 +1066,56 @@ canvas.addEventListener('touchmove', e => {
   }
 }, { passive: true });
 
+// --- Auto-hide UI ---
+let uiHideTimer = null;
+const uiElements = () => document.querySelectorAll('.ui-layer');
+
+function showUI() {
+  uiElements().forEach(el => el.classList.remove('ui-hidden'));
+  clearTimeout(uiHideTimer);
+  uiHideTimer = setTimeout(hideUI, 2000);
+}
+
+function hideUI() {
+  // Don't hide if panel is open or user is interacting with panel
+  if (state.panelOpen) {
+    uiHideTimer = setTimeout(hideUI, 2000);
+    return;
+  }
+  uiElements().forEach(el => el.classList.add('ui-hidden'));
+}
+
+document.addEventListener('mousemove', showUI);
+document.addEventListener('touchstart', showUI);
+// Start the initial hide timer
+uiHideTimer = setTimeout(hideUI, 2000);
+
+// Stop auto-hide while hovering over panel
+document.getElementById('panel').addEventListener('mouseenter', () => clearTimeout(uiHideTimer));
+document.getElementById('panel').addEventListener('mouseleave', () => {
+  uiHideTimer = setTimeout(hideUI, 2000);
+});
+
 // --- Keyboard ---
 window.addEventListener('keydown', e => {
+  showUI();
   if (e.key === 'h' || e.key === 'H') togglePanel();
   if (e.key === ' ') { e.preventDefault(); state.paused = !state.paused; }
-  if (e.key === 'p' || e.key === 'P') screenshot();
+  if (e.key === 'p' || e.key === 'P') saveScreenshot();
   const num = parseInt(e.key);
   if (num >= 1 && num <= 8) switchScene(num - 1);
 });
 
-function screenshot() {
-  // Force a render before capturing
+function saveScreenshot() {
+  // Hide all UI, render clean frame, capture, restore
+  const allUI = document.querySelectorAll('.ui-layer, #panel, #loading');
+  allUI.forEach(el => el.style.display = 'none');
   renderFrame();
   const link = document.createElement('a');
   link.download = `raymarching-${scenes[currentScene].id}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
+  allUI.forEach(el => el.style.display = '');
   const flash = document.createElement('div');
   flash.className = 'flash';
   document.body.appendChild(flash);

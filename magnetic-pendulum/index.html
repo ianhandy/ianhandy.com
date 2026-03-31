@@ -13,13 +13,6 @@ body {
   overflow: hidden;
   height: 100vh;
   width: 100vw;
-  display: flex;
-}
-
-.canvas-wrap {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
 }
 
 #gl-canvas, #trace-canvas {
@@ -30,13 +23,45 @@ body {
 
 #trace-canvas {
   pointer-events: none;
+  z-index: 1;
 }
 
-.canvas-wrap { cursor: crosshair; }
+#gl-canvas { cursor: crosshair; }
 
+/* Menu button */
+#menu-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(26, 13, 0, 0.85);
+  border: 1px solid rgba(221, 193, 101, 0.25);
+  color: #DDC165;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  font-family: inherit;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+#menu-btn.visible { opacity: 1; pointer-events: auto; }
+#menu-btn:hover { background: rgba(221, 193, 101, 0.15); }
+
+/* Panel */
 #panel {
+  position: fixed;
+  top: 0;
+  right: 0;
   width: 280px;
-  min-width: 280px;
+  height: 100vh;
   background: rgba(18, 8, 0, 0.95);
   border-left: 1px solid rgba(221, 193, 101, 0.2);
   padding: 16px;
@@ -45,7 +70,10 @@ body {
   flex-direction: column;
   gap: 12px;
   z-index: 10;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
 }
+#panel.open { transform: translateX(0); }
 
 #panel h1 {
   font-size: 16px;
@@ -69,6 +97,9 @@ body {
   margin-bottom: 4px;
   padding-top: 4px;
   border-top: 1px solid rgba(229, 89, 28, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .control-row {
@@ -142,6 +173,11 @@ input[type="range"]::-webkit-slider-thumb {
   color: #FFE9A3;
 }
 
+.action-row {
+  display: flex;
+  gap: 6px;
+}
+
 .action-btn {
   background: rgba(229, 89, 28, 0.15);
   border: 1px solid rgba(229, 89, 28, 0.3);
@@ -152,7 +188,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
-  width: 100%;
+  flex: 1;
 }
 
 .action-btn:hover {
@@ -195,62 +231,166 @@ input[type="range"]::-webkit-slider-thumb {
   text-align: center;
 }
 
-.info-text {
+/* Tooltip styles */
+.tip-wrap { position: relative; display: inline-flex; align-items: center; }
+.tip-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(221, 193, 101, 0.1);
+  border: 1px solid rgba(221, 193, 101, 0.25);
+  color: #DDC165;
   font-size: 10px;
-  color: rgba(221, 193, 101, 0.4);
-  line-height: 1.4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  font-family: Georgia, serif;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.tip-icon:hover { background: rgba(221, 193, 101, 0.2); }
+.tip-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  padding: 10px 12px;
+  background: rgba(18, 8, 0, 0.97);
+  border: 1px solid rgba(221, 193, 101, 0.25);
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #DDC165;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 100;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+.tip-bubble strong { color: #FFE9A3; }
+.tip-bubble .tip-source {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  color: rgba(221, 193, 101, 0.5);
+  font-style: italic;
+}
+.tip-wrap:hover .tip-bubble { opacity: 1; pointer-events: auto; }
+
+/* Hint overlay */
+#hint {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: rgba(221, 193, 101, 0.5);
+  z-index: 5;
+  pointer-events: none;
+  transition: opacity 0.5s;
+  text-align: center;
 }
 
 @media (max-width: 700px) {
-  body { flex-direction: column-reverse; }
   #panel {
-    width: 100%; min-width: unset;
-    max-height: 40vh;
+    width: 100%;
+    height: auto;
+    max-height: 50vh;
+    top: auto;
+    bottom: 0;
+    right: 0;
     border-left: none;
     border-top: 1px solid rgba(221, 193, 101, 0.2);
-    padding: 12px;
+    transform: translateY(100%);
   }
+  #panel.open { transform: translateY(0); }
 }
 </style>
 </head>
 <body>
 
-<div class="canvas-wrap" id="canvas-wrap">
-  <canvas id="gl-canvas"></canvas>
-  <canvas id="trace-canvas"></canvas>
-</div>
+<canvas id="gl-canvas"></canvas>
+<canvas id="trace-canvas"></canvas>
+
+<div id="hint">Click to drop a pendulum. Drag magnets to reshape the fractal.</div>
+
+<button id="menu-btn">Menu</button>
 
 <div id="panel">
   <h1>Magnetic Pendulum</h1>
   <div class="subtitle">Fractal Basin Explorer</div>
-  <div class="status-line" id="status">Initializing WebGL...</div>
+  <div class="status-line" id="status">Click to drop a pendulum</div>
 
-  <div class="section-title">Presets</div>
+  <div class="section-title">
+    Presets
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Presets</strong> configure the number of magnets and physics parameters to produce different fractal basin patterns. Low damping creates more complex, chaotic boundaries.
+      </div>
+    </div>
+  </div>
   <div class="preset-grid" id="presets"></div>
 
   <div class="section-title">Magnets</div>
   <div class="magnet-count-btns" id="magnet-btns"></div>
 
-  <div class="section-title">Physics</div>
+  <div class="section-title">
+    Physics
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Fractal basins of attraction:</strong> each color shows which magnet a pendulum released from that point will eventually reach. The boundaries between basins are fractal — infinitely complex at every scale.
+        <br><br>
+        The pendulum swings above magnets on a flat plane, pulled by gravity toward center and by each magnet below. Damping slowly removes energy until the pendulum settles at one magnet.
+        <span class="tip-source">Motter &amp; Lai (2002) "Dissipative chaotic scattering"; also see Peitgen, Jurgens &amp; Saupe (2004) "Chaos and Fractals"</span>
+      </div>
+    </div>
+  </div>
   <div class="control-row">
     <label>Damping</label>
     <input type="range" id="damping" min="0.01" max="0.5" step="0.01" value="0.1">
     <span class="value" id="damping-val">0.10</span>
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Friction / energy loss.</strong> Low damping means the pendulum swings longer before settling, producing more complex fractal boundaries. High damping = simpler, smoother basins.
+      </div>
+    </div>
   </div>
   <div class="control-row">
     <label>Gravity</label>
     <input type="range" id="gravity" min="0.1" max="2.0" step="0.05" value="0.5">
     <span class="value" id="gravity-val">0.50</span>
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Restoring force toward center.</strong> Simulates the pendulum's tendency to hang straight down. Higher gravity = pendulum stays closer to center, basins become more radially symmetric.
+      </div>
+    </div>
   </div>
   <div class="control-row">
     <label>Strength</label>
     <input type="range" id="strength" min="0.5" max="5.0" step="0.1" value="1.0">
     <span class="value" id="strength-val">1.0</span>
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Magnet pull strength.</strong> How strongly each magnet attracts the pendulum. Higher values make basins larger and more defined; lower values make the fractal boundary regions wider.
+      </div>
+    </div>
   </div>
   <div class="control-row">
     <label>Height</label>
     <input type="range" id="height" min="0.1" max="1.0" step="0.05" value="0.3">
     <span class="value" id="height-val">0.30</span>
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Pendulum height above magnets.</strong> The vertical distance between the swinging bob and the magnet plane. Lower = magnets have sharper, more localized pull. Higher = gentler, broader attraction.
+      </div>
+    </div>
   </div>
 
   <div class="section-title">View</div>
@@ -263,15 +403,20 @@ input[type="range"]::-webkit-slider-thumb {
     <label>Iterations</label>
     <input type="range" id="max-iter" min="500" max="8000" step="100" value="3000">
     <span class="value" id="max-iter-val">3000</span>
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Simulation steps per pixel.</strong> More iterations = more accurate basin boundaries but slower rendering. Increase if you see noisy/grainy regions.
+      </div>
+    </div>
   </div>
 
   <div class="section-title">Palette</div>
   <div id="palette-select"></div>
 
-  <button class="action-btn" id="export-btn">Export PNG</button>
-
-  <div class="info-text">
-    Click to trace pendulum path. Drag magnets to reposition. Each color = which magnet captures the pendulum from that starting point.
+  <div class="action-row">
+    <button class="action-btn" id="save-btn">Save</button>
+    <button class="action-btn" id="reset-btn">Reset Magnets</button>
   </div>
 </div>
 
@@ -484,6 +629,70 @@ const PRESETS = [
   { name: 'Delicate', n: 3, d: 0.05, g: 0.20, s: 0.8, h: 0.50 },
 ];
 
+// ============ AUTO-HIDE UI ============
+let hideTimer = null;
+let uiVisible = false;
+const panel = document.getElementById('panel');
+const menuBtn = document.getElementById('menu-btn');
+const hintEl = document.getElementById('hint');
+
+function showPanel() {
+  panel.classList.add('open');
+  menuBtn.classList.remove('visible');
+  uiVisible = true;
+  resetHideTimer();
+}
+
+function hidePanel() {
+  panel.classList.remove('open');
+  menuBtn.classList.remove('visible');
+  uiVisible = false;
+}
+
+function showMenuBtn() {
+  if (!uiVisible) {
+    menuBtn.classList.add('visible');
+  }
+}
+
+function resetHideTimer() {
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(hidePanel, 3000);
+}
+
+menuBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  showPanel();
+});
+
+document.addEventListener('pointermove', () => {
+  if (!uiVisible) {
+    showMenuBtn();
+  } else {
+    resetHideTimer();
+  }
+});
+
+panel.addEventListener('pointerdown', () => { clearTimeout(hideTimer); });
+panel.addEventListener('input', () => { clearTimeout(hideTimer); });
+panel.addEventListener('pointerup', () => { resetHideTimer(); });
+
+// Fade hint after first interaction
+let hintDismissed = false;
+function dismissHint() {
+  if (!hintDismissed) {
+    hintDismissed = true;
+    hintEl.style.opacity = '0';
+    setTimeout(() => { hintEl.style.display = 'none'; }, 500);
+  }
+}
+
+// Start with hint visible, menu hidden
+setTimeout(() => {
+  hintEl.style.opacity = '0';
+  setTimeout(() => { hintEl.style.display = 'none'; }, 500);
+}, 6000);
+
 // ============ MAGNET PLACEMENT ============
 function placeMagnets(n) {
   numMagnets = n;
@@ -496,9 +705,8 @@ function placeMagnets(n) {
 
 // ============ RENDER ============
 function resize() {
-  const wrap = document.getElementById('canvas-wrap');
-  const w = wrap.clientWidth;
-  const h = wrap.clientHeight;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
   const dpr = window.devicePixelRatio || 1;
   glCanvas.width = w * dpr;
   glCanvas.height = h * dpr;
@@ -508,7 +716,7 @@ function resize() {
   traceCanvas.height = h * dpr;
   traceCanvas.style.width = w + 'px';
   traceCanvas.style.height = h + 'px';
-  traceCtx.scale(dpr, dpr);
+  traceCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   gl.viewport(0, 0, glCanvas.width, glCanvas.height);
 }
 
@@ -539,42 +747,62 @@ function render() {
 
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   drawMagnets();
-  document.getElementById('status').textContent = 'Click to trace pendulum path';
+  document.getElementById('status').textContent = 'Click to drop a pendulum';
+}
+
+function worldToScreen(wx, wy) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = glCanvas.width / dpr;
+  const h = glCanvas.height / dpr;
+  const aspect = glCanvas.width / glCanvas.height;
+  return {
+    x: (wx / (2 * params.range * aspect) + 0.5) * w,
+    y: (-wy / (2 * params.range) + 0.5) * h
+  };
+}
+
+function screenToWorld(sx, sy) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = glCanvas.width / dpr;
+  const h = glCanvas.height / dpr;
+  const aspect = glCanvas.width / glCanvas.height;
+  return {
+    x: (sx / w - 0.5) * 2 * params.range * aspect,
+    y: -(sy / h - 0.5) * 2 * params.range
+  };
 }
 
 function drawMagnets() {
   const pal = PALETTES[currentPalette];
-  const aspect = glCanvas.width / glCanvas.height;
-  const w = glCanvas.width / (window.devicePixelRatio || 1);
-  const h = glCanvas.height / (window.devicePixelRatio || 1);
+  const dpr = window.devicePixelRatio || 1;
+  const w = glCanvas.width / dpr;
+  const h = glCanvas.height / dpr;
 
-  // Draw magnets on trace canvas (cleared first only if no trace)
   for (let m = 0; m < magnets.length; m++) {
-    const sx = (magnets[m].x / (2 * params.range * aspect) + 0.5) * w;
-    const sy = (-magnets[m].y / (2 * params.range) + 0.5) * h;
+    const s = worldToScreen(magnets[m].x, magnets[m].y);
     const c = pal.colors[m];
     const rgb = `${Math.floor(c[0]*255)},${Math.floor(c[1]*255)},${Math.floor(c[2]*255)}`;
 
     // Outer glow
-    const grad = traceCtx.createRadialGradient(sx, sy, 0, sx, sy, 22);
+    const grad = traceCtx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 22);
     grad.addColorStop(0, `rgba(${rgb}, 0.5)`);
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     traceCtx.fillStyle = grad;
     traceCtx.beginPath();
-    traceCtx.arc(sx, sy, 22, 0, Math.PI * 2);
+    traceCtx.arc(s.x, s.y, 22, 0, Math.PI * 2);
     traceCtx.fill();
 
     // Core dot
     traceCtx.fillStyle = `rgb(${rgb})`;
     traceCtx.beginPath();
-    traceCtx.arc(sx, sy, 5, 0, Math.PI * 2);
+    traceCtx.arc(s.x, s.y, 6, 0, Math.PI * 2);
     traceCtx.fill();
 
     // Ring
     traceCtx.strokeStyle = `rgba(${rgb}, 0.4)`;
     traceCtx.lineWidth = 1.5;
     traceCtx.beginPath();
-    traceCtx.arc(sx, sy, 11, 0, Math.PI * 2);
+    traceCtx.arc(s.x, s.y, 12, 0, Math.PI * 2);
     traceCtx.stroke();
   }
 }
@@ -623,121 +851,151 @@ function simulatePath(startX, startY) {
   return { path, magnet: closest };
 }
 
-function tracePath(cx, cy) {
-  const dpr = window.devicePixelRatio || 1;
-  const w = glCanvas.width / dpr;
-  const h = glCanvas.height / dpr;
-  const aspect = glCanvas.width / glCanvas.height;
-  const worldX = (cx / w - 0.5) * 2 * params.range * aspect;
-  const worldY = -(cy / h - 0.5) * 2 * params.range;
-
-  const result = simulatePath(worldX, worldY);
+function animateTrace(result) {
   const pal = PALETTES[currentPalette];
   const c = pal.colors[result.magnet % pal.colors.length];
   const rgb = `${Math.floor(c[0]*255)},${Math.floor(c[1]*255)},${Math.floor(c[2]*255)}`;
+  const dpr = window.devicePixelRatio || 1;
+  const w = glCanvas.width / dpr;
+  const h = glCanvas.height / dpr;
 
   traceCtx.clearRect(0, 0, w, h);
+  drawMagnets();
 
-  const toSX = wx => (wx / (2 * params.range * aspect) + 0.5) * w;
-  const toSY = wy => (-wy / (2 * params.range) + 0.5) * h;
+  // Draw start dot
+  const startS = worldToScreen(result.path[0].x, result.path[0].y);
+  traceCtx.fillStyle = '#FFE9A3';
+  traceCtx.beginPath();
+  traceCtx.arc(startS.x, startS.y, 4, 0, Math.PI * 2);
+  traceCtx.fill();
 
-  // Draw path
-  if (result.path.length > 1) {
-    for (let i = 1; i < result.path.length; i++) {
-      const alpha = 0.05 + 0.95 * (i / result.path.length);
+  const totalSteps = result.path.length;
+  const stepsPerFrame = Math.max(2, Math.floor(totalSteps / 60));
+  let drawn = 0;
+
+  function drawFrame() {
+    const end = Math.min(drawn + stepsPerFrame, totalSteps);
+
+    for (let i = drawn + 1; i < end; i++) {
+      const alpha = 0.1 + 0.9 * (i / totalSteps);
+      const prev = worldToScreen(result.path[i - 1].x, result.path[i - 1].y);
+      const cur = worldToScreen(result.path[i].x, result.path[i].y);
+
       traceCtx.strokeStyle = `rgba(${rgb}, ${alpha.toFixed(2)})`;
       traceCtx.lineWidth = 1.5;
       traceCtx.beginPath();
-      traceCtx.moveTo(toSX(result.path[i-1].x), toSY(result.path[i-1].y));
-      traceCtx.lineTo(toSX(result.path[i].x), toSY(result.path[i].y));
+      traceCtx.moveTo(prev.x, prev.y);
+      traceCtx.lineTo(cur.x, cur.y);
       traceCtx.stroke();
     }
 
-    // Glow
-    traceCtx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < result.path.length; i += 4) {
-      const sx = toSX(result.path[i].x), sy = toSY(result.path[i].y);
-      const a = 0.02 + 0.06 * (i / result.path.length);
-      const g = traceCtx.createRadialGradient(sx, sy, 0, sx, sy, 6);
-      g.addColorStop(0, `rgba(${rgb}, ${a})`);
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      traceCtx.fillStyle = g;
+    // Head glow
+    if (end > 1) {
+      const head = worldToScreen(result.path[end - 1].x, result.path[end - 1].y);
+      const hg = traceCtx.createRadialGradient(head.x, head.y, 0, head.x, head.y, 8);
+      hg.addColorStop(0, `rgba(${rgb}, 0.6)`);
+      hg.addColorStop(1, 'rgba(0,0,0,0)');
+      traceCtx.fillStyle = hg;
       traceCtx.beginPath();
-      traceCtx.arc(sx, sy, 6, 0, Math.PI * 2);
+      traceCtx.arc(head.x, head.y, 8, 0, Math.PI * 2);
       traceCtx.fill();
     }
-    traceCtx.globalCompositeOperation = 'source-over';
+
+    drawn = end;
+
+    if (drawn < totalSteps) {
+      requestAnimationFrame(drawFrame);
+    } else {
+      // Final: draw end glow
+      const last = result.path[totalSteps - 1];
+      const ls = worldToScreen(last.x, last.y);
+      const eg = traceCtx.createRadialGradient(ls.x, ls.y, 0, ls.x, ls.y, 14);
+      eg.addColorStop(0, `rgba(${rgb}, 0.7)`);
+      eg.addColorStop(1, 'rgba(0,0,0,0)');
+      traceCtx.fillStyle = eg;
+      traceCtx.beginPath();
+      traceCtx.arc(ls.x, ls.y, 14, 0, Math.PI * 2);
+      traceCtx.fill();
+      drawMagnets();
+      document.getElementById('status').textContent = `Captured by magnet ${result.magnet + 1} — ${totalSteps * 3} steps`;
+    }
   }
 
-  // Start dot
-  traceCtx.fillStyle = '#FFE9A3';
-  traceCtx.beginPath();
-  traceCtx.arc(toSX(result.path[0].x), toSY(result.path[0].y), 4, 0, Math.PI * 2);
-  traceCtx.fill();
+  drawFrame();
+}
 
-  // End glow
-  const last = result.path[result.path.length - 1];
-  const eg = traceCtx.createRadialGradient(toSX(last.x), toSY(last.y), 0, toSX(last.x), toSY(last.y), 14);
-  eg.addColorStop(0, `rgba(${rgb}, 0.7)`);
-  eg.addColorStop(1, 'rgba(0,0,0,0)');
-  traceCtx.fillStyle = eg;
-  traceCtx.beginPath();
-  traceCtx.arc(toSX(last.x), toSY(last.y), 14, 0, Math.PI * 2);
-  traceCtx.fill();
-
-  drawMagnets();
-  document.getElementById('status').textContent = `Magnet ${result.magnet + 1} — ${result.path.length * 3} steps`;
+function tracePath(cx, cy) {
+  const world = screenToWorld(cx, cy);
+  const result = simulatePath(world.x, world.y);
+  animateTrace(result);
 }
 
 // ============ INTERACTION ============
 let dragging = -1;
-const wrap = document.getElementById('canvas-wrap');
+let dragStarted = false;
+const MAGNET_HIT_RADIUS = 500; // px squared — generous hit area for grabbing magnets
 
 function canvasPos(e) {
-  const rect = wrap.getBoundingClientRect();
+  const rect = glCanvas.getBoundingClientRect();
   const t = e.touches ? e.touches[0] : e;
   return { x: t.clientX - rect.left, y: t.clientY - rect.top };
 }
 
 function findMagnet(cx, cy) {
-  const dpr = window.devicePixelRatio || 1;
-  const w = glCanvas.width / dpr;
-  const h = glCanvas.height / dpr;
-  const aspect = glCanvas.width / glCanvas.height;
   for (let m = 0; m < magnets.length; m++) {
-    const sx = (magnets[m].x / (2 * params.range * aspect) + 0.5) * w;
-    const sy = (-magnets[m].y / (2 * params.range) + 0.5) * h;
-    if ((cx - sx) ** 2 + (cy - sy) ** 2 < 400) return m;
+    const s = worldToScreen(magnets[m].x, magnets[m].y);
+    if ((cx - s.x) ** 2 + (cy - s.y) ** 2 < MAGNET_HIT_RADIUS) return m;
   }
   return -1;
 }
 
-wrap.addEventListener('pointerdown', e => {
+// Cursor: grab when hovering a magnet, crosshair otherwise
+glCanvas.addEventListener('pointermove', e => {
+  if (dragging >= 0) return; // already dragging
+  const p = canvasPos(e);
+  const m = findMagnet(p.x, p.y);
+  glCanvas.style.cursor = m >= 0 ? 'grab' : 'crosshair';
+});
+
+glCanvas.addEventListener('pointerdown', e => {
+  dismissHint();
   const p = canvasPos(e);
   const m = findMagnet(p.x, p.y);
   if (m >= 0) {
     dragging = m;
-    wrap.setPointerCapture(e.pointerId);
+    dragStarted = false;
+    glCanvas.style.cursor = 'grabbing';
+    glCanvas.setPointerCapture(e.pointerId);
   } else {
     tracePath(p.x, p.y);
   }
 });
 
-wrap.addEventListener('pointermove', e => {
+glCanvas.addEventListener('pointermove', e => {
   if (dragging >= 0) {
+    dragStarted = true;
     const p = canvasPos(e);
+    const world = screenToWorld(p.x, p.y);
+    magnets[dragging].x = world.x;
+    magnets[dragging].y = world.y;
     const dpr = window.devicePixelRatio || 1;
     const w = glCanvas.width / dpr;
     const h = glCanvas.height / dpr;
-    const aspect = glCanvas.width / glCanvas.height;
-    magnets[dragging].x = (p.x / w - 0.5) * 2 * params.range * aspect;
-    magnets[dragging].y = -(p.y / h - 0.5) * 2 * params.range;
     traceCtx.clearRect(0, 0, w, h);
     render();
   }
 });
 
-wrap.addEventListener('pointerup', () => { dragging = -1; });
+glCanvas.addEventListener('pointerup', e => {
+  if (dragging >= 0) {
+    if (dragStarted) {
+      // Magnet was moved — re-render the fractal
+      render();
+    }
+    dragging = -1;
+    glCanvas.style.cursor = 'crosshair';
+  }
+});
 
 // ============ UI ============
 function bindSlider(id, key, fmt) {
@@ -780,7 +1038,8 @@ PRESETS.forEach(p => {
 
     placeMagnets(p.n);
     updateMagnetBtns();
-    traceCtx.clearRect(0, 0, traceCanvas.width, traceCanvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    traceCtx.clearRect(0, 0, glCanvas.width / dpr, glCanvas.height / dpr);
     render();
   });
   presetsEl.appendChild(btn);
@@ -797,7 +1056,8 @@ function updateMagnetBtns() {
     btn.addEventListener('click', () => {
       placeMagnets(n);
       updateMagnetBtns();
-      traceCtx.clearRect(0, 0, traceCanvas.width, traceCanvas.height);
+      const dpr = window.devicePixelRatio || 1;
+      traceCtx.clearRect(0, 0, glCanvas.width / dpr, glCanvas.height / dpr);
       render();
     });
     el.appendChild(btn);
@@ -820,17 +1080,37 @@ Object.entries(PALETTES).forEach(([key, pal]) => {
   palEl.appendChild(sw);
 });
 
-// Export
-document.getElementById('export-btn').addEventListener('click', () => {
-  const exp = document.createElement('canvas');
-  exp.width = glCanvas.width; exp.height = glCanvas.height;
-  const ectx = exp.getContext('2d');
-  ectx.drawImage(glCanvas, 0, 0);
-  ectx.drawImage(traceCanvas, 0, 0);
-  const link = document.createElement('a');
-  link.download = `magnetic-pendulum-${Date.now()}.png`;
-  link.href = exp.toDataURL('image/png');
-  link.click();
+// Save — hide UI, capture clean image
+document.getElementById('save-btn').addEventListener('click', () => {
+  const wasOpen = panel.classList.contains('open');
+  panel.classList.remove('open');
+  menuBtn.classList.remove('visible');
+  hintEl.style.opacity = '0';
+
+  requestAnimationFrame(() => {
+    const exp = document.createElement('canvas');
+    exp.width = glCanvas.width; exp.height = glCanvas.height;
+    const ectx = exp.getContext('2d');
+    ectx.drawImage(glCanvas, 0, 0);
+    ectx.drawImage(traceCanvas, 0, 0);
+    const link = document.createElement('a');
+    link.download = `magnetic-pendulum-${Date.now()}.png`;
+    link.href = exp.toDataURL('image/png');
+    link.click();
+
+    if (wasOpen) {
+      panel.classList.add('open');
+      resetHideTimer();
+    }
+  });
+});
+
+// Reset magnets
+document.getElementById('reset-btn').addEventListener('click', () => {
+  placeMagnets(numMagnets);
+  const dpr = window.devicePixelRatio || 1;
+  traceCtx.clearRect(0, 0, glCanvas.width / dpr, glCanvas.height / dpr);
+  render();
 });
 
 // ============ INIT ============

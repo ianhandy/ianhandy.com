@@ -225,10 +225,111 @@
     .variation-chip { font-size: 0.65rem; padding: 2px 6px; }
     .status-bar { padding: 4px 12px; font-size: 0.7rem; }
   }
+
+  /* Auto-hide UI */
+  .ui-chrome {
+    transition: opacity 0.4s ease;
+  }
+  .ui-chrome.ui-hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Menu toggle button (appears when UI hidden) */
+  #menuToggle {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    width: 36px;
+    height: 36px;
+    background: rgba(26, 13, 0, 0.9);
+    border: 1px solid rgba(221, 193, 101, 0.2);
+    border-radius: 8px;
+    color: #DDC165;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transition: opacity 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #menuToggle.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+  #menuToggle:hover {
+    background: rgba(221, 193, 101, 0.15);
+    border-color: rgba(221, 193, 101, 0.4);
+  }
+
+  /* Tooltip ? icons */
+  .tip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(221, 193, 101, 0.2);
+    color: rgba(221, 193, 101, 0.4);
+    font-size: 8px;
+    font-weight: 700;
+    cursor: help;
+    position: relative;
+    flex-shrink: 0;
+    margin-left: 6px;
+    transition: border-color 0.2s, color 0.2s;
+    font-family: inherit;
+  }
+  .tip:hover {
+    border-color: #DDC165;
+    color: #DDC165;
+  }
+  .tip .tip-content {
+    display: none;
+    position: absolute;
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(36, 18, 0, 0.96);
+    border: 1px solid rgba(221, 193, 101, 0.25);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: rgba(221, 193, 101, 0.8);
+    line-height: 1.5;
+    width: 240px;
+    white-space: normal;
+    z-index: 50;
+    pointer-events: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  }
+  .tip .tip-content .cite {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.65rem;
+    color: rgba(221, 193, 101, 0.4);
+    font-style: italic;
+  }
+  .tip:hover .tip-content {
+    display: block;
+  }
+  /* Flip tooltip left when inside sidebar (near right edge) */
+  .sidebar .tip .tip-content {
+    left: auto;
+    right: calc(100% + 8px);
+  }
 </style>
 </head>
 <body>
-<header>
+<button id="menuToggle">&#9776;</button>
+<header class="ui-chrome">
   <h1>Fractal <span>Flames</span></h1>
   <div class="controls">
     <select id="presetSelect">
@@ -241,10 +342,11 @@
       <option value="vortex">Vortex</option>
       <option value="random">Random</option>
     </select>
+    <span class="tip">?<span class="tip-content">Named IFS flame configurations. Each combines different variation functions and affine transforms.<span class="cite">Draves &amp; Reckase, "The Fractal Flame Algorithm" (2003)</span></span></span>
     <button id="renderBtn">Render</button>
     <button id="randomBtn">Randomize</button>
     <button id="settingsBtn">Settings</button>
-    <button id="saveBtn">Save PNG</button>
+    <button id="saveBtn">Save</button>
   </div>
 </header>
 <div class="main-area">
@@ -252,10 +354,10 @@
   <div class="sidebar" id="sidebar">
     <h3>Transforms</h3>
     <div class="xform-list" id="xformList"></div>
-    <h3>Variations</h3>
+    <h3>Variations <span class="tip">?<span class="tip-content">Nonlinear functions applied to the iterated function system. Each transforms the affine-mapped point through a different mathematical warp. Originally catalogued by Draves &amp; Reckase.<span class="cite">Draves &amp; Reckase, "The Fractal Flame Algorithm" (2003)</span></span></span></h3>
     <div class="variation-chips" id="variationChips"></div>
     <div class="param-group" id="variationWeights" style="margin-top: 12px;"></div>
-    <h3>Rendering</h3>
+    <h3>Rendering <span class="tip">?<span class="tip-content">Log-density rendering with gamma correction. Brighter pixels = more iterations landed there. The histogram accumulates hits per pixel, then applies log scaling and gamma for tone mapping.<span class="cite">Draves, "The Fractal Flame Algorithm" (2003), Section 4</span></span></span></h3>
     <div class="param-group">
       <div class="param-row">
         <label>Iterations (M)</label>
@@ -278,7 +380,7 @@
       </div>
       <input type="range" id="ssSlider" min="1" max="3" value="1" step="1">
     </div>
-    <h3>Color Palette</h3>
+    <h3>Color Palette <span class="tip">?<span class="tip-content">Color mapped by which transform generated each point. The color index blends between the transform's assigned hue as points iterate through the IFS.<span class="cite">Draves &amp; Reckase, "The Fractal Flame Algorithm" (2003), Section 3</span></span></span></h3>
     <div class="param-group">
       <select id="paletteSelect" style="width: 100%; margin-bottom: 8px;">
         <option value="funforrest">FunForrest</option>
@@ -295,7 +397,7 @@
     </div>
   </div>
 </div>
-<div class="status-bar">
+<div class="status-bar ui-chrome">
   <span id="statusText">Ready</span>
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
   <span id="iterCount">0 iterations</span>
@@ -944,6 +1046,74 @@ document.addEventListener('keydown', (e) => {
     document.getElementById('randomBtn').click();
   }
 });
+
+// --- Auto-hide UI ---
+let uiHideTimer = null;
+let uiVisible = true;
+
+function showChromeUI() {
+  document.querySelectorAll('.ui-chrome').forEach(el => el.classList.remove('ui-hidden'));
+  document.getElementById('menuToggle').classList.remove('visible');
+  uiVisible = true;
+  clearTimeout(uiHideTimer);
+  uiHideTimer = setTimeout(hideChromeUI, 2000);
+}
+
+function hideChromeUI() {
+  // Don't hide if sidebar is open
+  if (document.getElementById('sidebar').classList.contains('open')) {
+    uiHideTimer = setTimeout(hideChromeUI, 2000);
+    return;
+  }
+  document.querySelectorAll('.ui-chrome').forEach(el => el.classList.add('ui-hidden'));
+  document.getElementById('menuToggle').classList.add('visible');
+  uiVisible = false;
+  // Fade out menu toggle after 2s if no further movement
+  clearTimeout(menuFadeTimer);
+  menuFadeTimer = setTimeout(() => {
+    if (!uiVisible) document.getElementById('menuToggle').classList.remove('visible');
+  }, 2000);
+}
+
+let menuFadeTimer = null;
+
+document.addEventListener('mousemove', () => {
+  if (!uiVisible) {
+    // Show menu toggle on movement, but don't restore full UI unless clicked
+    document.getElementById('menuToggle').classList.add('visible');
+    clearTimeout(menuFadeTimer);
+    menuFadeTimer = setTimeout(() => {
+      if (!uiVisible) document.getElementById('menuToggle').classList.remove('visible');
+    }, 2000);
+  } else {
+    clearTimeout(uiHideTimer);
+    uiHideTimer = setTimeout(hideChromeUI, 2000);
+  }
+});
+document.addEventListener('touchstart', () => {
+  if (!uiVisible) showChromeUI();
+  else {
+    clearTimeout(uiHideTimer);
+    uiHideTimer = setTimeout(hideChromeUI, 2000);
+  }
+});
+
+document.getElementById('menuToggle').addEventListener('click', () => {
+  showChromeUI();
+});
+
+// Pause auto-hide while hovering header or sidebar
+document.querySelector('header').addEventListener('mouseenter', () => clearTimeout(uiHideTimer));
+document.querySelector('header').addEventListener('mouseleave', () => {
+  uiHideTimer = setTimeout(hideChromeUI, 2000);
+});
+document.getElementById('sidebar').addEventListener('mouseenter', () => clearTimeout(uiHideTimer));
+document.getElementById('sidebar').addEventListener('mouseleave', () => {
+  uiHideTimer = setTimeout(hideChromeUI, 2000);
+});
+
+// Start initial hide timer
+uiHideTimer = setTimeout(hideChromeUI, 2000);
 
 // --- Init ---
 loadPreset('serpent');
