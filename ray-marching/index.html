@@ -10,21 +10,21 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap');
 
 :root {
-  --bg: #1A0D00;
-  --bg-deep: #241200;
-  --gold: #DDC165;
-  --gold-light: #FFE9A3;
-  --orange: #E5591C;
-  --panel-bg: rgba(26, 13, 0, 0.92);
-  --border: rgba(221, 193, 101, 0.15);
-  --text: #C4A86A;
-  --text-dim: rgba(196, 168, 106, 0.5);
+  --bg: #110a0a;
+  --bg-deep: #110a0a;
+  --gold: #d06050;
+  --gold-light: #f0c0b0;
+  --orange: #d06050;
+  --panel-bg: rgba(22, 13, 13, 0.92);
+  --border: rgba(208, 96, 80, 0.1);
+  --text: #9a6058;
+  --text-dim: rgba(154, 96, 88, 0.5);
 }
 
 body {
   background: var(--bg-deep);
   color: var(--text);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'SF Mono', 'Courier New', monospace;
   overflow: hidden;
   width: 100vw;
   height: 100vh;
@@ -66,7 +66,7 @@ canvas:active { cursor: grabbing; }
   color: var(--gold);
   letter-spacing: 0.5px;
   margin-bottom: 4px;
-  text-shadow: 0 0 20px rgba(221, 193, 101, 0.3);
+  text-shadow: 0 0 20px rgba(208, 96, 80, 0.3);
 }
 #panel .subtitle {
   font-size: 10px;
@@ -82,7 +82,7 @@ canvas:active { cursor: grabbing; }
 }
 
 .scene-btn {
-  background: rgba(221, 193, 101, 0.06);
+  background: rgba(208, 96, 80, 0.06);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 6px;
@@ -95,15 +95,15 @@ canvas:active { cursor: grabbing; }
   line-height: 1.3;
 }
 .scene-btn:hover {
-  background: rgba(221, 193, 101, 0.12);
-  border-color: rgba(221, 193, 101, 0.3);
+  background: rgba(208, 96, 80, 0.12);
+  border-color: rgba(208, 96, 80, 0.3);
   color: var(--gold);
 }
 .scene-btn.active {
-  background: rgba(229, 89, 28, 0.15);
+  background: rgba(106, 42, 34, 0.15);
   border-color: var(--orange);
   color: var(--gold-light);
-  box-shadow: 0 0 12px rgba(229, 89, 28, 0.2);
+  box-shadow: 0 0 12px rgba(106, 42, 34, 0.2);
 }
 
 .control-group {
@@ -126,7 +126,7 @@ input[type="range"] {
   -webkit-appearance: none;
   width: 100%;
   height: 4px;
-  background: rgba(221, 193, 101, 0.1);
+  background: rgba(208, 96, 80, 0.1);
   border-radius: 2px;
   outline: none;
 }
@@ -137,7 +137,7 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--gold);
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(221, 193, 101, 0.4);
+  box-shadow: 0 0 8px rgba(208, 96, 80, 0.4);
 }
 
 .toggle-row {
@@ -147,7 +147,7 @@ input[type="range"]::-webkit-slider-thumb {
   flex-wrap: wrap;
 }
 .toggle-btn {
-  background: rgba(221, 193, 101, 0.06);
+  background: rgba(208, 96, 80, 0.06);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 4px 8px;
@@ -159,8 +159,8 @@ input[type="range"]::-webkit-slider-thumb {
 }
 .toggle-btn:hover { color: var(--text); }
 .toggle-btn.on {
-  background: rgba(221, 193, 101, 0.12);
-  border-color: rgba(221, 193, 101, 0.3);
+  background: rgba(208, 96, 80, 0.12);
+  border-color: rgba(208, 96, 80, 0.3);
   color: var(--gold);
 }
 
@@ -239,8 +239,8 @@ input[type="range"]::-webkit-slider-thumb {
   letter-spacing: 0.5px;
 }
 #save-btn:hover {
-  background: rgba(221, 193, 101, 0.15);
-  border-color: rgba(221, 193, 101, 0.3);
+  background: rgba(208, 96, 80, 0.15);
+  border-color: rgba(208, 96, 80, 0.3);
 }
 
 /* Tooltip ? icons */
@@ -271,8 +271,8 @@ input[type="range"]::-webkit-slider-thumb {
   left: calc(100% + 8px);
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(36, 18, 0, 0.96);
-  border: 1px solid rgba(221, 193, 101, 0.25);
+  background: rgba(22, 13, 13, 0.96);
+  border: 1px solid rgba(208, 96, 80, 0.25);
   border-radius: 6px;
   padding: 8px 10px;
   font-size: 9px;
@@ -343,7 +343,7 @@ input[type="range"]::-webkit-slider-thumb {
   font-size: 16px;
   font-weight: 400;
   margin-bottom: 8px;
-  text-shadow: 0 0 30px rgba(221, 193, 101, 0.4);
+  text-shadow: 0 0 30px rgba(208, 96, 80, 0.4);
 }
 #loading p {
   color: var(--text-dim);

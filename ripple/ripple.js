@@ -43,7 +43,7 @@ const params = { alpha: false, depth: false, stencil: false, antialias: false, p
 let gl = canvas.getContext('webgl2', params);
 const isWebGL2 = !!gl;
 if (!gl) gl = canvas.getContext('webgl', params) || canvas.getContext('experimental-webgl', params);
-if (!gl) { document.body.innerHTML = '<p style="color:#DDC165;padding:40px;font-family:sans-serif">WebGL required</p>'; throw new Error('No WebGL'); }
+if (!gl) { document.body.innerHTML = '<p style="color:#a8c7a0;padding:40px;font-family:\'SF Mono\',\'Fira Code\',\'Courier New\',monospace">WebGL required</p>'; throw new Error('No WebGL'); }
 
 let ext;
 if (isWebGL2) {

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palette Exploration</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #111;
+  color: #ccc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  padding: 40px 20px;
+  min-height: 100vh;
+}
+
+h1 {
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 60px;
+}
+
+.palette-row {
+  max-width: 1100px;
+  margin: 0 auto 80px;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .palette-row { grid-template-columns: 1fr; }
+}
+
+/* ── Palette info ── */
+.palette-info {
+  position: sticky;
+  top: 40px;
+}
+.palette-info h2 {
+  font-size: 22px;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+.palette-info .tagline {
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.palette-info .swatches {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.palette-info .swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+  position: relative;
+}
+.palette-info .swatch::after {
+  content: attr(data-hex);
+  position: absolute;
+  top: 42px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  white-space: nowrap;
+  opacity: 0.5;
+}
+.palette-info .font-note {
+  font-size: 11px;
+  opacity: 0.5;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* ── Mock card ── */
+.mock {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.mock-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mock-header h3 {
+  font-size: 15px;
+  letter-spacing: 0.03em;
+}
+.mock-nav {
+  display: flex;
+  gap: 4px;
+}
+.mock-nav span {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: default;
+  letter-spacing: 0.03em;
+}
+.mock-canvas {
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+}
+.mock-canvas .gradient-bg {
+  position: absolute;
+  inset: 0;
+}
+.mock-controls {
+  padding: 14px 20px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.mock-controls button {
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: default;
+  letter-spacing: 0.03em;
+}
+.mock-controls .slider-mock {
+  flex: 1;
+  min-width: 120px;
+  height: 4px;
+  border-radius: 2px;
+  position: relative;
+}
+.mock-controls .slider-mock::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  top: -5px;
+  left: 40%;
+}
+.mock-controls label {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.mock-footer {
+  padding: 12px 20px;
+  font-size: 11px;
+  display: flex;
+  justify-content: space-between;
+  border-top-width: 1px;
+  border-top-style: solid;
+}
+.mock-tooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 9px;
+  margin-left: 6px;
+  cursor: default;
+}
+
+/* ── Divider ── */
+.divider {
+  max-width: 1100px;
+  margin: 0 auto 80px;
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ================================================================
+   PALETTE 1: DEEP MOSS
+   ================================================================ */
+.p1 .palette-info h2 { color: #a8c7a0; }
+.p1 .palette-info .tagline { color: #7a9474; }
+
+.p1 .mock { background: #0c1a0f; border-color: rgba(168,199,160,0.1); }
+.p1 .mock-header { background: #0f1f12; color: #a8c7a0; border-bottom: 1px solid rgba(168,199,160,0.08); }
+.p1 .mock-nav span { background: rgba(168,199,160,0.08); color: #7a9474; }
+.p1 .mock-nav span:first-child { background: rgba(168,199,160,0.18); color: #c4ddbf; }
+.p1 .mock-canvas .gradient-bg {
+  background: radial-gradient(ellipse at 30% 60%, rgba(86,130,76,0.3) 0%, rgba(12,26,15,0.9) 60%),
+              radial-gradient(ellipse at 70% 30%, rgba(45,90,50,0.2) 0%, transparent 50%),
+              #0c1a0f;
+}
+.p1 .mock-controls { background: #0c1a0f; color: #7a9474; }
+.p1 .mock-controls button { background: rgba(168,199,160,0.12); color: #a8c7a0; }
+.p1 .mock-controls button:first-child { background: #3d6b3a; color: #dce8da; }
+.p1 .mock-controls .slider-mock { background: rgba(168,199,160,0.1); }
+.p1 .mock-controls .slider-mock::after { background: #a8c7a0; }
+.p1 .mock-footer { border-top-color: rgba(168,199,160,0.08); color: #5a7a54; background: #0a160c; }
+.p1 .mock-tooltip { background: rgba(168,199,160,0.12); color: #7a9474; border: 1px solid rgba(168,199,160,0.2); }
+
+/* ================================================================
+   PALETTE 2: OBSIDIAN VIOLET
+   ================================================================ */
+.p2 .palette-info h2 { color: #b8a0d4; }
+.p2 .palette-info .tagline { color: #8a7aaa; }
+
+.p2 .mock { background: #12101a; border-color: rgba(184,160,212,0.1); }
+.p2 .mock-header { background: #161320; color: #b8a0d4; border-bottom: 1px solid rgba(184,160,212,0.08); }
+.p2 .mock-nav span { background: rgba(184,160,212,0.08); color: #8a7aaa; }
+.p2 .mock-nav span:first-child { background: rgba(184,160,212,0.18); color: #d4c4ee; }
+.p2 .mock-canvas .gradient-bg {
+  background: radial-gradient(ellipse at 50% 50%, rgba(100,60,160,0.25) 0%, rgba(18,16,26,0.95) 55%),
+              radial-gradient(ellipse at 80% 20%, rgba(140,80,200,0.15) 0%, transparent 40%),
+              #12101a;
+}
+.p2 .mock-controls { background: #12101a; color: #8a7aaa; }
+.p2 .mock-controls button { background: rgba(184,160,212,0.1); color: #b8a0d4; }
+.p2 .mock-controls button:first-child { background: #4a3570; color: #ddd0f0; }
+.p2 .mock-controls .slider-mock { background: rgba(184,160,212,0.1); }
+.p2 .mock-controls .slider-mock::after { background: #b8a0d4; }
+.p2 .mock-footer { border-top-color: rgba(184,160,212,0.08); color: #5a4a7a; background: #0e0c16; }
+.p2 .mock-tooltip { background: rgba(184,160,212,0.12); color: #8a7aaa; border: 1px solid rgba(184,160,212,0.2); }
+
+/* ================================================================
+   PALETTE 3: POLAR NIGHT
+   ================================================================ */
+.p3 .palette-info h2 { color: #88c0d0; }
+.p3 .palette-info .tagline { color: #6a96a5; }
+
+.p3 .mock { background: #0b1520; border-color: rgba(136,192,208,0.1); }
+.p3 .mock-header { background: #0e1a28; color: #88c0d0; border-bottom: 1px solid rgba(136,192,208,0.08); }
+.p3 .mock-nav span { background: rgba(136,192,208,0.08); color: #6a96a5; }
+.p3 .mock-nav span:first-child { background: rgba(136,192,208,0.18); color: #b0dce8; }
+.p3 .mock-canvas .gradient-bg {
+  background: radial-gradient(ellipse at 40% 70%, rgba(60,140,170,0.2) 0%, rgba(11,21,32,0.95) 50%),
+              radial-gradient(ellipse at 75% 25%, rgba(80,180,200,0.12) 0%, transparent 45%),
+              linear-gradient(180deg, #0e1a28 0%, #0b1520 100%);
+}
+.p3 .mock-controls { background: #0b1520; color: #6a96a5; }
+.p3 .mock-controls button { background: rgba(136,192,208,0.1); color: #88c0d0; }
+.p3 .mock-controls button:first-child { background: #2a5a6a; color: #d0eef5; }
+.p3 .mock-controls .slider-mock { background: rgba(136,192,208,0.1); }
+.p3 .mock-controls .slider-mock::after { background: #88c0d0; }
+.p3 .mock-footer { border-top-color: rgba(136,192,208,0.08); color: #4a7080; background: #091420; }
+.p3 .mock-tooltip { background: rgba(136,192,208,0.12); color: #6a96a5; border: 1px solid rgba(136,192,208,0.2); }
+
+/* ================================================================
+   PALETTE 4: DARKROOM RED
+   ================================================================ */
+.p4 .palette-info h2 { color: #d06050; }
+.p4 .palette-info .tagline { color: #9a6058; }
+
+.p4 .mock { background: #110a0a; border-color: rgba(208,96,80,0.12); }
+.p4 .mock-header { background: #160d0d; color: #d06050; border-bottom: 1px solid rgba(208,96,80,0.1); }
+.p4 .mock-nav span { background: rgba(208,96,80,0.08); color: #9a6058; }
+.p4 .mock-nav span:first-child { background: rgba(208,96,80,0.2); color: #e8a090; }
+.p4 .mock-canvas .gradient-bg {
+  background: radial-gradient(ellipse at 50% 60%, rgba(180,50,40,0.2) 0%, rgba(17,10,10,0.95) 50%),
+              radial-gradient(ellipse at 20% 30%, rgba(200,70,50,0.1) 0%, transparent 40%),
+              #110a0a;
+}
+.p4 .mock-controls { background: #110a0a; color: #9a6058; }
+.p4 .mock-controls button { background: rgba(208,96,80,0.1); color: #d06050; }
+.p4 .mock-controls button:first-child { background: #6a2a22; color: #f0c0b0; }
+.p4 .mock-controls .slider-mock { background: rgba(208,96,80,0.1); }
+.p4 .mock-controls .slider-mock::after { background: #d06050; }
+.p4 .mock-footer { border-top-color: rgba(208,96,80,0.08); color: #6a3a32; background: #0d0808; }
+.p4 .mock-tooltip { background: rgba(208,96,80,0.12); color: #9a6058; border: 1px solid rgba(208,96,80,0.2); }
+
+/* ================================================================
+   PALETTE 5: BONE & CHARCOAL
+   ================================================================ */
+.p5 .palette-info h2 { color: #d4cbb8; }
+.p5 .palette-info .tagline { color: #8a8478; }
+
+.p5 .mock { background: #18181a; border-color: rgba(212,203,184,0.08); }
+.p5 .mock-header { background: #1e1e20; color: #d4cbb8; border-bottom: 1px solid rgba(212,203,184,0.06); }
+.p5 .mock-header h3 { font-weight: 400; }
+.p5 .mock-nav span { background: rgba(212,203,184,0.06); color: #8a8478; }
+.p5 .mock-nav span:first-child { background: rgba(212,203,184,0.14); color: #d4cbb8; }
+.p5 .mock-canvas .gradient-bg {
+  background: radial-gradient(ellipse at 50% 50%, rgba(160,148,120,0.08) 0%, rgba(24,24,26,1) 55%),
+              linear-gradient(135deg, #1a1a1c 0%, #18181a 50%, #1c1a18 100%);
+}
+.p5 .mock-controls { background: #18181a; color: #8a8478; }
+.p5 .mock-controls button { background: rgba(212,203,184,0.06); color: #a09888; border: 1px solid rgba(212,203,184,0.08); }
+.p5 .mock-controls button:first-child { background: rgba(212,203,184,0.14); color: #d4cbb8; border-color: rgba(212,203,184,0.15); }
+.p5 .mock-controls .slider-mock { background: rgba(212,203,184,0.08); }
+.p5 .mock-controls .slider-mock::after { background: #d4cbb8; }
+.p5 .mock-footer { border-top-color: rgba(212,203,184,0.06); color: #5a5650; background: #141416; }
+.p5 .mock-tooltip { background: rgba(212,203,184,0.08); color: #8a8478; border: 1px solid rgba(212,203,184,0.12); }
+
+/* Font overrides */
+.p1 .mock { font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace; }
+.p2 .mock { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+.p3 .mock { font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
+.p4 .mock { font-family: 'JetBrains Mono', 'SF Mono', 'Courier New', monospace; }
+.p5 .mock { font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+</style>
+</head>
+<body>
+
+<h1>Palette Exploration</h1>
+
+<!-- ── 1. Deep Moss ── -->
+<div class="palette-row p1">
+  <div class="palette-info">
+    <h2>Deep Moss</h2>
+    <p class="tagline">Old-growth forest at dusk. Muted sage greens on near-black. Quiet, alive, patient. Good for biology sims and growth visualizations.</p>
+    <div class="swatches">
+      <div class="swatch" style="background:#0c1a0f" data-hex="#0c1a0f"></div>
+      <div class="swatch" style="background:#0f1f12" data-hex="#0f1f12"></div>
+      <div class="swatch" style="background:#3d6b3a" data-hex="#3d6b3a"></div>
+      <div class="swatch" style="background:#a8c7a0" data-hex="#a8c7a0"></div>
+      <div class="swatch" style="background:#dce8da" data-hex="#dce8da"></div>
+    </div>
+    <div class="font-note">Font: SF Mono / Fira Code<br>Monospace for the scientific instrument feel. Numbers and labels align cleanly.</div>
+  </div>
+  <div class="mock">
+    <div class="mock-header">
+      <h3>DLA Growth</h3>
+      <div class="mock-nav">
+        <span>Coral</span>
+        <span>Lightning</span>
+        <span>Frost</span>
+      </div>
+    </div>
+    <div class="mock-canvas"><div class="gradient-bg"></div></div>
+    <div class="mock-controls">
+      <button>Reset</button>
+      <button>Save</button>
+      <label>Stickiness <span class="mock-tooltip">?</span></label>
+      <div class="slider-mock"></div>
+    </div>
+    <div class="mock-footer">
+      <span>Witten & Sander, 1981</span>
+      <span>2,847 particles</span>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── 2. Obsidian Violet ── -->
+<div class="palette-row p2">
+  <div class="palette-info">
+    <h2>Obsidian Violet</h2>
+    <p class="tagline">Deep space telescope aesthetic. Cool purple undertones on black glass. Mathematical, precise, slightly alien. Good for fractals, attractors, and abstract math.</p>
+    <div class="swatches">
+      <div class="swatch" style="background:#12101a" data-hex="#12101a"></div>
+      <div class="swatch" style="background:#161320" data-hex="#16132"></div>
+      <div class="swatch" style="background:#4a3570" data-hex="#4a3570"></div>
+      <div class="swatch" style="background:#b8a0d4" data-hex="#b8a0d4"></div>
+      <div class="swatch" style="background:#d4c4ee" data-hex="#d4c4ee"></div>
+    </div>
+    <div class="font-note">Font: Inter<br>Clean geometric sans-serif. Highly legible at small sizes, modern without being cold.</div>
+  </div>
+  <div class="mock">
+    <div class="mock-header">
+      <h3>Fractal Explorer</h3>
+      <div class="mock-nav">
+        <span>Mandelbrot</span>
+        <span>Julia</span>
+      </div>
+    </div>
+    <div class="mock-canvas"><div class="gradient-bg"></div></div>
+    <div class="mock-controls">
+      <button>Reset View</button>
+      <button>Save</button>
+      <label>Iterations <span class="mock-tooltip">?</span></label>
+      <div class="slider-mock"></div>
+    </div>
+    <div class="mock-footer">
+      <span>Mandelbrot, 1980</span>
+      <span>Zoom: 1.2e14</span>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── 3. Polar Night ── -->
+<div class="palette-row p3">
+  <div class="palette-info">
+    <h2>Polar Night</h2>
+    <p class="tagline">Arctic research station. Deep navy with frost-blue accents. Clean, focused, Scandinavian. Good for fluid dynamics, physics sims, and data visualization.</p>
+    <div class="swatches">
+      <div class="swatch" style="background:#0b1520" data-hex="#0b1520"></div>
+      <div class="swatch" style="background:#0e1a28" data-hex="#0e1a28"></div>
+      <div class="swatch" style="background:#2a5a6a" data-hex="#2a5a6a"></div>
+      <div class="swatch" style="background:#88c0d0" data-hex="#88c0d0"></div>
+      <div class="swatch" style="background:#d0eef5" data-hex="#d0eef5"></div>
+    </div>
+    <div class="font-note">Font: IBM Plex Sans<br>Designed for technical interfaces. Humanist warmth with engineering precision. Good for education-first projects.</div>
+  </div>
+  <div class="mock">
+    <div class="mock-header">
+      <h3>Wind Tunnel</h3>
+      <div class="mock-nav">
+        <span>Velocity</span>
+        <span>Vorticity</span>
+        <span>Streamlines</span>
+      </div>
+    </div>
+    <div class="mock-canvas"><div class="gradient-bg"></div></div>
+    <div class="mock-controls">
+      <button>Cylinder</button>
+      <button>Airfoil</button>
+      <label>Reynolds <span class="mock-tooltip">?</span></label>
+      <div class="slider-mock"></div>
+    </div>
+    <div class="mock-footer">
+      <span>Von Karman, 1911</span>
+      <span>Re = 180</span>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── 4. Darkroom Red ── -->
+<div class="palette-row p4">
+  <div class="palette-info">
+    <h2>Darkroom</h2>
+    <p class="tagline">Photographic darkroom under safelight. Near-black with muted red warmth. Dramatic, focused, intimate. Good for generative art, particle systems, and visual-first experiences.</p>
+    <div class="swatches">
+      <div class="swatch" style="background:#110a0a" data-hex="#110a0a"></div>
+      <div class="swatch" style="background:#160d0d" data-hex="#160d0d"></div>
+      <div class="swatch" style="background:#6a2a22" data-hex="#6a2a22"></div>
+      <div class="swatch" style="background:#d06050" data-hex="#d06050"></div>
+      <div class="swatch" style="background:#f0c0b0" data-hex="#f0c0b0"></div>
+    </div>
+    <div class="font-note">Font: JetBrains Mono<br>Monospace with character. Ligatures, distinct letterforms. Technical but with personality.</div>
+  </div>
+  <div class="mock">
+    <div class="mock-header">
+      <h3>Fractal Flames</h3>
+      <div class="mock-nav">
+        <span>Serpent</span>
+        <span>Phoenix</span>
+        <span>Nebula</span>
+      </div>
+    </div>
+    <div class="mock-canvas"><div class="gradient-bg"></div></div>
+    <div class="mock-controls">
+      <button>Randomize</button>
+      <button>Save</button>
+      <label>Gamma <span class="mock-tooltip">?</span></label>
+      <div class="slider-mock"></div>
+    </div>
+    <div class="mock-footer">
+      <span>Draves & Reckase, 2003</span>
+      <span>20M iterations</span>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── 5. Bone & Charcoal ── -->
+<div class="palette-row p5">
+  <div class="palette-info">
+    <h2>Bone & Charcoal</h2>
+    <p class="tagline">Museum artifact card. Warm ivory on deep grey. Restrained, tactile, timeless. No hue dominates — the content provides the color. Good for the portfolio itself and any project where the visualization should speak.</p>
+    <div class="swatches">
+      <div class="swatch" style="background:#18181a" data-hex="#18181a"></div>
+      <div class="swatch" style="background:#1e1e20" data-hex="#1e1e20"></div>
+      <div class="swatch" style="background:#5a5650" data-hex="#5a5650"></div>
+      <div class="swatch" style="background:#a09888" data-hex="#a09888"></div>
+      <div class="swatch" style="background:#d4cbb8" data-hex="#d4cbb8"></div>
+    </div>
+    <div class="font-note">Font: System sans-serif<br>Let the OS decide. No font is the statement — the content is. Maximum readability, zero distraction.</div>
+  </div>
+  <div class="mock">
+    <div class="mock-header">
+      <h3>Magnetic Pendulum</h3>
+      <div class="mock-nav">
+        <span>3 Magnets</span>
+        <span>5 Magnets</span>
+        <span>Ring</span>
+      </div>
+    </div>
+    <div class="mock-canvas"><div class="gradient-bg"></div></div>
+    <div class="mock-controls">
+      <button>Reset</button>
+      <button>Save</button>
+      <label>Damping <span class="mock-tooltip">?</span></label>
+      <div class="slider-mock"></div>
+    </div>
+    <div class="mock-footer">
+      <span>Motter & Lai, 2002</span>
+      <span>Click to drop pendulum</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
