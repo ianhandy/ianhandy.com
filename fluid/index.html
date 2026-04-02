@@ -6,16 +6,33 @@
 <title>Fluid Dynamics</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-html,body{width:100%;height:100%;overflow:hidden;background:#1A0D00;touch-action:none;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
+html,body{width:100%;height:100%;overflow:hidden;background:#0b1520;touch-action:none;font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;}
 canvas{display:block;width:100%;height:100%;cursor:crosshair;}
+
+.menu-btn{
+  position:fixed;top:16px;left:16px;
+  background:rgba(14,26,40,0.85);
+  border:1px solid rgba(136,192,208,0.1);
+  border-radius:8px;
+  color:#b0dce8;
+  font:500 12px/1 'IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  padding:10px 14px;
+  cursor:pointer;z-index:101;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  letter-spacing:0.5px;text-transform:uppercase;
+  opacity:0;transition:opacity 0.3s ease;
+  pointer-events:none;
+}
+.menu-btn.visible{opacity:1;pointer-events:auto;}
+.menu-btn:hover{background:rgba(136,192,208,0.15);border-color:rgba(136,192,208,0.25);}
 
 .panel{
   position:fixed;top:16px;right:16px;
-  background:rgba(26,13,0,0.92);
-  border:1px solid rgba(221,193,101,0.25);
+  background:rgba(14,26,40,0.9);
+  border:1px solid rgba(136,192,208,0.1);
   border-radius:10px;
   padding:18px 20px;
-  color:#DDC165;
+  color:#b0dce8;
   font-size:13px;
   z-index:100;
   backdrop-filter:blur(12px);
@@ -23,45 +40,48 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;}
   min-width:220px;
   box-shadow:0 8px 32px rgba(0,0,0,0.5);
   transition:transform 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.35s ease;
+  transform:translateX(calc(100% + 20px));opacity:0;pointer-events:none;
 }
-.panel h2{font-size:14px;font-weight:600;letter-spacing:0.5px;margin-bottom:14px;color:#FFE9A3;text-transform:uppercase;}
+.panel.open{transform:translateX(0);opacity:1;pointer-events:auto;}
+.panel h2{font-size:14px;font-weight:600;letter-spacing:0.5px;margin-bottom:14px;color:#d0eef5;text-transform:uppercase;}
 .ctrl{margin-bottom:12px;}
-.ctrl label{display:block;margin-bottom:4px;font-size:11px;color:rgba(221,193,101,0.7);text-transform:uppercase;letter-spacing:0.8px;}
+.ctrl label{display:block;margin-bottom:4px;font-size:11px;color:#6a96a5;text-transform:uppercase;letter-spacing:0.8px;}
 .ctrl input[type=range]{
   -webkit-appearance:none;appearance:none;width:100%;height:4px;
-  background:rgba(221,193,101,0.15);border-radius:2px;outline:none;
+  background:rgba(136,192,208,0.15);border-radius:2px;outline:none;
 }
 .ctrl input[type=range]::-webkit-slider-thumb{
   -webkit-appearance:none;appearance:none;width:14px;height:14px;
-  background:#DDC165;border-radius:50%;cursor:pointer;
-  box-shadow:0 0 6px rgba(221,193,101,0.4);
+  background:#88c0d0;border-radius:50%;cursor:pointer;
+  box-shadow:0 0 6px rgba(136,192,208,0.3);
 }
 .ctrl input[type=range]::-moz-range-thumb{
-  width:14px;height:14px;background:#DDC165;border:none;border-radius:50%;cursor:pointer;
+  width:14px;height:14px;background:#88c0d0;border:none;border-radius:50%;cursor:pointer;
 }
 .ctrl select,.ctrl button{
   width:100%;padding:6px 10px;
-  background:rgba(221,193,101,0.08);
-  border:1px solid rgba(221,193,101,0.2);
-  border-radius:6px;color:#DDC165;font-size:12px;cursor:pointer;
+  background:rgba(136,192,208,0.1);
+  border:1px solid rgba(136,192,208,0.1);
+  border-radius:6px;color:#b0dce8;font-size:12px;cursor:pointer;
   transition:border-color 0.2s,background 0.2s;
 }
-.ctrl select:hover,.ctrl button:hover{border-color:rgba(221,193,101,0.5);background:rgba(221,193,101,0.15);}
-.ctrl select option{background:#1A0D00;color:#DDC165;}
+.ctrl select:hover,.ctrl button:hover{border-color:rgba(136,192,208,0.25);background:rgba(136,192,208,0.15);}
+.ctrl select option{background:#0e1a28;color:#b0dce8;}
 .ctrl button{text-transform:uppercase;letter-spacing:1px;font-weight:600;}
-.ctrl .val{float:right;color:#FFE9A3;font-size:11px;font-variant-numeric:tabular-nums;}
+.ctrl .val{float:right;color:#88c0d0;font-size:11px;font-variant-numeric:tabular-nums;}
 .btn-row{display:flex;gap:8px;}
 .btn-row .ctrl{flex:1;margin-bottom:0;}
+.citation{margin-top:14px;padding-top:10px;border-top:1px solid rgba(136,192,208,0.1);font-size:10px;line-height:1.5;color:#6a96a5;}
 
 .tray-tab{display:none;}
-.hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);color:rgba(221,193,101,0.35);font-size:11px;pointer-events:none;z-index:50;text-align:center;}
+.hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);color:rgba(136,192,208,0.3);font-size:11px;pointer-events:none;z-index:50;text-align:center;transition:opacity 0.5s ease;}
 
 @media(max-width:768px){
   .panel{
     top:auto;right:0;bottom:0;left:0;
     border-radius:16px 16px 0 0;
     min-width:unset;width:100%;
-    transform:translateY(100%);
+    transform:translateY(100%);opacity:1;pointer-events:auto;
     padding:16px 20px 28px;
     max-height:70vh;overflow-y:auto;
   }
@@ -69,16 +89,16 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;}
   .tray-tab{
     display:flex;align-items:center;justify-content:center;gap:6px;
     position:fixed;bottom:0;left:50%;transform:translateX(-50%);
-    background:rgba(26,13,0,0.92);
-    border:1px solid rgba(221,193,101,0.25);
+    background:rgba(14,26,40,0.9);
+    border:1px solid rgba(136,192,208,0.1);
     border-bottom:none;
     border-radius:12px 12px 0 0;
     padding:8px 24px;
-    color:#DDC165;font-size:12px;font-weight:600;
+    color:#b0dce8;font-size:12px;font-weight:600;
     letter-spacing:0.8px;text-transform:uppercase;
     cursor:pointer;z-index:101;
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-    transition:bottom 0.35s cubic-bezier(0.4,0,0.2,1);
+    transition:bottom 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.3s ease;
   }
   .tray-tab.shifted{bottom:calc(70vh - 16px);}
   .tray-tab .chevron{
@@ -86,11 +106,14 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;}
   }
   .tray-tab.shifted .chevron{transform:rotate(180deg);}
   .hint{bottom:44px;}
+  .menu-btn{display:none;}
 }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+
+<button class="menu-btn" id="menuBtn">Menu</button>
 
 <div class="panel" id="panel">
   <h2>Fluid Controls</h2>
@@ -109,7 +132,7 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;}
   <div class="ctrl">
     <label>Color Mode</label>
     <select id="colorMode">
-      <option value="funforrest" selected>FunForrest</option>
+      <option value="polarnight" selected>Polar Night</option>
       <option value="rainbow">Rainbow</option>
       <option value="smoke">Smoke</option>
     </select>
@@ -129,6 +152,10 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;}
   <div class="ctrl" style="margin-top:12px;">
     <button id="btnObstacle">Place Obstacle Mode</button>
   </div>
+  <div class="ctrl" style="margin-top:4px;">
+    <button id="btnSave">Save</button>
+  </div>
+  <div class="citation">Navier-Stokes equations. CPU implementation inspired by Jos Stam, "Stable Fluids" (SIGGRAPH 1999).</div>
 </div>
 
 <div class="tray-tab" id="trayTab">
@@ -145,6 +172,7 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const panel = document.getElementById('panel');
 const trayTab = document.getElementById('trayTab');
+const menuBtn = document.getElementById('menuBtn');
 
 // Controls
 const viscSlider = document.getElementById('viscosity');
@@ -341,11 +369,11 @@ function hslToRgb(h, s, l) {
   return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
 }
 
-// FunForrest palette: bg #1A0D00, gold #DDC165, bright #FFE9A3, orange #E5591C
-const bgR = 0x1A, bgG = 0x0D, bgB = 0x00;
-const goldR = 0xDD, goldG = 0xC1, goldB = 0x65;
-const orangeR = 0xE5, orangeG = 0x59, orangeB = 0x1C;
-const brightR = 0xFF, brightG = 0xE9, brightB = 0xA3;
+// Polar Night palette: bg #0b1520, primary #88c0d0, light #b0dce8, bright #d0eef5, dark #2a5a6a
+const bgR = 0x0B, bgG = 0x15, bgB = 0x20;
+const goldR = 0x88, goldG = 0xC0, goldB = 0xD0;
+const orangeR = 0x2A, orangeG = 0x5A, orangeB = 0x6A;
+const brightR = 0xD0, brightG = 0xEE, brightB = 0xF5;
 
 function render() {
   const cw = canvas.width;
@@ -377,7 +405,7 @@ function render() {
       const d = dens[idx];
       const velMag = Math.sqrt(u[idx] * u[idx] + v[idx] * v[idx]);
 
-      if (mode === 'funforrest') {
+      if (mode === 'polarnight') {
         // Blend from bg → gold → bright based on density, shift toward orange with velocity
         const t = Math.min(d * 2.5, 1);
         const velT = Math.min(velMag * 0.15, 1);
@@ -422,7 +450,7 @@ function render() {
 
   // Velocity streamlines
   if (showLines) {
-    ctx.strokeStyle = 'rgba(221,193,101,0.15)';
+    ctx.strokeStyle = 'rgba(136,192,208,0.15)';
     ctx.lineWidth = 0.8;
     const step = Math.max(4, N / 24 | 0);
     for (let j = step; j <= N; j += step) {
@@ -442,7 +470,7 @@ function render() {
 
   // Draw obstacle outlines
   if (obstacles.length > 0) {
-    ctx.strokeStyle = 'rgba(229,89,28,0.4)';
+    ctx.strokeStyle = 'rgba(136,192,208,0.4)';
     ctx.lineWidth = 1.5;
     for (const ob of obstacles) {
       ctx.beginPath();
@@ -578,7 +606,7 @@ btnLines.addEventListener('click', () => {
 btnObstacle.addEventListener('click', () => {
   obstacleMode = !obstacleMode;
   btnObstacle.textContent = obstacleMode ? 'Obstacle Mode: ON' : 'Place Obstacle Mode';
-  btnObstacle.style.borderColor = obstacleMode ? '#E5591C' : '';
+  btnObstacle.style.borderColor = obstacleMode ? '#88c0d0' : '';
   canvas.style.cursor = obstacleMode ? 'cell' : 'crosshair';
 });
 
@@ -587,15 +615,85 @@ resSelect.addEventListener('change', () => {
   allocFields();
 });
 
-// Tray
+// Menu button + auto-hide
+let panelOpen = false;
+let uiHideTimer = null;
+
+function showMenuBtn() {
+  menuBtn.classList.add('visible');
+  clearTimeout(uiHideTimer);
+  uiHideTimer = setTimeout(() => {
+    if (!panelOpen) {
+      menuBtn.classList.remove('visible');
+      trayTab.style.opacity = '0';
+    }
+  }, 2000);
+}
+
+menuBtn.addEventListener('click', () => {
+  panelOpen = !panelOpen;
+  panel.classList.toggle('open', panelOpen);
+  if (panelOpen) {
+    menuBtn.classList.add('visible');
+    clearTimeout(uiHideTimer);
+  }
+});
+
+// Close panel on canvas click (desktop)
+canvas.addEventListener('mousedown', function(e) {
+  if (panelOpen && !e.target.closest('.panel')) {
+    panelOpen = false;
+    panel.classList.remove('open');
+  }
+});
+
+document.addEventListener('mousemove', showMenuBtn);
+document.addEventListener('touchstart', () => {
+  trayTab.style.opacity = '1';
+  showMenuBtn();
+});
+
+panel.addEventListener('mouseenter', () => clearTimeout(uiHideTimer));
+
+// Tray (mobile)
 trayTab.addEventListener('click', () => {
   panel.classList.toggle('open');
   trayTab.classList.toggle('shifted');
+  panelOpen = panel.classList.contains('open');
 });
 trayTab.addEventListener('touchend', (e) => {
   e.preventDefault();
   panel.classList.toggle('open');
   trayTab.classList.toggle('shifted');
+  panelOpen = panel.classList.contains('open');
+});
+
+// Save screenshot
+document.getElementById('btnSave').addEventListener('click', () => {
+  const wasOpen = panelOpen;
+  panelOpen = false;
+  panel.classList.remove('open');
+  menuBtn.classList.remove('visible');
+  trayTab.classList.remove('shifted');
+  // Wait one frame to render clean
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      canvas.toBlob(blob => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'fluid-' + Date.now() + '.png';
+        a.click();
+        URL.revokeObjectURL(url);
+        if (wasOpen) {
+          panelOpen = true;
+          panel.classList.add('open');
+          menuBtn.classList.add('visible');
+        }
+      }, 'image/png');
+    });
+  });
 });
 
 // Resize

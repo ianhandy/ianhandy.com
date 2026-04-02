@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Magnetic Pendulum — Fractal Basin Explorer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #12101a;
+  color: #b8a0d4;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+#gl-canvas, #trace-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+
+#trace-canvas {
+  pointer-events: none;
+  z-index: 1;
+}
+
+#gl-canvas { cursor: crosshair; }
+
+/* Menu button */
+#menu-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(22, 19, 32, 0.85);
+  border: 1px solid rgba(184, 160, 212, 0.25);
+  color: #b8a0d4;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  font-family: inherit;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+#menu-btn.visible { opacity: 1; pointer-events: auto; }
+#menu-btn:hover { background: rgba(184, 160, 212, 0.15); }
+
+/* Panel */
+#panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 280px;
+  height: 100vh;
+  background: rgba(22, 19, 32, 0.95);
+  border-left: 1px solid rgba(184, 160, 212, 0.1);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 10;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+}
+#panel.open { transform: translateX(0); }
+
+#panel h1 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #d4c4ee;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+#panel .subtitle {
+  font-size: 11px;
+  color: #8a7aaa;
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #d4c4ee;
+  margin-bottom: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(74, 53, 112, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.control-row label {
+  font-size: 11px;
+  color: #8a7aaa;
+  flex-shrink: 0;
+}
+
+.control-row .value {
+  font-size: 11px;
+  color: #b8a0d4;
+  min-width: 36px;
+  text-align: right;
+}
+
+input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: rgba(184, 160, 212, 0.15);
+  border-radius: 2px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #b8a0d4;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(184, 160, 212, 0.4);
+}
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.preset-btn, .magnet-count-btns button {
+  background: rgba(184, 160, 212, 0.08);
+  border: 1px solid rgba(184, 160, 212, 0.15);
+  color: #b8a0d4;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.preset-btn:hover, .magnet-count-btns button:hover {
+  background: rgba(184, 160, 212, 0.15);
+  border-color: rgba(184, 160, 212, 0.3);
+}
+
+.preset-btn.active, .magnet-count-btns button.active {
+  background: rgba(74, 53, 112, 0.3);
+  border-color: #4a3570;
+  color: #d4c4ee;
+}
+
+.action-row {
+  display: flex;
+  gap: 6px;
+}
+
+.action-btn {
+  background: rgba(74, 53, 112, 0.3);
+  border: 1px solid rgba(74, 53, 112, 0.4);
+  color: #b8a0d4;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: 1;
+}
+
+.action-btn:hover {
+  background: rgba(74, 53, 112, 0.5);
+  border-color: #4a3570;
+}
+
+.magnet-count-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.magnet-count-btns button { flex: 1; font-size: 12px; }
+
+#palette-select {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.palette-swatch {
+  width: 28px;
+  height: 18px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.palette-swatch.active {
+  border-color: #d4c4ee;
+  box-shadow: 0 0 8px rgba(184, 160, 212, 0.3);
+}
+
+.palette-swatch:hover { transform: scale(1.1); }
+
+.status-line {
+  font-size: 10px;
+  color: #8a7aaa;
+  text-align: center;
+}
+
+/* Tooltip styles */
+.tip-wrap { position: relative; display: inline-flex; align-items: center; }
+.tip-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(184, 160, 212, 0.1);
+  border: 1px solid rgba(184, 160, 212, 0.25);
+  color: #b8a0d4;
+  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  font-family: Georgia, serif;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.tip-icon:hover { background: rgba(184, 160, 212, 0.2); }
+.tip-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  padding: 10px 12px;
+  background: rgba(22, 19, 32, 0.97);
+  border: 1px solid rgba(184, 160, 212, 0.25);
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #b8a0d4;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 100;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.tip-bubble strong { color: #d4c4ee; }
+.tip-bubble .tip-source {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  color: #8a7aaa;
+  font-style: italic;
+}
+.tip-wrap:hover .tip-bubble { opacity: 1; pointer-events: auto; }
+
+/* Hint overlay */
+#hint {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #8a7aaa;
+  z-index: 5;
+  pointer-events: none;
+  transition: opacity 0.5s;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  #panel {
+    width: 100%;
+    height: auto;
+    max-height: 50vh;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    border-left: none;
+    border-top: 1px solid rgba(184, 160, 212, 0.1);
+    transform: translateY(100%);
+  }
+  #panel.open { transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<canvas id="gl-canvas"></canvas>
+<canvas id="trace-canvas"></canvas>
+
+<div id="hint">Click to drop a pendulum. Drag magnets to reshape the fractal.</div>
+
+<button id="menu-btn">Menu</button>
+
+<div id="panel">
+  <h1>Magnetic Pendulum</h1>
+  <div class="subtitle">Fractal Basin Explorer</div>
+  <div class="status-line" id="status">Click to drop a pendulum</div>
+
+  <div class="section-title">
+    Presets
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Presets</strong> configure the number of magnets and physics parameters to produce different fractal basin patterns. Low damping creates more complex, chaotic boundaries.
+      </div>
+    </div>
+  </div>
+  <div class="preset-grid" id="presets"></div>
+
+  <div class="section-title">Magnets</div>
+  <div class="magnet-count-btns" id="magnet-btns"></div>
+
+  <div class="section-title">
+    Physics
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Fractal basins of attraction:</strong> each color shows which magnet a pendulum released from that point will eventually reach. The boundaries between basins are fractal — infinitely complex at every scale.
+        <br><br>
+        The pendulum swings above magnets on a flat plane, pulled by gravity toward center and by each magnet below. Damping slowly removes energy until the pendulum settles at one magnet.
+        <span class="tip-source">Motter &amp; Lai (2002) "Dissipative chaotic scattering"; also see Peitgen, Jurgens &amp; Saupe (2004) "Chaos and Fractals"</span>
+      </div>
+    </div>
+  </div>
+  <div class="control-row">
+    <label>Damping</label>
+    <input type="range" id="damping" min="0.01" max="0.5" step="0.01" value="0.1">
+    <span class="value" id="damping-val">0.10</span>
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Friction / energy loss.</strong> Low damping means the pendulum swings longer before settling, producing more complex fractal boundaries. High damping = simpler, smoother basins.
+      </div>
+    </div>
+  </div>
+  <div class="control-row">
+    <label>Gravity</label>
+    <input type="range" id="gravity" min="0.1" max="2.0" step="0.05" value="0.5">
+    <span class="value" id="gravity-val">0.50</span>
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Restoring force toward center.</strong> Simulates the pendulum's tendency to hang straight down. Higher gravity = pendulum stays closer to center, basins become more radially symmetric.
+      </div>
+    </div>
+  </div>
+  <div class="control-row">
+    <label>Strength</label>
+    <input type="range" id="strength" min="0.5" max="5.0" step="0.1" value="1.0">
+    <span class="value" id="strength-val">1.0</span>
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Magnet pull strength.</strong> How strongly each magnet attracts the pendulum. Higher values make basins larger and more defined; lower values make the fractal boundary regions wider.
+      </div>
+    </div>
+  </div>
+  <div class="control-row">
+    <label>Height</label>
+    <input type="range" id="height" min="0.1" max="1.0" step="0.05" value="0.3">
+    <span class="value" id="height-val">0.30</span>
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Pendulum height above magnets.</strong> The vertical distance between the swinging bob and the magnet plane. Lower = magnets have sharper, more localized pull. Higher = gentler, broader attraction.
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">View</div>
+  <div class="control-row">
+    <label>Zoom</label>
+    <input type="range" id="zoom" min="1.0" max="8.0" step="0.1" value="3.0">
+    <span class="value" id="zoom-val">3.0</span>
+  </div>
+  <div class="control-row">
+    <label>Iterations</label>
+    <input type="range" id="max-iter" min="500" max="8000" step="100" value="3000">
+    <span class="value" id="max-iter-val">3000</span>
+    <div class="tip-wrap">
+      <span class="tip-icon">?</span>
+      <div class="tip-bubble">
+        <strong>Simulation steps per pixel.</strong> More iterations = more accurate basin boundaries but slower rendering. Increase if you see noisy/grainy regions.
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Palette</div>
+  <div id="palette-select"></div>
+
+  <div class="action-row">
+    <button class="action-btn" id="save-btn">Save</button>
+    <button class="action-btn" id="reset-btn">Reset Magnets</button>
+  </div>
+</div>
+
+<script>
+// ============ WEBGL SETUP ============
+const glCanvas = document.getElementById('gl-canvas');
+const gl = glCanvas.getContext('webgl2');
+if (!gl) { alert('WebGL 2 required'); }
+
+const traceCanvas = document.getElementById('trace-canvas');
+const traceCtx = traceCanvas.getContext('2d');
+
+// ============ SHADER SOURCE ============
+const VERT_SRC = `#version 300 es
+in vec2 a_pos;
+void main() { gl_Position = vec4(a_pos, 0, 1); }
+`;
+
+const FRAG_SRC = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+
+uniform vec2 u_resolution;
+uniform float u_range;
+uniform float u_aspect;
+uniform float u_damping;
+uniform float u_gravity;
+uniform float u_magnetStrength;
+uniform float u_height;
+uniform int u_maxIter;
+uniform int u_numMagnets;
+uniform vec2 u_magnets[6];
+uniform vec3 u_colors[6];
+uniform vec3 u_bgColor;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution;
+  float worldX = (uv.x - 0.5) * 2.0 * u_range * u_aspect;
+  float worldY = (uv.y - 0.5) * 2.0 * u_range;
+
+  float x = worldX;
+  float y = worldY;
+  float vx = 0.0;
+  float vy = 0.0;
+  float dt = 0.005;
+  float h2 = u_height * u_height;
+
+  int capturedMagnet = 0;
+  float iterFrac = 1.0;
+  float threshold2 = 0.0025; // 0.05^2
+  float velThreshold2 = 0.0001; // 0.01^2
+
+  for (int i = 0; i < 8000; i++) {
+    if (i >= u_maxIter) break;
+
+    float fx = -u_gravity * x;
+    float fy = -u_gravity * y;
+
+    for (int m = 0; m < 6; m++) {
+      if (m >= u_numMagnets) break;
+      float dx = u_magnets[m].x - x;
+      float dy = u_magnets[m].y - y;
+      float dist2 = dx * dx + dy * dy + h2;
+      float dist3 = dist2 * sqrt(dist2);
+      float force = u_magnetStrength / dist3;
+      fx += force * dx;
+      fy += force * dy;
+    }
+
+    fx -= u_damping * vx;
+    fy -= u_damping * vy;
+
+    vx += fx * dt;
+    vy += fy * dt;
+    x += vx * dt;
+    y += vy * dt;
+
+    float speed2 = vx * vx + vy * vy;
+    if (speed2 < velThreshold2) {
+      for (int m = 0; m < 6; m++) {
+        if (m >= u_numMagnets) break;
+        float dx = u_magnets[m].x - x;
+        float dy = u_magnets[m].y - y;
+        if (dx * dx + dy * dy < threshold2) {
+          capturedMagnet = m;
+          iterFrac = float(i) / float(u_maxIter);
+          // Jump to end
+          i = u_maxIter;
+          break;
+        }
+      }
+    }
+  }
+
+  // If didn't converge, find closest
+  if (iterFrac >= 1.0) {
+    float closest = 1e10;
+    for (int m = 0; m < 6; m++) {
+      if (m >= u_numMagnets) break;
+      float dx = u_magnets[m].x - x;
+      float dy = u_magnets[m].y - y;
+      float d = dx * dx + dy * dy;
+      if (d < closest) { closest = d; capturedMagnet = m; }
+    }
+  }
+
+  vec3 color = u_colors[capturedMagnet];
+  float rawBright = 1.0 - iterFrac;
+  float brightness = 0.35 + 0.65 * pow(rawBright, 0.35);
+
+  // Vignette
+  vec2 vc = uv - 0.5;
+  float vignette = 1.0 - 0.3 * dot(vc, vc) * 4.0;
+
+  vec3 finalColor = color * brightness * vignette;
+
+  // Subtle glow at fractal boundaries (high iteration = boundary)
+  float edgeGlow = smoothstep(0.3, 0.8, iterFrac) * 0.15;
+  finalColor += vec3(1.0, 0.9, 0.7) * edgeGlow * vignette;
+
+  fragColor = vec4(finalColor, 1.0);
+}
+`;
+
+// ============ COMPILE SHADERS ============
+function createShader(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(s));
+    return null;
+  }
+  return s;
+}
+
+const vs = createShader(gl.VERTEX_SHADER, VERT_SRC);
+const fs = createShader(gl.FRAGMENT_SHADER, FRAG_SRC);
+const program = gl.createProgram();
+gl.attachShader(program, vs);
+gl.attachShader(program, fs);
+gl.linkProgram(program);
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+  console.error(gl.getProgramInfoLog(program));
+}
+gl.useProgram(program);
+
+// Fullscreen quad
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+const aPos = gl.getAttribLocation(program, 'a_pos');
+gl.enableVertexAttribArray(aPos);
+gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+// Uniform locations
+const loc = {};
+['u_resolution','u_range','u_aspect','u_damping','u_gravity','u_magnetStrength',
+ 'u_height','u_maxIter','u_numMagnets','u_bgColor'].forEach(name => {
+  loc[name] = gl.getUniformLocation(program, name);
+});
+for (let i = 0; i < 6; i++) {
+  loc[`u_magnets_${i}`] = gl.getUniformLocation(program, `u_magnets[${i}]`);
+  loc[`u_colors_${i}`] = gl.getUniformLocation(program, `u_colors[${i}]`);
+}
+
+// ============ PALETTES ============
+const PALETTES = {
+  funforrest: {
+    name: 'FunForrest', swatch: '#DDC165',
+    bg: [0.10, 0.05, 0.0],
+    colors: [[0.87,0.76,0.40],[0.90,0.35,0.11],[0.30,0.72,0.40],[0.55,0.40,0.85],[0.85,0.55,0.25],[0.40,0.70,0.80]]
+  },
+  ember: {
+    name: 'Ember', swatch: '#FF5926',
+    bg: [0.08,0.02,0.02],
+    colors: [[1.0,0.35,0.15],[1.0,0.65,0.10],[0.85,0.15,0.25],[1.0,0.85,0.30],[0.70,0.20,0.10],[1.0,0.50,0.20]]
+  },
+  ocean: {
+    name: 'Ocean', swatch: '#3399FF',
+    bg: [0.02,0.05,0.10],
+    colors: [[0.20,0.60,0.95],[0.10,0.85,0.75],[0.40,0.35,0.90],[0.15,0.75,0.55],[0.55,0.50,1.0],[0.25,0.90,0.90]]
+  },
+  neon: {
+    name: 'Neon', swatch: '#FF1A8C',
+    bg: [0.03,0.02,0.05],
+    colors: [[1.0,0.10,0.55],[0.10,1.0,0.55],[0.30,0.30,1.0],[1.0,1.0,0.10],[0.0,1.0,1.0],[1.0,0.50,0.0]]
+  },
+  mono: {
+    name: 'Mono', swatch: '#CCCCCC',
+    bg: [0.04,0.04,0.04],
+    colors: [[1.0,1.0,1.0],[0.65,0.65,0.65],[0.85,0.85,0.85],[0.45,0.45,0.45],[0.75,0.75,0.75],[0.55,0.55,0.55]]
+  }
+};
+
+// ============ STATE ============
+let currentPalette = 'funforrest';
+let numMagnets = 3;
+let magnets = [];
+let params = { damping: 0.1, gravity: 0.5, strength: 1.0, height: 0.3, range: 3.0, maxIter: 3000 };
+
+const PRESETS = [
+  { name: 'Classic',  n: 3, d: 0.10, g: 0.50, s: 1.0, h: 0.30 },
+  { name: 'Low Damp', n: 3, d: 0.03, g: 0.50, s: 1.0, h: 0.30 },
+  { name: 'Heavy',    n: 3, d: 0.20, g: 1.00, s: 1.5, h: 0.20 },
+  { name: 'Quad',     n: 4, d: 0.10, g: 0.50, s: 1.0, h: 0.30 },
+  { name: 'Pentagon', n: 5, d: 0.08, g: 0.40, s: 1.2, h: 0.25 },
+  { name: 'Hex',      n: 6, d: 0.10, g: 0.50, s: 1.0, h: 0.30 },
+  { name: 'Chaos',    n: 3, d: 0.02, g: 0.30, s: 2.0, h: 0.15 },
+  { name: 'Delicate', n: 3, d: 0.05, g: 0.20, s: 0.8, h: 0.50 },
+];
+
+// ============ AUTO-HIDE UI ============
+let hideTimer = null;
+let uiVisible = false;
+const panel = document.getElementById('panel');
+const menuBtn = document.getElementById('menu-btn');
+const hintEl = document.getElementById('hint');
+
+function showPanel() {
+  panel.classList.add('open');
+  menuBtn.classList.remove('visible');
+  uiVisible = true;
+  resetHideTimer();
+}
+
+function hidePanel() {
+  panel.classList.remove('open');
+  menuBtn.classList.remove('visible');
+  uiVisible = false;
+}
+
+function showMenuBtn() {
+  if (!uiVisible) {
+    menuBtn.classList.add('visible');
+  }
+}
+
+function resetHideTimer() {
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(hidePanel, 3000);
+}
+
+menuBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  showPanel();
+});
+
+document.addEventListener('pointermove', () => {
+  if (!uiVisible) {
+    showMenuBtn();
+  } else {
+    resetHideTimer();
+  }
+});
+
+panel.addEventListener('pointerdown', () => { clearTimeout(hideTimer); });
+panel.addEventListener('input', () => { clearTimeout(hideTimer); });
+panel.addEventListener('pointerup', () => { resetHideTimer(); });
+
+// Fade hint after first interaction
+let hintDismissed = false;
+function dismissHint() {
+  if (!hintDismissed) {
+    hintDismissed = true;
+    hintEl.style.opacity = '0';
+    setTimeout(() => { hintEl.style.display = 'none'; }, 500);
+  }
+}
+
+// Start with hint visible, menu hidden
+setTimeout(() => {
+  hintEl.style.opacity = '0';
+  setTimeout(() => { hintEl.style.display = 'none'; }, 500);
+}, 6000);
+
+// ============ MAGNET PLACEMENT ============
+function placeMagnets(n) {
+  numMagnets = n;
+  magnets = [];
+  for (let i = 0; i < n; i++) {
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    magnets.push({ x: Math.cos(angle), y: Math.sin(angle) });
+  }
+}
+
+// ============ RENDER ============
+function resize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  glCanvas.width = w * dpr;
+  glCanvas.height = h * dpr;
+  glCanvas.style.width = w + 'px';
+  glCanvas.style.height = h + 'px';
+  traceCanvas.width = w * dpr;
+  traceCanvas.height = h * dpr;
+  traceCanvas.style.width = w + 'px';
+  traceCanvas.style.height = h + 'px';
+  traceCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+}
+
+function render() {
+  const pal = PALETTES[currentPalette];
+  const aspect = glCanvas.width / glCanvas.height;
+
+  gl.uniform2f(loc.u_resolution, glCanvas.width, glCanvas.height);
+  gl.uniform1f(loc.u_range, params.range);
+  gl.uniform1f(loc.u_aspect, aspect);
+  gl.uniform1f(loc.u_damping, params.damping);
+  gl.uniform1f(loc.u_gravity, params.gravity);
+  gl.uniform1f(loc.u_magnetStrength, params.strength);
+  gl.uniform1f(loc.u_height, params.height);
+  gl.uniform1i(loc.u_maxIter, params.maxIter);
+  gl.uniform1i(loc.u_numMagnets, numMagnets);
+  gl.uniform3fv(loc.u_bgColor, pal.bg);
+
+  for (let i = 0; i < 6; i++) {
+    if (i < magnets.length) {
+      gl.uniform2f(loc[`u_magnets_${i}`], magnets[i].x, magnets[i].y);
+      gl.uniform3fv(loc[`u_colors_${i}`], pal.colors[i]);
+    } else {
+      gl.uniform2f(loc[`u_magnets_${i}`], 0, 0);
+      gl.uniform3fv(loc[`u_colors_${i}`], [0, 0, 0]);
+    }
+  }
+
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  drawMagnets();
+  document.getElementById('status').textContent = 'Click to drop a pendulum';
+}
+
+function worldToScreen(wx, wy) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = glCanvas.width / dpr;
+  const h = glCanvas.height / dpr;
+  const aspect = glCanvas.width / glCanvas.height;
+  return {
+    x: (wx / (2 * params.range * aspect) + 0.5) * w,
+    y: (-wy / (2 * params.range) + 0.5) * h
+  };
+}
+
+function screenToWorld(sx, sy) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = glCanvas.width / dpr;
+  const h = glCanvas.height / dpr;
+  const aspect = glCanvas.width / glCanvas.height;
+  return {
+    x: (sx / w - 0.5) * 2 * params.range * aspect,
+    y: -(sy / h - 0.5) * 2 * params.range
+  };
+}
+
+function drawMagnets() {
+  const pal = PALETTES[currentPalette];
+  const dpr = window.devicePixelRatio || 1;
+  const w = glCanvas.width / dpr;
+  const h = glCanvas.height / dpr;
+
+  for (let m = 0; m < magnets.length; m++) {
+    const s = worldToScreen(magnets[m].x, magnets[m].y);
+    const c = pal.colors[m];
+    const rgb = `${Math.floor(c[0]*255)},${Math.floor(c[1]*255)},${Math.floor(c[2]*255)}`;
+
+    // Outer glow
+    const grad = traceCtx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 22);
+    grad.addColorStop(0, `rgba(${rgb}, 0.5)`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    traceCtx.fillStyle = grad;
+    traceCtx.beginPath();
+    traceCtx.arc(s.x, s.y, 22, 0, Math.PI * 2);
+    traceCtx.fill();
+
+    // Core dot
+    traceCtx.fillStyle = `rgb(${rgb})`;
+    traceCtx.beginPath();
+    traceCtx.arc(s.x, s.y, 6, 0, Math.PI * 2);
+    traceCtx.fill();
+
+    // Ring
+    traceCtx.strokeStyle = `rgba(${rgb}, 0.4)`;
+    traceCtx.lineWidth = 1.5;
+    traceCtx.beginPath();
+    traceCtx.arc(s.x, s.y, 12, 0, Math.PI * 2);
+    traceCtx.stroke();
+  }
+}
+
+// ============ PENDULUM PATH TRACE (CPU) ============
+function simulatePath(startX, startY) {
+  const path = [{ x: startX, y: startY }];
+  let x = startX, y = startY, vx = 0, vy = 0;
+  const dt = 0.005;
+  const h2 = params.height * params.height;
+
+  for (let i = 0; i < params.maxIter; i++) {
+    let fx = -params.gravity * x;
+    let fy = -params.gravity * y;
+    for (let m = 0; m < magnets.length; m++) {
+      const dx = magnets[m].x - x, dy = magnets[m].y - y;
+      const dist2 = dx * dx + dy * dy + h2;
+      const force = params.strength / (dist2 * Math.sqrt(dist2));
+      fx += force * dx;
+      fy += force * dy;
+    }
+    fx -= params.damping * vx;
+    fy -= params.damping * vy;
+    vx += fx * dt; vy += fy * dt;
+    x += vx * dt; y += vy * dt;
+    if (i % 3 === 0) path.push({ x, y });
+
+    if (vx * vx + vy * vy < 0.0001) {
+      for (let m = 0; m < magnets.length; m++) {
+        const dx = magnets[m].x - x, dy = magnets[m].y - y;
+        if (dx * dx + dy * dy < 0.0025) {
+          path.push({ x, y });
+          return { path, magnet: m };
+        }
+      }
+    }
+  }
+
+  let closest = 0, cd = Infinity;
+  for (let m = 0; m < magnets.length; m++) {
+    const dx = magnets[m].x - x, dy = magnets[m].y - y;
+    const d = dx * dx + dy * dy;
+    if (d < cd) { cd = d; closest = m; }
+  }
+  path.push({ x, y });
+  return { path, magnet: closest };
+}
+
+function animateTrace(result) {
+  const pal = PALETTES[currentPalette];
+  const c = pal.colors[result.magnet % pal.colors.length];
+  const rgb = `${Math.floor(c[0]*255)},${Math.floor(c[1]*255)},${Math.floor(c[2]*255)}`;
+  const dpr = window.devicePixelRatio || 1;
+  const w = glCanvas.width / dpr;
+  const h = glCanvas.height / dpr;
+
+  traceCtx.clearRect(0, 0, w, h);
+  drawMagnets();
+
+  // Draw start dot
+  const startS = worldToScreen(result.path[0].x, result.path[0].y);
+  traceCtx.fillStyle = '#FFE9A3';
+  traceCtx.beginPath();
+  traceCtx.arc(startS.x, startS.y, 4, 0, Math.PI * 2);
+  traceCtx.fill();
+
+  const totalSteps = result.path.length;
+  const stepsPerFrame = Math.max(2, Math.floor(totalSteps / 60));
+  let drawn = 0;
+
+  function drawFrame() {
+    const end = Math.min(drawn + stepsPerFrame, totalSteps);
+
+    for (let i = drawn + 1; i < end; i++) {
+      const alpha = 0.1 + 0.9 * (i / totalSteps);
+      const prev = worldToScreen(result.path[i - 1].x, result.path[i - 1].y);
+      const cur = worldToScreen(result.path[i].x, result.path[i].y);
+
+      traceCtx.strokeStyle = `rgba(${rgb}, ${alpha.toFixed(2)})`;
+      traceCtx.lineWidth = 1.5;
+      traceCtx.beginPath();
+      traceCtx.moveTo(prev.x, prev.y);
+      traceCtx.lineTo(cur.x, cur.y);
+      traceCtx.stroke();
+    }
+
+    // Head glow
+    if (end > 1) {
+      const head = worldToScreen(result.path[end - 1].x, result.path[end - 1].y);
+      const hg = traceCtx.createRadialGradient(head.x, head.y, 0, head.x, head.y, 8);
+      hg.addColorStop(0, `rgba(${rgb}, 0.6)`);
+      hg.addColorStop(1, 'rgba(0,0,0,0)');
+      traceCtx.fillStyle = hg;
+      traceCtx.beginPath();
+      traceCtx.arc(head.x, head.y, 8, 0, Math.PI * 2);
+      traceCtx.fill();
+    }
+
+    drawn = end;
+
+    if (drawn < totalSteps) {
+      requestAnimationFrame(drawFrame);
+    } else {
+      // Final: draw end glow
+      const last = result.path[totalSteps - 1];
+      const ls = worldToScreen(last.x, last.y);
+      const eg = traceCtx.createRadialGradient(ls.x, ls.y, 0, ls.x, ls.y, 14);
+      eg.addColorStop(0, `rgba(${rgb}, 0.7)`);
+      eg.addColorStop(1, 'rgba(0,0,0,0)');
+      traceCtx.fillStyle = eg;
+      traceCtx.beginPath();
+      traceCtx.arc(ls.x, ls.y, 14, 0, Math.PI * 2);
+      traceCtx.fill();
+      drawMagnets();
+      document.getElementById('status').textContent = `Captured by magnet ${result.magnet + 1} — ${totalSteps * 3} steps`;
+    }
+  }
+
+  drawFrame();
+}
+
+function tracePath(cx, cy) {
+  const world = screenToWorld(cx, cy);
+  const result = simulatePath(world.x, world.y);
+  animateTrace(result);
+}
+
+// ============ INTERACTION ============
+let dragging = -1;
+let dragStarted = false;
+const MAGNET_HIT_RADIUS = 500; // px squared — generous hit area for grabbing magnets
+
+function canvasPos(e) {
+  const rect = glCanvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+}
+
+function findMagnet(cx, cy) {
+  for (let m = 0; m < magnets.length; m++) {
+    const s = worldToScreen(magnets[m].x, magnets[m].y);
+    if ((cx - s.x) ** 2 + (cy - s.y) ** 2 < MAGNET_HIT_RADIUS) return m;
+  }
+  return -1;
+}
+
+// Cursor: grab when hovering a magnet, crosshair otherwise
+glCanvas.addEventListener('pointermove', e => {
+  if (dragging >= 0) return; // already dragging
+  const p = canvasPos(e);
+  const m = findMagnet(p.x, p.y);
+  glCanvas.style.cursor = m >= 0 ? 'grab' : 'crosshair';
+});
+
+glCanvas.addEventListener('pointerdown', e => {
+  dismissHint();
+  const p = canvasPos(e);
+  const m = findMagnet(p.x, p.y);
+  if (m >= 0) {
+    dragging = m;
+    dragStarted = false;
+    glCanvas.style.cursor = 'grabbing';
+    glCanvas.setPointerCapture(e.pointerId);
+  } else {
+    tracePath(p.x, p.y);
+  }
+});
+
+glCanvas.addEventListener('pointermove', e => {
+  if (dragging >= 0) {
+    dragStarted = true;
+    const p = canvasPos(e);
+    const world = screenToWorld(p.x, p.y);
+    magnets[dragging].x = world.x;
+    magnets[dragging].y = world.y;
+    const dpr = window.devicePixelRatio || 1;
+    const w = glCanvas.width / dpr;
+    const h = glCanvas.height / dpr;
+    traceCtx.clearRect(0, 0, w, h);
+    render();
+  }
+});
+
+glCanvas.addEventListener('pointerup', e => {
+  if (dragging >= 0) {
+    if (dragStarted) {
+      // Magnet was moved — re-render the fractal
+      render();
+    }
+    dragging = -1;
+    glCanvas.style.cursor = 'crosshair';
+  }
+});
+
+// ============ UI ============
+function bindSlider(id, key, fmt) {
+  const el = document.getElementById(id);
+  const val = document.getElementById(id + '-val');
+  el.addEventListener('input', () => {
+    const v = parseFloat(el.value);
+    params[key] = v;
+    val.textContent = fmt ? fmt(v) : v.toFixed(2);
+    render();
+  });
+}
+
+bindSlider('damping', 'damping');
+bindSlider('gravity', 'gravity');
+bindSlider('strength', 'strength', v => v.toFixed(1));
+bindSlider('height', 'height');
+bindSlider('zoom', 'range');
+bindSlider('max-iter', 'maxIter', v => Math.round(v).toString());
+
+// Presets
+const presetsEl = document.getElementById('presets');
+PRESETS.forEach(p => {
+  const btn = document.createElement('button');
+  btn.className = 'preset-btn';
+  btn.textContent = p.name;
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    params.damping = p.d; params.gravity = p.g; params.strength = p.s; params.height = p.h;
+    document.getElementById('damping').value = p.d;
+    document.getElementById('damping-val').textContent = p.d.toFixed(2);
+    document.getElementById('gravity').value = p.g;
+    document.getElementById('gravity-val').textContent = p.g.toFixed(2);
+    document.getElementById('strength').value = p.s;
+    document.getElementById('strength-val').textContent = p.s.toFixed(1);
+    document.getElementById('height').value = p.h;
+    document.getElementById('height-val').textContent = p.h.toFixed(2);
+
+    placeMagnets(p.n);
+    updateMagnetBtns();
+    const dpr = window.devicePixelRatio || 1;
+    traceCtx.clearRect(0, 0, glCanvas.width / dpr, glCanvas.height / dpr);
+    render();
+  });
+  presetsEl.appendChild(btn);
+});
+
+// Magnet count
+function updateMagnetBtns() {
+  const el = document.getElementById('magnet-btns');
+  el.innerHTML = '';
+  for (let n = 2; n <= 6; n++) {
+    const btn = document.createElement('button');
+    btn.textContent = n;
+    btn.className = n === numMagnets ? 'active' : '';
+    btn.addEventListener('click', () => {
+      placeMagnets(n);
+      updateMagnetBtns();
+      const dpr = window.devicePixelRatio || 1;
+      traceCtx.clearRect(0, 0, glCanvas.width / dpr, glCanvas.height / dpr);
+      render();
+    });
+    el.appendChild(btn);
+  }
+}
+
+// Palettes
+const palEl = document.getElementById('palette-select');
+Object.entries(PALETTES).forEach(([key, pal]) => {
+  const sw = document.createElement('div');
+  sw.className = 'palette-swatch' + (key === currentPalette ? ' active' : '');
+  sw.style.background = pal.swatch;
+  sw.title = pal.name;
+  sw.addEventListener('click', () => {
+    currentPalette = key;
+    document.querySelectorAll('.palette-swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    render();
+  });
+  palEl.appendChild(sw);
+});
+
+// Save — hide UI, capture clean image
+document.getElementById('save-btn').addEventListener('click', () => {
+  const wasOpen = panel.classList.contains('open');
+  panel.classList.remove('open');
+  menuBtn.classList.remove('visible');
+  hintEl.style.opacity = '0';
+
+  requestAnimationFrame(() => {
+    const exp = document.createElement('canvas');
+    exp.width = glCanvas.width; exp.height = glCanvas.height;
+    const ectx = exp.getContext('2d');
+    ectx.drawImage(glCanvas, 0, 0);
+    ectx.drawImage(traceCanvas, 0, 0);
+    const link = document.createElement('a');
+    link.download = `magnetic-pendulum-${Date.now()}.png`;
+    link.href = exp.toDataURL('image/png');
+    link.click();
+
+    if (wasOpen) {
+      panel.classList.add('open');
+      resetHideTimer();
+    }
+  });
+});
+
+// Reset magnets
+document.getElementById('reset-btn').addEventListener('click', () => {
+  placeMagnets(numMagnets);
+  const dpr = window.devicePixelRatio || 1;
+  traceCtx.clearRect(0, 0, glCanvas.width / dpr, glCanvas.height / dpr);
+  render();
+});
+
+// ============ INIT ============
+window.addEventListener('resize', () => { resize(); render(); });
+placeMagnets(3);
+updateMagnetBtns();
+resize();
+document.querySelector('.preset-btn').classList.add('active');
+render();
+</script>
+</body>
+</html>

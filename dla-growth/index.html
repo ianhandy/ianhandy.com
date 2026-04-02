@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>DLA Growth — Diffusion-Limited Aggregation</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0c1a0f;overflow:hidden;font-family:'SF Mono','Fira Code','Courier New',monospace;color:#a8c7a0;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+canvas{display:block;position:absolute;top:0;left:0}
+#stats{position:fixed;top:12px;left:12px;font-size:11px;opacity:0.5;z-index:5;pointer-events:none;transition:opacity 0.4s}
+
+/* Menu button — visible when UI is hidden */
+#menu-btn{position:fixed;bottom:16px;right:16px;width:40px;height:40px;border-radius:50%;background:rgba(15,31,18,0.85);border:1px solid rgba(168,199,160,0.1);color:#a8c7a0;font-size:13px;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:20;font-family:inherit;opacity:0;transition:opacity 0.3s;pointer-events:none}
+#menu-btn.visible{opacity:1;pointer-events:auto}
+#menu-btn:hover{background:rgba(168,199,160,0.15)}
+
+/* Controls panel */
+#ui{position:fixed;bottom:0;left:0;right:0;z-index:10;pointer-events:none}
+#controls{background:rgba(15,31,18,0.92);border-top:1px solid rgba(168,199,160,0.1);padding:12px 16px;pointer-events:auto;transform:translateY(100%);transition:transform 0.3s ease;opacity:1}
+#controls.open{transform:translateY(0)}
+.controls-inner{padding:8px 0 4px}
+.row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.row label{font-size:11px;letter-spacing:0.5px;text-transform:uppercase;opacity:0.7;min-width:70px}
+.row input[type=range]{flex:1;-webkit-appearance:none;background:rgba(168,199,160,0.15);height:3px;border-radius:2px;outline:none;min-width:80px}
+.row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#a8c7a0;cursor:pointer}
+.row .val{font-size:11px;min-width:30px;text-align:right;opacity:0.7}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+button{background:rgba(168,199,160,0.12);border:1px solid rgba(168,199,160,0.1);color:#a8c7a0;padding:6px 14px;border-radius:4px;font-size:11px;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;transition:background 0.15s}
+button:active,button.active{background:#3d6b3a;border-color:#3d6b3a}
+button:hover{background:rgba(168,199,160,0.2)}
+.preset-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.preset-btn{font-size:10px;padding:4px 10px}
+.seed-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.seed-btn{font-size:10px;padding:4px 10px}
+#palette-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.pal-btn{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.pal-btn.active{border-color:#dce8da}
+
+/* Tooltip styles */
+.tip-wrap{position:relative;display:inline-flex;align-items:center;margin-left:6px}
+.tip-icon{width:16px;height:16px;border-radius:50%;background:rgba(168,199,160,0.1);border:1px solid rgba(168,199,160,0.1);color:#a8c7a0;font-size:10px;display:inline-flex;align-items:center;justify-content:center;cursor:help;font-family:Georgia,serif;flex-shrink:0;line-height:1}
+.tip-icon:hover{background:rgba(168,199,160,0.2)}
+.tip-bubble{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:280px;padding:10px 12px;background:rgba(10,22,12,0.97);border:1px solid rgba(168,199,160,0.1);border-radius:6px;font-size:11px;line-height:1.6;color:#a8c7a0;opacity:0;pointer-events:none;transition:opacity 0.2s;z-index:100;font-family:'SF Mono','Fira Code','Courier New',monospace}
+.tip-bubble strong{color:#dce8da}
+.tip-bubble .tip-source{display:block;margin-top:6px;font-size:10px;color:rgba(168,199,160,0.5);font-style:italic}
+.tip-wrap:hover .tip-bubble{opacity:1;pointer-events:auto}
+/* Keep bubbles on screen */
+.tip-bubble.tip-left{left:0;transform:none}
+.tip-bubble.tip-right{left:auto;right:0;transform:none}
+
+/* Section labels with tooltips */
+.section-label{display:flex;align-items:center;margin-bottom:6px}
+.section-label span{font-size:10px;letter-spacing:1px;text-transform:uppercase;opacity:0.5}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="stats">Particles: 0</div>
+
+<button id="menu-btn">Menu</button>
+
+<div id="ui">
+<div id="controls">
+<div class="controls-inner">
+
+<div class="section-label">
+<span>Presets</span>
+<div class="tip-wrap">
+<span class="tip-icon">?</span>
+<div class="tip-bubble">
+<strong>Growth presets</strong> tune stickiness, walker count, and spawn distance to mimic different natural DLA phenomena.
+<br><br>
+<strong>Dendrite:</strong> Default balanced growth — mimics manganese oxide crystal dendrites on limestone surfaces.
+<br>
+<strong>Coral:</strong> Low sticking probability with many walkers mimics calcium carbonate deposition in marine organisms — radial, dense branching.
+<br>
+<strong>Lightning:</strong> Maximum stickiness with wide spawn gap produces thin, jagged branches like Lichtenberg figures in electrical discharge.
+<br>
+<strong>Frost:</strong> Moderate stickiness creates the feathery patterns of ice crystal nucleation on cold glass.
+<br>
+<strong>Snowflake:</strong> Tuned for hexagonal-like symmetry seen in ice crystal formation.
+<br>
+<strong>Lichen:</strong> Very low stickiness with dense walkers — slow, compact growth like crustose lichen on rock.
+<span class="tip-source">Witten &amp; Sander (1981); Meakin (1983) cluster-cluster aggregation</span>
+</div>
+</div>
+</div>
+<div class="preset-row">
+<button class="preset-btn active" data-preset="dendrite">Dendrite</button>
+<button class="preset-btn" data-preset="coral">Coral</button>
+<button class="preset-btn" data-preset="lightning">Lightning</button>
+<button class="preset-btn" data-preset="frost">Frost</button>
+<button class="preset-btn" data-preset="snowflake">Snowflake</button>
+<button class="preset-btn" data-preset="lichen">Lichen</button>
+</div>
+
+<div class="section-label">
+<span>Seed Shape</span>
+</div>
+<div class="seed-row">
+<button class="seed-btn active" data-seed="point">Point</button>
+<button class="seed-btn" data-seed="line">Line</button>
+<button class="seed-btn" data-seed="circle">Circle</button>
+<button class="seed-btn" data-seed="cross">Cross</button>
+</div>
+
+<div class="section-label">
+<span>Palette</span>
+</div>
+<div id="palette-row"></div>
+
+<div class="row">
+<label>Stickiness</label>
+<input type="range" id="stickiness" min="5" max="100" value="100">
+<span class="val" id="stickiness-val">100%</span>
+<div class="tip-wrap">
+<span class="tip-icon">?</span>
+<div class="tip-bubble tip-right">
+<strong>Sticking probability</strong> — the chance a random walker attaches on contact with the cluster. Lower values produce denser, more compact structures as particles penetrate deeper before sticking.
+<span class="tip-source">Controls fractal dimension: ~1.71 at 100%, approaching 2.0 at low values</span>
+</div>
+</div>
+</div>
+<div class="row">
+<label>Walkers</label>
+<input type="range" id="walkers" min="100" max="5000" value="2000" step="100">
+<span class="val" id="walkers-val">2000</span>
+<div class="tip-wrap">
+<span class="tip-icon">?</span>
+<div class="tip-bubble tip-right">
+<strong>Active walkers</strong> — number of particles simultaneously performing random walks. More walkers = faster growth but doesn't change the structure's shape.
+</div>
+</div>
+</div>
+<div class="row">
+<label>Spawn gap</label>
+<input type="range" id="spawn-gap" min="5" max="40" value="15">
+<span class="val" id="spawn-gap-val">15</span>
+<div class="tip-wrap">
+<span class="tip-icon">?</span>
+<div class="tip-bubble tip-right">
+<strong>Spawn distance</strong> — how far from the cluster edge new walkers appear. Larger gaps produce more diffuse, tree-like branching; smaller gaps create denser growth.
+</div>
+</div>
+</div>
+
+<div class="btn-row">
+<button id="btn-clear">Clear</button>
+<button id="btn-pause">Pause</button>
+<button id="btn-save">Save</button>
+<div class="tip-wrap" style="margin-left:auto">
+<span class="tip-icon">?</span>
+<div class="tip-bubble tip-right" style="bottom:calc(100% + 8px)">
+<strong>Diffusion-Limited Aggregation</strong> — random-walking particles stick on contact, building fractal structures. The resulting clusters have a fractal dimension of ~1.71, between a line (1) and a filled area (2). This self-similar branching appears at every scale.
+<br><br>First described by Witten &amp; Sander (1981) "Diffusion-Limited Aggregation, a Kinetic Critical Phenomenon." Extended by Meakin (1983) for cluster-cluster aggregation.
+<br><br>Click anywhere on the canvas to place additional seed points.
+<span class="tip-source">Witten &amp; Sander, Phys. Rev. Lett. 47 (1981); Meakin, Phys. Rev. A 27 (1983)</span>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<script>
+'use strict';
+
+// --- Auto-hide UI ---
+let hideTimer = null;
+let uiVisible = true;
+const controlsEl = document.getElementById('controls');
+const menuBtn = document.getElementById('menu-btn');
+const statsEl = document.getElementById('stats');
+
+function showUI() {
+  controlsEl.classList.add('open');
+  menuBtn.classList.remove('visible');
+  uiVisible = true;
+  resetHideTimer();
+}
+
+function hideUI() {
+  controlsEl.classList.remove('open');
+  menuBtn.classList.remove('visible');
+  statsEl.style.opacity = '0';
+  uiVisible = false;
+}
+
+function showMenuBtn() {
+  if (!uiVisible) {
+    menuBtn.classList.add('visible');
+    statsEl.style.opacity = '0.5';
+  }
+}
+
+function resetHideTimer() {
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(hideUI, 2000);
+}
+
+menuBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  showUI();
+});
+
+// Track mouse/touch movement
+document.addEventListener('pointermove', () => {
+  if (!uiVisible) {
+    showMenuBtn();
+  } else {
+    resetHideTimer();
+  }
+});
+
+// Clicking inside controls keeps them open
+controlsEl.addEventListener('pointerdown', () => {
+  clearTimeout(hideTimer);
+});
+controlsEl.addEventListener('input', () => {
+  clearTimeout(hideTimer);
+});
+controlsEl.addEventListener('pointerup', () => {
+  resetHideTimer();
+});
+
+// Start the initial hide timer
+resetHideTimer();
+
+// --- Palettes ---
+const palettes = [
+  { name:'FunForrest', bg:[26,13,0], colors:[[100,60,10],[180,120,30],[221,193,101],[255,233,163],[255,255,220]], accent:[229,89,28] },
+  { name:'Bioluminescence', bg:[0,8,20], colors:[[0,40,60],[0,100,120],[0,200,180],[100,255,220],[220,255,240]], accent:[0,180,255] },
+  { name:'Ember', bg:[5,2,0], colors:[[80,20,5],[180,50,10],[229,89,28],[255,160,60],[255,220,140]], accent:[255,80,20] },
+  { name:'Frost', bg:[5,10,20], colors:[[30,50,80],[60,100,150],[120,170,220],[180,210,240],[230,240,255]], accent:[100,180,255] },
+  { name:'Amethyst', bg:[15,5,20], colors:[[60,20,80],[120,40,160],[170,80,200],[200,140,230],[230,200,255]], accent:[180,60,220] },
+];
+
+let currentPalette = 0;
+const paletteRow = document.getElementById('palette-row');
+palettes.forEach((p, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'pal-btn' + (i === 0 ? ' active' : '');
+  btn.style.background = `rgb(${p.colors[2].join(',')})`;
+  btn.title = p.name;
+  btn.onclick = () => {
+    document.querySelectorAll('.pal-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPalette = i;
+    needsFullRedraw = true;
+  };
+  paletteRow.appendChild(btn);
+});
+
+// --- Canvas setup ---
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha: false });
+
+let W, H, gridW, gridH, cellSize, dpr;
+let grid; // 0 = empty, >0 = order of attachment
+let clusterSize = 0;
+let maxRadius = 0;
+let paused = false;
+let walkers = [];
+let seedType = 'point';
+let needsFullRedraw = true;
+let newCells = []; // buffer of newly added cells for incremental draw
+
+// Params
+let stickiness = 1.0;
+let numWalkers = 2000;
+let spawnGap = 15;
+
+const presets = {
+  dendrite:  { stickiness:100, walkers:2000, spawnGap:15 },
+  coral:     { stickiness:30,  walkers:3000, spawnGap:10 },
+  lightning: { stickiness:100, walkers:1000, spawnGap:30 },
+  frost:     { stickiness:60,  walkers:2500, spawnGap:12 },
+  snowflake: { stickiness:45,  walkers:2000, spawnGap:10 },
+  lichen:    { stickiness:20,  walkers:4000, spawnGap:8 },
+};
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  cellSize = Math.max(1, Math.floor(Math.min(W, H) / 400));
+  gridW = Math.ceil(W / cellSize);
+  gridH = Math.ceil(H / cellSize);
+
+  resetSim();
+}
+
+function resetSim() {
+  grid = new Uint32Array(gridW * gridH);
+  walkers = [];
+  clusterSize = 0;
+  maxRadius = 0;
+  newCells = [];
+  needsFullRedraw = true;
+  placeSeed();
+  spawnWalkers();
+}
+
+function placeSeed() {
+  const cx = Math.floor(gridW / 2);
+  const cy = Math.floor(gridH / 2);
+
+  switch (seedType) {
+    case 'point':
+      setCell(cx, cy);
+      break;
+    case 'line':
+      for (let x = cx - 30; x <= cx + 30; x++) setCell(x, cy);
+      break;
+    case 'circle': {
+      const r = 25;
+      for (let a = 0; a < 360; a += 2) {
+        const x = cx + Math.round(r * Math.cos(a * Math.PI / 180));
+        const y = cy + Math.round(r * Math.sin(a * Math.PI / 180));
+        setCell(x, y);
+      }
+      break;
+    }
+    case 'cross':
+      for (let i = -20; i <= 20; i++) {
+        setCell(cx + i, cy);
+        setCell(cx, cy + i);
+      }
+      break;
+  }
+}
+
+function setCell(x, y) {
+  if (x < 0 || x >= gridW || y < 0 || y >= gridH) return;
+  const idx = y * gridW + x;
+  if (grid[idx] > 0) return;
+  clusterSize++;
+  grid[idx] = clusterSize;
+  newCells.push(x, y, clusterSize);
+  const cx = gridW / 2, cy = gridH / 2;
+  const d = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+  if (d > maxRadius) maxRadius = d;
+}
+
+function spawnWalkers() {
+  let attempts = 0;
+  while (walkers.length < numWalkers && attempts < numWalkers * 3) {
+    attempts++;
+    const w = spawnOneWalker();
+    if (w) walkers.push(w);
+  }
+}
+
+function spawnOneWalker() {
+  const cx = gridW / 2, cy = gridH / 2;
+  const r = maxRadius + spawnGap + 5;
+  const angle = Math.random() * Math.PI * 2;
+  const x = Math.round(cx + r * Math.cos(angle));
+  const y = Math.round(cy + r * Math.sin(angle));
+  if (x < 1 || x >= gridW - 1 || y < 1 || y >= gridH - 1) return null;
+  return { x, y };
+}
+
+function hasNeighbor(x, y) {
+  const w = gridW;
+  return (
+    grid[(y - 1) * w + x - 1] > 0 || grid[(y - 1) * w + x] > 0 || grid[(y - 1) * w + x + 1] > 0 ||
+    grid[y * w + x - 1] > 0 || grid[y * w + x + 1] > 0 ||
+    grid[(y + 1) * w + x - 1] > 0 || grid[(y + 1) * w + x] > 0 || grid[(y + 1) * w + x + 1] > 0
+  );
+}
+
+// Pre-flattened directions for random walk
+const dx = [-1,-1,-1,0,0,1,1,1];
+const dy = [-1,0,1,-1,1,-1,0,1];
+
+function stepSim() {
+  if (paused) return;
+
+  const killR2 = (maxRadius + spawnGap + 30) ** 2;
+  const cx = gridW / 2, cy = gridH / 2;
+  const gw = gridW, gh = gridH;
+  const stepsPerFrame = 10;
+
+  for (let s = 0; s < stepsPerFrame; s++) {
+    let i = walkers.length;
+    while (i--) {
+      const w = walkers[i];
+      const d = (Math.random() * 8) | 0;
+      w.x += dx[d];
+      w.y += dy[d];
+
+      // Kill if out of bounds or too far
+      if (w.x < 1 || w.x >= gw - 1 || w.y < 1 || w.y >= gh - 1) {
+        const nw = spawnOneWalker();
+        if (nw) walkers[i] = nw; else { walkers[i] = walkers[walkers.length - 1]; walkers.pop(); }
+        continue;
+      }
+
+      const ddx = w.x - cx, ddy = w.y - cy;
+      if (ddx * ddx + ddy * ddy > killR2) {
+        const nw = spawnOneWalker();
+        if (nw) walkers[i] = nw; else { walkers[i] = walkers[walkers.length - 1]; walkers.pop(); }
+        continue;
+      }
+
+      // Check adjacency
+      if (hasNeighbor(w.x, w.y)) {
+        if (Math.random() < stickiness) {
+          setCell(w.x, w.y);
+          const nw = spawnOneWalker();
+          if (nw) walkers[i] = nw; else { walkers[i] = walkers[walkers.length - 1]; walkers.pop(); }
+        }
+      }
+    }
+
+    // Top up walkers
+    let att = 0;
+    while (walkers.length < numWalkers && att < 50) {
+      att++;
+      const w = spawnOneWalker();
+      if (w) walkers.push(w);
+    }
+  }
+}
+
+// --- Rendering ---
+function colorForValue(v, maxP) {
+  const pal = palettes[currentPalette];
+  const colors = pal.colors;
+  const numC = colors.length;
+  const t = Math.min(v / maxP, 1);
+  const ci = t * (numC - 1);
+  const lo = Math.floor(ci);
+  const hi = Math.min(lo + 1, numC - 1);
+  const f = ci - lo;
+  const r = (colors[lo][0] + (colors[hi][0] - colors[lo][0]) * f) | 0;
+  const g = (colors[lo][1] + (colors[hi][1] - colors[lo][1]) * f) | 0;
+  const b = (colors[lo][2] + (colors[hi][2] - colors[lo][2]) * f) | 0;
+  return `rgb(${r},${g},${b})`;
+}
+
+function fullRedraw() {
+  const pal = palettes[currentPalette];
+  const bg = pal.bg;
+  ctx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
+  ctx.fillRect(0, 0, W, H);
+
+  const maxP = clusterSize || 1;
+  const cs = cellSize;
+
+  for (let gy = 0; gy < gridH; gy++) {
+    for (let gx = 0; gx < gridW; gx++) {
+      const v = grid[gy * gridW + gx];
+      if (v === 0) continue;
+      ctx.fillStyle = colorForValue(v, maxP);
+      ctx.fillRect(gx * cs, gy * cs, cs, cs);
+    }
+  }
+
+  needsFullRedraw = false;
+  newCells = [];
+}
+
+function incrementalDraw() {
+  if (newCells.length === 0) return;
+  const maxP = clusterSize || 1;
+  const cs = cellSize;
+
+  for (let i = 0; i < newCells.length; i += 3) {
+    const gx = newCells[i];
+    const gy = newCells[i + 1];
+    const v = newCells[i + 2];
+    ctx.fillStyle = colorForValue(v, maxP);
+    ctx.fillRect(gx * cs, gy * cs, cs, cs);
+
+    // Subtle glow around new particles
+    const pal = palettes[currentPalette];
+    const accent = pal.accent;
+    ctx.save();
+    ctx.globalAlpha = 0.08;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = `rgb(${accent[0]},${accent[1]},${accent[2]})`;
+    ctx.beginPath();
+    ctx.arc(gx * cs + cs * 0.5, gy * cs + cs * 0.5, cs * 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  newCells = [];
+}
+
+function draw() {
+  if (needsFullRedraw) {
+    fullRedraw();
+  } else {
+    incrementalDraw();
+  }
+  statsEl.textContent = `Particles: ${clusterSize.toLocaleString()}`;
+}
+
+function loop() {
+  stepSim();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// --- Controls ---
+function bindSlider(id, setter) {
+  const el = document.getElementById(id);
+  const valEl = document.getElementById(id + '-val');
+  el.addEventListener('input', () => { setter(el); valEl.textContent = el.value + (id === 'stickiness' ? '%' : ''); });
+}
+bindSlider('stickiness', el => { stickiness = el.value / 100; });
+bindSlider('walkers', el => { numWalkers = +el.value; spawnWalkers(); });
+bindSlider('spawn-gap', el => { spawnGap = +el.value; });
+
+// Presets
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const p = presets[btn.dataset.preset];
+    document.getElementById('stickiness').value = p.stickiness;
+    document.getElementById('stickiness-val').textContent = p.stickiness + '%';
+    stickiness = p.stickiness / 100;
+    document.getElementById('walkers').value = p.walkers;
+    document.getElementById('walkers-val').textContent = p.walkers;
+    numWalkers = p.walkers;
+    document.getElementById('spawn-gap').value = p.spawnGap;
+    document.getElementById('spawn-gap-val').textContent = p.spawnGap;
+    spawnGap = p.spawnGap;
+
+    const palMap = { frost:3, snowflake:3, coral:1, lightning:2, lichen:4, dendrite:0 };
+    const pi = palMap[btn.dataset.preset] ?? 0;
+    currentPalette = pi;
+    document.querySelectorAll('.pal-btn').forEach((b,i) => b.classList.toggle('active', i === pi));
+
+    resetSim();
+  });
+});
+
+// Seed shapes
+document.querySelectorAll('.seed-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.seed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    seedType = btn.dataset.seed;
+    resetSim();
+  });
+});
+
+// Buttons
+document.getElementById('btn-clear').addEventListener('click', resetSim);
+document.getElementById('btn-pause').addEventListener('click', () => {
+  paused = !paused;
+  document.getElementById('btn-pause').textContent = paused ? 'Resume' : 'Pause';
+});
+document.getElementById('btn-save').addEventListener('click', () => {
+  // Hide all UI, capture clean canvas, then restore
+  const wasOpen = controlsEl.classList.contains('open');
+  controlsEl.classList.remove('open');
+  menuBtn.classList.remove('visible');
+  statsEl.style.opacity = '0';
+  // Use rAF to ensure UI is hidden before capture
+  requestAnimationFrame(() => {
+    const link = document.createElement('a');
+    link.download = 'dla-growth.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    // Restore UI
+    if (wasOpen) {
+      controlsEl.classList.add('open');
+    }
+    statsEl.style.opacity = '0.5';
+    resetHideTimer();
+  });
+});
+
+// Tap to add seed
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.target !== canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const gx = Math.floor((e.clientX - rect.left) / cellSize);
+  const gy = Math.floor((e.clientY - rect.top) / cellSize);
+  // Place a small cluster of seeds for visibility
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      setCell(gx + dx, gy + dy);
+    }
+  }
+});
+
+window.addEventListener('resize', resize);
+resize();
+loop();
+</script>
+</body>
+</html>

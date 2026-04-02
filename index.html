@@ -94,54 +94,17 @@
     <div class="section-rule"></div>
   </div>
   <div class="projects-grid fade-up">
-    <a href="/evo/" class="project-card">
-      <div class="project-tag">Simulation · Strategy</div>
-      <div class="project-name">Evo</div>
-      <p class="project-desc">Evolution simulation featuring Velothrix aurantis. Population dynamics, trait mutation, and natural selection — expanding into a strategy game.</p>
-      <div class="project-footer">
-        <div class="project-stack">
-          <span class="stack-tag">JavaScript</span>
-          <span class="stack-tag">Canvas</span>
-          <span class="stack-tag">Simulation</span>
-        </div>
-        <span class="project-arrow">↗</span>
-      </div>
-    </a>
-    <a href="/dither/" class="project-card">
-      <div class="project-tag">Canvas · Image Processing</div>
-      <div class="project-name">Dithering Studio</div>
-      <p class="project-desc">Retro image dithering with 8 algorithms and curated color palettes. Upload, transform, download — all client-side.</p>
-      <div class="project-footer">
-        <div class="project-stack">
-          <span class="stack-tag">JavaScript</span>
-          <span class="stack-tag">Canvas</span>
-          <span class="stack-tag">Dithering</span>
-        </div>
-        <span class="project-arrow">↗</span>
-      </div>
-    </a>
-    <a href="/fractal/" class="project-card">
-      <div class="project-tag">WebGL · Math</div>
-      <div class="project-name">Fractal Explorer</div>
-      <p class="project-desc">GPU-accelerated Mandelbrot & Julia set explorer. Click to see Julia duality. Infinite zoom, 5 palettes, smooth coloring.</p>
+    <!-- Evo: temporarily removed from grid -->
+    <!-- Lenia: removed from grid -->
+    <a href="/ray-marching/" class="project-card">
+      <div class="project-tag">WebGL · 3D Rendering</div>
+      <div class="project-name">Ray Marching</div>
+      <p class="project-desc">Eight interactive SDF scenes rendered per-pixel via sphere tracing. Navigate mathematically-defined 3D worlds — infinite detail, zero polygons.</p>
       <div class="project-footer">
         <div class="project-stack">
           <span class="stack-tag">WebGL</span>
           <span class="stack-tag">GLSL</span>
-          <span class="stack-tag">GPU</span>
-        </div>
-        <span class="project-arrow">↗</span>
-      </div>
-    </a>
-    <a href="/lorenz/" class="project-card">
-      <div class="project-tag">Pyodide · Simulation</div>
-      <div class="project-name">Lorenz Attractor</div>
-      <p class="project-desc">Real-time 3D strange attractor with parameter sliders. Gold butterfly on black. RK4 integration via Pyodide.</p>
-      <div class="project-footer">
-        <div class="project-stack">
-          <span class="stack-tag">Python</span>
-          <span class="stack-tag">SciPy</span>
-          <span class="stack-tag">Canvas</span>
+          <span class="stack-tag">SDF</span>
         </div>
         <span class="project-arrow">↗</span>
       </div>
@@ -159,80 +122,67 @@
         <span class="project-arrow">↗</span>
       </div>
     </a>
-    <a href="/math/" class="project-card">
-      <div class="project-tag">Pyodide · Math</div>
-      <div class="project-name">Math Scratchpad</div>
-      <p class="project-desc">Client-side symbolic math. Differentiate, integrate, solve, factor — powered by SymPy + MathJax in the browser.</p>
-      <div class="project-footer">
-        <div class="project-stack">
-          <span class="stack-tag">Python</span>
-          <span class="stack-tag">SymPy</span>
-          <span class="stack-tag">MathJax</span>
-        </div>
-        <span class="project-arrow">↗</span>
-      </div>
-    </a>
-    <a href="/sort/" class="project-card">
-      <div class="project-tag">Canvas · Education</div>
-      <div class="project-name">Sorting Visualizer</div>
-      <p class="project-desc">Six sorting algorithms racing side by side with sound. Bubble, Selection, Insertion, Merge, Quick, Heap.</p>
-      <div class="project-footer">
-        <div class="project-stack">
-          <span class="stack-tag">JavaScript</span>
-          <span class="stack-tag">Canvas</span>
-          <span class="stack-tag">Web Audio</span>
-        </div>
-        <span class="project-arrow">↗</span>
-      </div>
-    </a>
-    <a href="/terrain/" class="project-card">
-      <div class="project-tag">Canvas · Generative</div>
-      <div class="project-name">Terrain Generator</div>
-      <p class="project-desc">Procedural terrain with Perlin noise. 3D isometric view, shareable seeds, FunForrest palette elevation gradient.</p>
-      <div class="project-footer">
-        <div class="project-stack">
-          <span class="stack-tag">JavaScript</span>
-          <span class="stack-tag">Canvas</span>
-          <span class="stack-tag">Perlin</span>
-        </div>
-        <span class="project-arrow">↗</span>
-      </div>
-    </a>
-    <a href="/life/" class="project-card">
+    <a href="/fluid/" class="project-card">
       <div class="project-tag">Canvas · Simulation</div>
-      <div class="project-name">Game of Life</div>
-      <p class="project-desc">Conway's Game of Life with gold cells, amber death trails, 12 patterns, zoom, pan, and URL sharing.</p>
+      <div class="project-name">Fluid Sim</div>
+      <p class="project-desc">Interactive Navier-Stokes fluid simulation. Click and drag to inject dye and velocity into a real-time pressure solver.</p>
       <div class="project-footer">
         <div class="project-stack">
           <span class="stack-tag">JavaScript</span>
           <span class="stack-tag">Canvas</span>
-          <span class="stack-tag">Cellular Automata</span>
+          <span class="stack-tag">Navier-Stokes</span>
         </div>
         <span class="project-arrow">↗</span>
       </div>
     </a>
-    <a href="/graph/" class="project-card">
-      <div class="project-tag">Canvas · Physics</div>
-      <div class="project-name">Network Graph</div>
-      <p class="project-desc">Force-directed graph playground with 6 generators. Verlet physics, interactive dragging, real-time simulation.</p>
+    <a href="/ripple/" class="project-card">
+      <div class="project-tag">WebGL · Simulation</div>
+      <div class="project-name">Ripple</div>
+      <p class="project-desc">Real-time fluid surface simulation with autopilot mode and wallpaper recording. Touch the water and watch interference patterns propagate.</p>
       <div class="project-footer">
         <div class="project-stack">
-          <span class="stack-tag">JavaScript</span>
-          <span class="stack-tag">Canvas</span>
-          <span class="stack-tag">Physics</span>
+          <span class="stack-tag">WebGL</span>
+          <span class="stack-tag">GLSL</span>
+          <span class="stack-tag">Wave Physics</span>
         </div>
         <span class="project-arrow">↗</span>
       </div>
     </a>
-    <a href="/linalg/" class="project-card">
-      <div class="project-tag">Canvas · Education</div>
-      <div class="project-name">Linear Algebra Viz</div>
-      <p class="project-desc">Interactive 2D matrix transformations. Animated basis vectors, eigenvectors, determinant area, unit circle mapping.</p>
+    <a href="/dla-growth/" class="project-card">
+      <div class="project-tag">Canvas · Generative</div>
+      <div class="project-name">DLA Growth</div>
+      <p class="project-desc">Diffusion-limited aggregation — random-walking particles build coral, lightning, and frost structures. Real-world presets with tunable stickiness.</p>
       <div class="project-footer">
         <div class="project-stack">
           <span class="stack-tag">JavaScript</span>
           <span class="stack-tag">Canvas</span>
-          <span class="stack-tag">Linear Algebra</span>
+          <span class="stack-tag">DLA</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/magnetic-pendulum/" class="project-card">
+      <div class="project-tag">Canvas · Fractals</div>
+      <div class="project-name">Magnetic Pendulum</div>
+      <p class="project-desc">Fractal basin explorer. Drop a pendulum over magnets and map which one captures it — the boundaries between basins form infinitely complex fractals.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">JavaScript</span>
+          <span class="stack-tag">Canvas</span>
+          <span class="stack-tag">Chaos Theory</span>
+        </div>
+        <span class="project-arrow">↗</span>
+      </div>
+    </a>
+    <a href="/wind-tunnel/" class="project-card">
+      <div class="project-tag">WebGL · Fluid Dynamics</div>
+      <div class="project-name">Wind Tunnel</div>
+      <p class="project-desc">Lattice Boltzmann fluid simulation. Place obstacles and watch vortex streets form in real time. Adjustable Reynolds number with context-aware education panel.</p>
+      <div class="project-footer">
+        <div class="project-stack">
+          <span class="stack-tag">LBM</span>
+          <span class="stack-tag">WebGL</span>
+          <span class="stack-tag">Fluid Dynamics</span>
         </div>
         <span class="project-arrow">↗</span>
       </div>
@@ -278,7 +228,7 @@
     </div>
     <div class="about-sidebar">
       <div class="stat-block">
-        <div class="stat-num">10</div>
+        <div class="stat-num">9</div>
         <div class="stat-label">Live projects</div>
       </div>
       <div class="stat-block">

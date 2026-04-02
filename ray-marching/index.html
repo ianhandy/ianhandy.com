@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ray Marching SDF Playground</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #110a0a;
+  --bg-deep: #110a0a;
+  --gold: #d06050;
+  --gold-light: #f0c0b0;
+  --orange: #d06050;
+  --panel-bg: rgba(22, 13, 13, 0.92);
+  --border: rgba(208, 96, 80, 0.1);
+  --text: #9a6058;
+  --text-dim: rgba(154, 96, 88, 0.5);
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: 'JetBrains Mono', 'SF Mono', 'Courier New', monospace;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  cursor: grab;
+}
+canvas:active { cursor: grabbing; }
+
+/* Control Panel */
+#panel {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  width: 280px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 10;
+  user-select: none;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+#panel.collapsed {
+  transform: translateX(-300px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+#panel h1 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  text-shadow: 0 0 20px rgba(208, 96, 80, 0.3);
+}
+#panel .subtitle {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+.scene-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.scene-btn {
+  background: rgba(208, 96, 80, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  line-height: 1.3;
+}
+.scene-btn:hover {
+  background: rgba(208, 96, 80, 0.12);
+  border-color: rgba(208, 96, 80, 0.3);
+  color: var(--gold);
+}
+.scene-btn.active {
+  background: rgba(106, 42, 34, 0.15);
+  border-color: var(--orange);
+  color: var(--gold-light);
+  box-shadow: 0 0 12px rgba(106, 42, 34, 0.2);
+}
+
+.control-group {
+  margin-bottom: 12px;
+}
+.control-group label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.control-group label span.val {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: rgba(208, 96, 80, 0.1);
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--gold);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(208, 96, 80, 0.4);
+}
+
+.toggle-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.toggle-btn {
+  background: rgba(208, 96, 80, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.toggle-btn:hover { color: var(--text); }
+.toggle-btn.on {
+  background: rgba(208, 96, 80, 0.12);
+  border-color: rgba(208, 96, 80, 0.3);
+  color: var(--gold);
+}
+
+.separator {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+/* Toggle button */
+#toggle-panel {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  width: 36px;
+  height: 36px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--gold);
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+#toggle-panel.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Help overlay */
+#help {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: right;
+  line-height: 1.6;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Save button */
+#save-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 8px 14px;
+  cursor: pointer;
+  z-index: 11;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: opacity 0.3s ease, background 0.2s ease;
+  letter-spacing: 0.5px;
+}
+#save-btn:hover {
+  background: rgba(208, 96, 80, 0.15);
+  border-color: rgba(208, 96, 80, 0.3);
+}
+
+/* Tooltip ? icons */
+.tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 8px;
+  font-weight: 600;
+  cursor: help;
+  position: relative;
+  flex-shrink: 0;
+  margin-left: 4px;
+  transition: border-color 0.2s, color 0.2s;
+}
+.tooltip-trigger:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.tooltip-trigger .tooltip-text {
+  display: none;
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(22, 13, 13, 0.96);
+  border: 1px solid rgba(208, 96, 80, 0.25);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--text);
+  line-height: 1.5;
+  width: 220px;
+  white-space: normal;
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.tooltip-trigger .tooltip-text .cite {
+  display: block;
+  margin-top: 4px;
+  font-size: 8px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.tooltip-trigger:hover .tooltip-text {
+  display: block;
+}
+/* Flip tooltip to left side when near right edge */
+.tooltip-trigger.tip-left .tooltip-text {
+  left: auto;
+  right: calc(100% + 8px);
+}
+
+/* Auto-hide UI */
+.ui-layer {
+  transition: opacity 0.4s ease;
+}
+.ui-layer.ui-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Screenshot flash */
+.flash {
+  position: fixed;
+  inset: 0;
+  background: white;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 100;
+  animation: flash 0.3s ease-out;
+}
+@keyframes flash {
+  0% { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+/* Loading */
+#loading {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-deep);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  transition: opacity 0.5s ease;
+}
+#loading.hidden { opacity: 0; pointer-events: none; }
+#loading h2 {
+  color: var(--gold);
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 8px;
+  text-shadow: 0 0 30px rgba(208, 96, 80, 0.4);
+}
+#loading p {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.loader {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 600px) {
+  #panel { width: calc(100vw - 32px); }
+  #help { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="loader"></div>
+  <h2>Ray Marching SDF Playground</h2>
+  <p>Compiling shaders...</p>
+</div>
+
+<canvas id="c"></canvas>
+
+<div id="panel" class="ui-layer">
+  <h1>RAY MARCHING</h1>
+  <div class="subtitle">Signed Distance Field Playground</div>
+
+  <div class="scene-grid" id="scene-grid"></div>
+
+  <div class="separator"></div>
+
+  <div class="control-group">
+    <label>Animation Speed <span class="val" id="speed-val">1.0x</span><span class="tooltip-trigger">?<span class="tooltip-text">Controls the time multiplier for SDF animation. Affects how fast shapes morph and rotate. The time uniform is scaled by this factor each frame.<span class="cite">Sphere tracing: Hart, 1996, "Sphere Tracing"</span></span></span></label>
+    <input type="range" id="speed" min="0" max="3" step="0.1" value="1">
+  </div>
+  <div class="control-group">
+    <label>Glow Intensity <span class="val" id="glow-val">0.50</span><span class="tooltip-trigger">?<span class="tooltip-text">Volumetric glow accumulation along each ray. Near-misses contribute exponential falloff glow, creating an emission-like effect around surface edges.<span class="cite">SDF glow: Inigo Quilez, iquilezles.org/articles/rmshadows/</span></span></span></label>
+    <input type="range" id="glow" min="0" max="1" step="0.01" value="0.5">
+  </div>
+  <div class="control-group">
+    <label>Shadow Softness <span class="val" id="shadow-val">16</span><span class="tooltip-trigger">?<span class="tooltip-text">The k parameter in soft shadow calculation. Higher values produce harder shadows. Uses the ratio min(k*d/t) along the shadow ray to approximate penumbra width.<span class="cite">Soft shadows: Inigo Quilez, iquilezles.org/articles/rmshadows/</span></span></span></label>
+    <input type="range" id="shadow" min="2" max="64" step="1" value="16">
+  </div>
+  <div class="control-group">
+    <label>AO Strength <span class="val" id="ao-val">0.50</span><span class="tooltip-trigger">?<span class="tooltip-text">Ambient Occlusion strength. Samples the SDF at increasing distances along the surface normal — if the distance is less than expected, the point is occluded. 5-tap AO with exponential falloff.<span class="cite">SDF AO: Inigo Quilez, iquilezles.org/articles/nvscene2008/</span></span></span></label>
+    <input type="range" id="ao" min="0" max="1" step="0.01" value="0.5">
+  </div>
+
+  <div class="separator"></div>
+
+  <div class="toggle-row">
+    <button class="toggle-btn on" id="btn-shadows" onclick="toggleOpt('shadows')">Shadows</button>
+    <button class="toggle-btn on" id="btn-ao" onclick="toggleOpt('ao')">AO</button>
+    <button class="toggle-btn on" id="btn-glow" onclick="toggleOpt('glow')">Glow</button>
+    <button class="toggle-btn" id="btn-animate" onclick="toggleOpt('animate')">Auto-Rotate</button>
+    <span class="tooltip-trigger">?<span class="tooltip-text">Toggle rendering features. Shadows use sphere-traced soft penumbras. AO measures local occlusion via SDF sampling. Glow accumulates near-miss luminance along rays.<span class="cite">SDF primitives: Inigo Quilez, iquilezles.org/articles/distfunctions/</span></span></span>
+  </div>
+
+  <div class="separator"></div>
+
+  <div class="info-row">
+    <span id="fps">-- fps</span>
+    <span id="resolution">--</span>
+  </div>
+</div>
+
+<button id="toggle-panel" class="ui-layer" onclick="togglePanel()">&#9776;</button>
+<button id="save-btn" class="ui-layer" onclick="saveScreenshot()">Save</button>
+
+<div id="help" class="ui-layer">
+  Drag to orbit &middot; Scroll to zoom<br>
+  H — toggle panel &middot; P — screenshot<br>
+  1-8 — switch scene &middot; Space — pause
+</div>
+
+<script>
+// ============================================================
+// Ray Marching SDF Playground
+// WebGL 2 fragment shader ray marcher with multiple SDF scenes
+// ============================================================
+
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl2', { antialias: false, preserveDrawingBuffer: true });
+
+if (!gl) {
+  document.getElementById('loading').innerHTML = '<h2>WebGL 2 Required</h2><p>Your browser does not support WebGL 2.</p>';
+  throw new Error('No WebGL 2');
+}
+
+// --- Scenes ---
+const scenes = [
+  { name: 'Mandelbulb', id: 'mandelbulb', desc: 'Fractal power geometry' },
+  { name: 'Infinite Corridor', id: 'corridor', desc: 'Repeating architecture' },
+  { name: 'Organic Blobs', id: 'blobs', desc: 'Smooth union metaballs' },
+  { name: 'Crystal Lattice', id: 'crystal', desc: 'Infinite repetition' },
+  { name: 'Twisted Torus', id: 'torus', desc: 'Domain warping' },
+  { name: 'Menger Sponge', id: 'menger', desc: 'Recursive subtraction' },
+  { name: 'Alien Terrain', id: 'terrain', desc: 'Noise heightfield' },
+  { name: 'Gyroid Surface', id: 'gyroid', desc: 'Triply periodic minimal' },
+];
+
+let currentScene = 0;
+
+// --- State ---
+const state = {
+  speed: 1.0,
+  glow: 0.5,
+  shadowK: 16,
+  aoStrength: 0.5,
+  shadows: true,
+  ao: true,
+  glowOn: true,
+  autoRotate: false,
+  paused: false,
+  time: 0,
+  camTheta: 0.5,
+  camPhi: 0.4,
+  camDist: 4.0,
+  panelOpen: true,
+};
+
+// --- Vertex shader (fullscreen quad) ---
+const vertSrc = `#version 300 es
+in vec2 a_pos;
+out vec2 v_uv;
+void main() {
+  v_uv = a_pos * 0.5 + 0.5;
+  gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+
+// --- Fragment shader ---
+const fragSrc = `#version 300 es
+precision highp float;
+
+in vec2 v_uv;
+out vec4 fragColor;
+
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_speed;
+uniform float u_glow;
+uniform float u_shadowK;
+uniform float u_aoStrength;
+uniform int u_scene;
+uniform bool u_shadows;
+uniform bool u_ao;
+uniform bool u_glowOn;
+uniform vec3 u_camPos;
+uniform mat3 u_camMat;
+
+#define MAX_STEPS 128
+#define MAX_DIST 80.0
+#define SURF_DIST 0.001
+#define PI 3.14159265
+
+// --- SDF primitives ---
+float sdSphere(vec3 p, float r) { return length(p) - r; }
+float sdBox(vec3 p, vec3 b) { vec3 q = abs(p) - b; return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0); }
+float sdTorus(vec3 p, vec2 t) { vec2 q = vec2(length(p.xz) - t.x, p.y); return length(q) - t.y; }
+float sdCylinder(vec3 p, float r, float h) { vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h); return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)); }
+float sdPlane(vec3 p, float h) { return p.y - h; }
+
+// --- Operations ---
+float opSmoothUnion(float d1, float d2, float k) { float h = clamp(0.5 + 0.5*(d2-d1)/k, 0.0, 1.0); return mix(d2, d1, h) - k*h*(1.0-h); }
+float opSmoothSub(float d1, float d2, float k) { float h = clamp(0.5 - 0.5*(d2+d1)/k, 0.0, 1.0); return mix(d1, -d2, h) + k*h*(1.0-h); }
+float opSmoothIntersect(float d1, float d2, float k) { float h = clamp(0.5 - 0.5*(d2-d1)/k, 0.0, 1.0); return mix(d2, d1, h) + k*h*(1.0-h); }
+vec3 opRep(vec3 p, vec3 c) { return mod(p + 0.5*c, c) - 0.5*c; }
+
+// --- Rotation ---
+mat2 rot2(float a) { float s=sin(a), c=cos(a); return mat2(c,-s,s,c); }
+
+// --- Noise ---
+float hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7)))*43758.5453); }
+float noise3d(vec3 p) {
+  vec3 i = floor(p), f = fract(p);
+  f = f*f*(3.0-2.0*f);
+  return mix(mix(mix(hash(i), hash(i+vec3(1,0,0)), f.x),
+                 mix(hash(i+vec3(0,1,0)), hash(i+vec3(1,1,0)), f.x), f.y),
+             mix(mix(hash(i+vec3(0,0,1)), hash(i+vec3(1,0,1)), f.x),
+                 mix(hash(i+vec3(0,1,1)), hash(i+vec3(1,1,1)), f.x), f.y), f.z);
+}
+float fbm(vec3 p) {
+  float v = 0.0, a = 0.5;
+  for (int i = 0; i < 5; i++) { v += a * noise3d(p); p *= 2.0; a *= 0.5; }
+  return v;
+}
+
+// ============================================================
+// Scene SDFs
+// ============================================================
+
+// Scene 0: Mandelbulb
+float mandelbulb(vec3 p) {
+  vec3 z = p;
+  float dr = 1.0;
+  float r = 0.0;
+  float power = 8.0 + sin(u_time * 0.2) * 2.0;
+  for (int i = 0; i < 8; i++) {
+    r = length(z);
+    if (r > 2.0) break;
+    float theta = acos(z.z / r);
+    float phi = atan(z.y, z.x);
+    dr = pow(r, power - 1.0) * power * dr + 1.0;
+    float zr = pow(r, power);
+    theta *= power;
+    phi *= power;
+    z = zr * vec3(sin(theta)*cos(phi), sin(phi)*sin(theta), cos(theta)) + p;
+  }
+  return 0.5 * log(r) * r / dr;
+}
+
+float sceneMandelbulb(vec3 p) {
+  return mandelbulb(p);
+}
+
+// Scene 1: Infinite Corridor
+float sceneCorridor(vec3 p) {
+  float t = u_time * 0.5;
+  vec3 q = p;
+  q.z = mod(q.z + t, 6.0) - 3.0;
+
+  float walls = -sdBox(q, vec3(2.0, 2.5, 3.0));
+
+  // Pillars
+  vec3 pil = q;
+  pil.x = abs(pil.x) - 1.5;
+  pil.z = mod(pil.z + 1.5, 3.0) - 1.5;
+  float pillars = sdCylinder(pil, 0.15, 2.5);
+
+  // Arches
+  vec3 arch = q;
+  arch.z = mod(arch.z + 1.5, 3.0) - 1.5;
+  float archD = sdTorus(vec3(arch.x, arch.y - 2.0, arch.z), vec2(1.5, 0.12));
+  archD = max(archD, -q.y + 2.0);
+
+  // Floor detail
+  vec3 fq = q;
+  fq.xz = mod(fq.xz + 0.5, 1.0) - 0.5;
+  float floorTile = sdBox(vec3(fq.x, q.y + 2.5, fq.z), vec3(0.45, 0.02, 0.45));
+
+  float d = walls;
+  d = min(d, pillars);
+  d = min(d, archD);
+  d = min(d, floorTile);
+  return d;
+}
+
+// Scene 2: Organic Blobs
+float sceneBlobs(vec3 p) {
+  float t = u_time;
+  float d = sdSphere(p - vec3(sin(t*0.7)*1.5, cos(t*0.5)*0.8, sin(t*0.3)*1.2), 1.0);
+  d = opSmoothUnion(d, sdSphere(p - vec3(cos(t*0.6)*1.2, sin(t*0.8)*1.0, cos(t*0.4)*1.5), 0.8), 0.8);
+  d = opSmoothUnion(d, sdSphere(p - vec3(sin(t*0.4)*0.8, cos(t*0.3)*1.5, sin(t*0.7)*0.6), 0.7), 0.6);
+  d = opSmoothUnion(d, sdSphere(p - vec3(cos(t*0.5)*1.0, sin(t*0.6)*0.5, cos(t*0.8)*1.0), 0.9), 0.7);
+  d = opSmoothUnion(d, sdSphere(p - vec3(0.0, sin(t*0.4)*0.3, 0.0), 1.2), 1.0);
+  return d;
+}
+
+// Scene 3: Crystal Lattice
+float sceneCrystal(vec3 p) {
+  float t = u_time * 0.3;
+  p.xy *= rot2(t * 0.1);
+  vec3 q = opRep(p, vec3(3.0));
+
+  float oct = sdSphere(q, 0.5);
+  oct = max(oct, sdBox(q, vec3(0.38)));
+
+  float bars = sdCylinder(q.xzy, 0.06, 1.5);
+  bars = min(bars, sdCylinder(q.yxz, 0.06, 1.5));
+  bars = min(bars, sdCylinder(q, 0.06, 1.5));
+
+  float sphere = sdSphere(q, 0.2 + 0.05 * sin(u_time + p.x + p.y + p.z));
+
+  return min(min(oct, bars), sphere);
+}
+
+// Scene 4: Twisted Torus
+float sceneTorus(vec3 p) {
+  float t = u_time * 0.5;
+  float twist = sin(t * 0.3) * 3.0;
+
+  // Main torus with twist
+  vec3 tp = p;
+  float a = atan(tp.z, tp.x);
+  vec2 q2 = vec2(length(tp.xz) - 2.0, tp.y);
+  q2 *= rot2(a * twist + t);
+  float d = length(q2) - 0.5;
+
+  // Inner ring
+  vec3 tp2 = p;
+  q2 = vec2(length(tp2.xz) - 2.0, tp2.y);
+  q2 *= rot2(-a * twist * 0.5 + t * 1.5);
+  float d2 = length(q2) - 0.2;
+
+  d = opSmoothUnion(d, d2, 0.3);
+
+  // Orbiting spheres
+  for (int i = 0; i < 6; i++) {
+    float fi = float(i) * PI * 2.0 / 6.0;
+    vec3 sp = vec3(cos(fi + t * 0.5) * 2.5, sin(t * 0.7 + fi) * 0.5, sin(fi + t * 0.5) * 2.5);
+    d = opSmoothUnion(d, sdSphere(p - sp, 0.25), 0.4);
+  }
+
+  return d;
+}
+
+// Scene 5: Menger Sponge
+float sceneMenger(vec3 p) {
+  float t = u_time * 0.2;
+  p.xy *= rot2(t);
+  p.yz *= rot2(t * 0.7);
+
+  float d = sdBox(p, vec3(1.5));
+
+  float s = 1.0;
+  for (int i = 0; i < 4; i++) {
+    vec3 a = mod(p * s, 2.0) - 1.0;
+    s *= 3.0;
+    vec3 r = abs(1.0 - 3.0 * abs(a));
+    float da = max(r.x, r.y);
+    float db = max(r.y, r.z);
+    float dc = max(r.z, r.x);
+    float c = (min(da, min(db, dc)) - 1.0) / s;
+    d = max(d, c);
+  }
+  return d;
+}
+
+// Scene 6: Alien Terrain
+float sceneTerrain(vec3 p) {
+  float t = u_time * 0.15;
+  vec2 q = p.xz * 0.3;
+  float h = fbm(vec3(q + t * 0.2, t * 0.1)) * 4.0;
+  h += fbm(vec3(q * 2.0 - t * 0.1, t * 0.05)) * 1.5;
+  h -= 2.0;
+  float terrain = p.y - h;
+
+  // Floating orbs
+  vec3 op = p;
+  op.y -= h - 0.5;
+  op.xz = mod(op.xz + 3.0, 6.0) - 3.0;
+  float orb = sdSphere(op - vec3(0.0, 3.0 + sin(u_time * 0.5 + p.x) * 0.5, 0.0), 0.3);
+
+  return min(terrain, orb);
+}
+
+// Scene 7: Gyroid Surface
+float sceneGyroid(vec3 p) {
+  float t = u_time * 0.3;
+  float scale = 3.0 + sin(t * 0.2) * 0.5;
+  vec3 q = p * scale;
+
+  float gyroid = abs(dot(sin(q), cos(q.zxy))) - 0.1;
+  gyroid /= scale;
+
+  // Bounding sphere
+  float bound = sdSphere(p, 2.5);
+  return max(gyroid, bound);
+}
+
+// Scene dispatcher
+float sceneSDF(vec3 p) {
+  if (u_scene == 0) return sceneMandelbulb(p);
+  if (u_scene == 1) return sceneCorridor(p);
+  if (u_scene == 2) return sceneBlobs(p);
+  if (u_scene == 3) return sceneCrystal(p);
+  if (u_scene == 4) return sceneTorus(p);
+  if (u_scene == 5) return sceneMenger(p);
+  if (u_scene == 6) return sceneTerrain(p);
+  if (u_scene == 7) return sceneGyroid(p);
+  return MAX_DIST;
+}
+
+// --- Normal estimation ---
+vec3 calcNormal(vec3 p) {
+  vec2 e = vec2(0.001, 0.0);
+  return normalize(vec3(
+    sceneSDF(p + e.xyy) - sceneSDF(p - e.xyy),
+    sceneSDF(p + e.yxy) - sceneSDF(p - e.yxy),
+    sceneSDF(p + e.yyx) - sceneSDF(p - e.yyx)
+  ));
+}
+
+// --- Ray march ---
+float rayMarch(vec3 ro, vec3 rd, out float glowAcc) {
+  float t = 0.0;
+  glowAcc = 0.0;
+  for (int i = 0; i < MAX_STEPS; i++) {
+    vec3 p = ro + rd * t;
+    float d = sceneSDF(p);
+    if (d < SURF_DIST) return t;
+    if (t > MAX_DIST) break;
+    glowAcc += exp(-d * 6.0) * 0.015;
+    t += d * 0.8;
+  }
+  return -1.0;
+}
+
+// --- Soft shadows ---
+float softShadow(vec3 ro, vec3 rd, float mint, float maxt, float k) {
+  float res = 1.0;
+  float t = mint;
+  for (int i = 0; i < 48; i++) {
+    float d = sceneSDF(ro + rd * t);
+    if (d < 0.001) return 0.0;
+    res = min(res, k * d / t);
+    t += clamp(d, 0.01, 0.2);
+    if (t > maxt) break;
+  }
+  return clamp(res, 0.0, 1.0);
+}
+
+// --- Ambient Occlusion ---
+float calcAO(vec3 p, vec3 n) {
+  float occ = 0.0;
+  float sca = 1.0;
+  for (int i = 1; i <= 5; i++) {
+    float h = 0.02 + 0.12 * float(i);
+    float d = sceneSDF(p + h * n);
+    occ += (h - d) * sca;
+    sca *= 0.7;
+  }
+  return clamp(1.0 - 1.5 * occ, 0.0, 1.0);
+}
+
+// --- Color palette ---
+vec3 palette(float t) {
+  vec3 a = vec3(0.866, 0.757, 0.396);
+  vec3 b = vec3(0.498, 0.2, 0.05);
+  vec3 c = vec3(1.0, 1.0, 0.5);
+  vec3 d = vec3(0.0, 0.15, 0.2);
+  return a + b * cos(6.28318 * (c * t + d));
+}
+
+void main() {
+  vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
+
+  vec3 ro = u_camPos;
+  vec3 rd = normalize(u_camMat * vec3(uv, 1.2));
+
+  // Light
+  vec3 lightDir = normalize(vec3(0.8, 0.9, -0.6));
+  vec3 lightCol = vec3(1.0, 0.92, 0.78);
+
+  float glowAcc;
+  float t = rayMarch(ro, rd, glowAcc);
+
+  vec3 col;
+
+  if (t > 0.0) {
+    vec3 p = ro + rd * t;
+    vec3 n = calcNormal(p);
+
+    // Color from normal + position
+    float colorIdx = dot(n, vec3(0.3, 0.6, 0.1)) * 0.5 + 0.5;
+    colorIdx += length(p) * 0.05;
+    vec3 baseCol = palette(colorIdx + u_time * 0.02);
+
+    // Diffuse
+    float diff = max(dot(n, lightDir), 0.0);
+
+    // Specular
+    vec3 halfDir = normalize(lightDir - rd);
+    float spec = pow(max(dot(n, halfDir), 0.0), 64.0);
+
+    // Fresnel rim
+    float fresnel = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+    vec3 rimCol = vec3(0.898, 0.345, 0.11);
+
+    // Shadow
+    float shadow = 1.0;
+    if (u_shadows) {
+      shadow = softShadow(p + n * 0.01, lightDir, 0.02, 10.0, u_shadowK);
+      shadow = shadow * 0.8 + 0.2;
+    }
+
+    // AO
+    float ao = 1.0;
+    if (u_ao) {
+      ao = calcAO(p, n);
+      ao = mix(1.0, ao, u_aoStrength);
+    }
+
+    // Compose
+    vec3 ambient = baseCol * 0.15;
+    col = ambient + baseCol * diff * lightCol * shadow * ao;
+    col += spec * lightCol * shadow * 0.5;
+    col += fresnel * rimCol * 0.4;
+
+    // Fog
+    float fog = 1.0 - exp(-t * t * 0.003);
+    vec3 fogCol = vec3(0.14, 0.07, 0.0);
+    col = mix(col, fogCol, fog);
+  } else {
+    // Background
+    float grad = uv.y * 0.5 + 0.5;
+    col = mix(vec3(0.14, 0.07, 0.0), vec3(0.05, 0.02, 0.0), grad);
+
+    // Star field
+    vec2 starUV = gl_FragCoord.xy * 0.01;
+    float star = smoothstep(0.97, 1.0, noise3d(vec3(starUV * 50.0, 0.0)));
+    col += star * vec3(0.866, 0.757, 0.396) * 0.3;
+  }
+
+  // Glow
+  if (u_glowOn) {
+    vec3 glowCol = vec3(0.898, 0.345, 0.11);
+    col += glowAcc * glowCol * u_glow * 2.0;
+  }
+
+  // Tone mapping
+  col = col / (col + 0.5);
+
+  // Vignette
+  vec2 vig = v_uv * (1.0 - v_uv);
+  float vigF = pow(vig.x * vig.y * 16.0, 0.3);
+  col *= vigF;
+
+  // Gamma
+  col = pow(col, vec3(1.0 / 2.2));
+
+  fragColor = vec4(col, 1.0);
+}
+`;
+
+// --- Compile shader ---
+function createShader(gl, type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(s));
+    gl.deleteShader(s);
+    return null;
+  }
+  return s;
+}
+
+function createProgram(gl, vs, fs) {
+  const p = gl.createProgram();
+  gl.attachShader(p, vs);
+  gl.attachShader(p, fs);
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+    console.error(gl.getProgramInfoLog(p));
+    return null;
+  }
+  return p;
+}
+
+const vs = createShader(gl, gl.VERTEX_SHADER, vertSrc);
+const fs = createShader(gl, gl.FRAGMENT_SHADER, fragSrc);
+const program = createProgram(gl, vs, fs);
+
+if (!program) {
+  document.getElementById('loading').innerHTML = '<h2>Shader Error</h2><p>Failed to compile shaders.</p>';
+  throw new Error('Shader compilation failed');
+}
+
+gl.useProgram(program);
+
+// Fullscreen quad
+const quadVerts = new Float32Array([-1,-1, 1,-1, -1,1, 1,1]);
+const vao = gl.createVertexArray();
+gl.bindVertexArray(vao);
+const vbo = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+gl.bufferData(gl.ARRAY_BUFFER, quadVerts, gl.STATIC_DRAW);
+const posLoc = gl.getAttribLocation(program, 'a_pos');
+gl.enableVertexAttribArray(posLoc);
+gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+// Uniforms
+const u = {};
+['u_resolution','u_time','u_speed','u_glow','u_shadowK','u_aoStrength',
+ 'u_scene','u_shadows','u_ao','u_glowOn','u_camPos','u_camMat'].forEach(name => {
+  u[name] = gl.getUniformLocation(program, name);
+});
+
+// --- Camera defaults per scene ---
+const sceneCamDefaults = [
+  { theta: 0.5, phi: 0.3, dist: 3.0 },   // Mandelbulb
+  { theta: 0.0, phi: 0.0, dist: 0.1 },    // Corridor
+  { theta: 0.6, phi: 0.3, dist: 6.0 },    // Blobs
+  { theta: 0.4, phi: 0.35, dist: 8.0 },   // Crystal
+  { theta: 0.5, phi: 0.3, dist: 6.0 },    // Torus
+  { theta: 0.5, phi: 0.4, dist: 4.0 },    // Menger
+  { theta: 0.3, phi: 0.5, dist: 8.0 },    // Terrain
+  { theta: 0.5, phi: 0.3, dist: 4.5 },    // Gyroid
+];
+
+// --- Scene buttons ---
+const sceneGrid = document.getElementById('scene-grid');
+scenes.forEach((s, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'scene-btn' + (i === 0 ? ' active' : '');
+  btn.innerHTML = s.name;
+  btn.title = s.desc;
+  btn.onclick = () => switchScene(i);
+  btn.id = `scene-${i}`;
+  sceneGrid.appendChild(btn);
+});
+
+function switchScene(i) {
+  currentScene = i;
+  document.querySelectorAll('.scene-btn').forEach((b, j) => b.classList.toggle('active', j === i));
+  const def = sceneCamDefaults[i];
+  state.camTheta = def.theta;
+  state.camPhi = def.phi;
+  state.camDist = def.dist;
+}
+
+// --- Controls ---
+function setupSlider(id, prop) {
+  const el = document.getElementById(id);
+  const valEl = document.getElementById(id + '-val');
+  el.addEventListener('input', () => {
+    const v = parseFloat(el.value);
+    state[prop] = v;
+    valEl.textContent = el.value + (id === 'speed' ? 'x' : '');
+  });
+}
+setupSlider('speed', 'speed');
+setupSlider('glow', 'glow');
+setupSlider('shadow', 'shadowK');
+setupSlider('ao', 'aoStrength');
+
+window.toggleOpt = function(opt) {
+  if (opt === 'shadows') state.shadows = !state.shadows;
+  if (opt === 'ao') state.ao = !state.ao;
+  if (opt === 'glow') state.glowOn = !state.glowOn;
+  if (opt === 'animate') state.autoRotate = !state.autoRotate;
+  document.getElementById(`btn-${opt === 'glow' ? 'glow' : opt}`).classList.toggle('on',
+    state[opt === 'glow' ? 'glowOn' : opt === 'animate' ? 'autoRotate' : opt]);
+};
+
+window.togglePanel = function() {
+  state.panelOpen = !state.panelOpen;
+  document.getElementById('panel').classList.toggle('collapsed', !state.panelOpen);
+  document.getElementById('toggle-panel').classList.toggle('visible', !state.panelOpen);
+};
+
+// --- Mouse / Touch controls ---
+let isDragging = false;
+let lastX = 0, lastY = 0;
+
+canvas.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
+window.addEventListener('mouseup', () => isDragging = false);
+window.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - lastX;
+  const dy = e.clientY - lastY;
+  state.camTheta -= dx * 0.005;
+  state.camPhi = Math.max(-1.5, Math.min(1.5, state.camPhi + dy * 0.005));
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  state.camDist = Math.max(0.5, Math.min(30, state.camDist * (1 + e.deltaY * 0.001)));
+}, { passive: false });
+
+// Touch
+let touchId = null;
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    isDragging = true;
+    touchId = e.touches[0].identifier;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+  }
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  for (let t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      const dx = t.clientX - lastX;
+      const dy = t.clientY - lastY;
+      state.camTheta -= dx * 0.005;
+      state.camPhi = Math.max(-1.5, Math.min(1.5, state.camPhi + dy * 0.005));
+      lastX = t.clientX;
+      lastY = t.clientY;
+    }
+  }
+}, { passive: true });
+canvas.addEventListener('touchend', e => {
+  for (let t of e.changedTouches) {
+    if (t.identifier === touchId) isDragging = false;
+  }
+}, { passive: true });
+
+// Pinch zoom
+let lastPinchDist = 0;
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    isDragging = false;
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastPinchDist = Math.sqrt(dx*dx + dy*dy);
+  }
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const delta = lastPinchDist - dist;
+    state.camDist = Math.max(0.5, Math.min(30, state.camDist * (1 + delta * 0.005)));
+    lastPinchDist = dist;
+  }
+}, { passive: true });
+
+// --- Auto-hide UI ---
+let uiHideTimer = null;
+const uiElements = () => document.querySelectorAll('.ui-layer');
+
+function showUI() {
+  uiElements().forEach(el => el.classList.remove('ui-hidden'));
+  clearTimeout(uiHideTimer);
+  uiHideTimer = setTimeout(hideUI, 2000);
+}
+
+function hideUI() {
+  // Don't hide if panel is open or user is interacting with panel
+  if (state.panelOpen) {
+    uiHideTimer = setTimeout(hideUI, 2000);
+    return;
+  }
+  uiElements().forEach(el => el.classList.add('ui-hidden'));
+}
+
+document.addEventListener('mousemove', showUI);
+document.addEventListener('touchstart', showUI);
+// Start the initial hide timer
+uiHideTimer = setTimeout(hideUI, 2000);
+
+// Stop auto-hide while hovering over panel
+document.getElementById('panel').addEventListener('mouseenter', () => clearTimeout(uiHideTimer));
+document.getElementById('panel').addEventListener('mouseleave', () => {
+  uiHideTimer = setTimeout(hideUI, 2000);
+});
+
+// --- Keyboard ---
+window.addEventListener('keydown', e => {
+  showUI();
+  if (e.key === 'h' || e.key === 'H') togglePanel();
+  if (e.key === ' ') { e.preventDefault(); state.paused = !state.paused; }
+  if (e.key === 'p' || e.key === 'P') saveScreenshot();
+  const num = parseInt(e.key);
+  if (num >= 1 && num <= 8) switchScene(num - 1);
+});
+
+function saveScreenshot() {
+  // Hide all UI, render clean frame, capture, restore
+  const allUI = document.querySelectorAll('.ui-layer, #panel, #loading');
+  allUI.forEach(el => el.style.display = 'none');
+  renderFrame();
+  const link = document.createElement('a');
+  link.download = `raymarching-${scenes[currentScene].id}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  allUI.forEach(el => el.style.display = '');
+  const flash = document.createElement('div');
+  flash.className = 'flash';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 300);
+}
+
+// --- Resize ---
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5); // cap for performance
+  canvas.width = Math.floor(window.innerWidth * dpr);
+  canvas.height = Math.floor(window.innerHeight * dpr);
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  document.getElementById('resolution').textContent = `${canvas.width}x${canvas.height}`;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- Render ---
+let lastTime = 0;
+let frameCount = 0;
+let fpsTime = 0;
+
+function renderFrame() {
+  // Camera
+  const theta = state.camTheta;
+  const phi = state.camPhi;
+  const dist = state.camDist;
+
+  let camPos;
+  if (currentScene === 1) {
+    camPos = [0.0, 0.0, state.time * 0.5];
+  } else {
+    camPos = [
+      dist * Math.cos(phi) * Math.sin(theta),
+      dist * Math.sin(phi),
+      dist * Math.cos(phi) * Math.cos(theta)
+    ];
+  }
+
+  let target = [0, 0, 0];
+  if (currentScene === 1) {
+    target = [Math.sin(theta) * 0.3, Math.sin(phi) * 0.3, camPos[2] + 5.0];
+  }
+  if (currentScene === 6) {
+    target = [0, -1, 0];
+  }
+
+  const forward = normalize3(sub3(target, camPos));
+  const right = normalize3(cross3(forward, [0, 1, 0]));
+  const up = cross3(right, forward);
+
+  const camMat = [
+    right[0], right[1], right[2],
+    up[0], up[1], up[2],
+    forward[0], forward[1], forward[2]
+  ];
+
+  gl.uniform2f(u.u_resolution, canvas.width, canvas.height);
+  gl.uniform1f(u.u_time, state.time);
+  gl.uniform1f(u.u_speed, state.speed);
+  gl.uniform1f(u.u_glow, state.glow);
+  gl.uniform1f(u.u_shadowK, state.shadowK);
+  gl.uniform1f(u.u_aoStrength, state.aoStrength);
+  gl.uniform1i(u.u_scene, currentScene);
+  gl.uniform1i(u.u_shadows, state.shadows ? 1 : 0);
+  gl.uniform1i(u.u_ao, state.ao ? 1 : 0);
+  gl.uniform1i(u.u_glowOn, state.glowOn ? 1 : 0);
+  gl.uniform3fv(u.u_camPos, camPos);
+  gl.uniformMatrix3fv(u.u_camMat, false, camMat);
+
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+function render(now) {
+  requestAnimationFrame(render);
+
+  const dt = Math.min((now - lastTime) * 0.001, 0.1);
+  lastTime = now;
+
+  if (!state.paused) {
+    state.time += dt * state.speed;
+  }
+
+  if (state.autoRotate) {
+    state.camTheta += dt * 0.3;
+  }
+
+  // FPS
+  frameCount++;
+  fpsTime += dt;
+  if (fpsTime >= 1.0) {
+    document.getElementById('fps').textContent = `${Math.round(frameCount / fpsTime)} fps`;
+    frameCount = 0;
+    fpsTime = 0;
+  }
+
+  renderFrame();
+}
+
+// Vec3 helpers
+function sub3(a, b) { return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+function cross3(a, b) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+function normalize3(v) { const l = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); return l > 0 ? [v[0]/l, v[1]/l, v[2]/l] : [0,0,1]; }
+
+// Start
+setTimeout(() => {
+  document.getElementById('loading').classList.add('hidden');
+  requestAnimationFrame(render);
+}, 100);
+
+</script>
+</body>
+</html>

@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Lenia — Continuous Cellular Automata</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0F0800;
+            color: #DDC165;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+        }
+
+        #canvas-wrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 16px;
+            position: relative;
+        }
+
+        #canvas-frame {
+            background: #0A0500;
+            border: 2px solid rgba(221, 193, 101, 0.12);
+            border-radius: 6px;
+            padding: 6px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            display: block;
+            border-radius: 2px;
+            cursor: crosshair;
+        }
+
+        #info-bar {
+            width: 100%;
+            max-width: 1040px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            font-size: 10px;
+            color: rgba(221, 193, 101, 0.5);
+            letter-spacing: 1px;
+        }
+
+        #info-bar .preset-info {
+            color: rgba(221, 193, 101, 0.7);
+        }
+
+        #info-bar .preset-info strong {
+            color: #FFE9A3;
+        }
+
+        #info-bar .citation {
+            font-size: 9px;
+            color: rgba(221, 193, 101, 0.35);
+        }
+
+        /* ---- Side panel (desktop) ---- */
+        #panel {
+            width: 280px;
+            min-width: 280px;
+            background: rgba(36, 18, 0, 0.97);
+            border-left: 1px solid rgba(221, 193, 101, 0.15);
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        /* ---- Tooltips ---- */
+        .tip-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tip-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: rgba(229, 89, 28, 0.2);
+            border: 1px solid rgba(229, 89, 28, 0.4);
+            color: #FFE9A3;
+            font-size: 9px;
+            font-weight: bold;
+            cursor: help;
+            flex-shrink: 0;
+            font-family: inherit;
+            line-height: 1;
+        }
+
+        .tip-btn:hover {
+            background: rgba(229, 89, 28, 0.5);
+        }
+
+        .tip-text {
+            display: none;
+            position: absolute;
+            left: 0;
+            top: 100%;
+            margin-top: 6px;
+            background: rgba(10, 5, 0, 0.96);
+            border: 1px solid rgba(221, 193, 101, 0.25);
+            border-radius: 4px;
+            padding: 8px 10px;
+            font-size: 10px;
+            color: rgba(221, 193, 101, 0.8);
+            line-height: 1.5;
+            width: 240px;
+            z-index: 300;
+            pointer-events: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+        }
+
+        .tip-wrap:hover .tip-text {
+            display: block;
+        }
+
+        #panel h1 {
+            font-size: 20px;
+            color: #FFE9A3;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 0;
+        }
+
+        #panel .subtitle {
+            font-size: 10px;
+            color: #E5591C;
+            letter-spacing: 1px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .control-group label {
+            font-size: 10px;
+            color: rgba(221, 193, 101, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .control-group label span {
+            color: #FFE9A3;
+            font-weight: bold;
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            background: #241200;
+            color: #DDC165;
+            border: 1px solid rgba(221, 193, 101, 0.2);
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: 12px;
+            outline: none;
+        }
+
+        select {
+            padding: 6px 8px;
+            cursor: pointer;
+        }
+
+        select option {
+            background: #241200;
+            color: #DDC165;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #E5591C;
+            border: 2px solid #FFE9A3;
+            cursor: pointer;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+        }
+
+        button {
+            padding: 8px 12px;
+            background: rgba(229, 89, 28, 0.2);
+            color: #DDC165;
+            border: 1px solid rgba(229, 89, 28, 0.4);
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: rgba(229, 89, 28, 0.4);
+            color: #FFE9A3;
+            border-color: #E5591C;
+        }
+
+        button.active {
+            background: rgba(229, 89, 28, 0.6);
+            color: #FFE9A3;
+        }
+
+        #fps {
+            position: fixed;
+            top: 8px;
+            left: 8px;
+            font-size: 10px;
+            color: rgba(221, 193, 101, 0.35);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .info {
+            font-size: 10px;
+            color: rgba(221, 193, 101, 0.4);
+            line-height: 1.5;
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid rgba(221, 193, 101, 0.1);
+        }
+
+        .sep {
+            height: 1px;
+            background: rgba(221, 193, 101, 0.1);
+        }
+
+        /* ---- Help button ---- */
+        #help-btn {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(229, 89, 28, 0.3);
+            border: 1px solid rgba(229, 89, 28, 0.6);
+            color: #FFE9A3;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        #help-btn:hover { background: rgba(229, 89, 28, 0.6); }
+
+        /* ---- Help overlay ---- */
+        #help-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(26, 13, 0, 0.92);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        #help-overlay.visible { display: flex; }
+
+        #help-content {
+            max-width: 560px;
+            max-height: 90vh;
+            overflow-y: auto;
+            background: rgba(36, 18, 0, 0.98);
+            border: 1px solid rgba(221, 193, 101, 0.2);
+            border-radius: 8px;
+            padding: 28px;
+            color: #DDC165;
+            line-height: 1.7;
+        }
+
+        #help-content h2 {
+            color: #FFE9A3;
+            font-size: 18px;
+            letter-spacing: 3px;
+            margin-bottom: 16px;
+        }
+
+        #help-content h3 {
+            color: #E5591C;
+            font-size: 13px;
+            letter-spacing: 2px;
+            margin: 16px 0 8px;
+            text-transform: uppercase;
+        }
+
+        #help-content p, #help-content li {
+            font-size: 12px;
+            color: rgba(221, 193, 101, 0.8);
+        }
+
+        #help-content ul { list-style: none; padding: 0; }
+        #help-content li { padding: 2px 0; }
+
+        #help-content kbd {
+            background: rgba(229, 89, 28, 0.3);
+            border: 1px solid rgba(229, 89, 28, 0.5);
+            border-radius: 3px;
+            padding: 1px 6px;
+            font-size: 11px;
+            color: #FFE9A3;
+            font-family: inherit;
+        }
+
+        #help-content .close-hint {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 11px;
+            color: rgba(221, 193, 101, 0.4);
+        }
+
+        /* ---- Mobile toggle ---- */
+        #panel-toggle {
+            display: none;
+            position: fixed;
+            bottom: 12px;
+            right: 12px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(229, 89, 28, 0.5);
+            border: 1px solid #E5591C;
+            color: #FFE9A3;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            font-family: inherit;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+        }
+
+        /* ---- Mobile ---- */
+        @media (max-width: 700px) {
+            body { flex-direction: column; }
+
+            #panel {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                min-width: unset;
+                max-height: 55vh;
+                border-left: none;
+                border-top: 1px solid rgba(221, 193, 101, 0.2);
+                transform: translateY(100%);
+                z-index: 50;
+                border-radius: 12px 12px 0 0;
+            }
+
+            #panel.open {
+                transform: translateY(0);
+            }
+
+            #panel-toggle {
+                display: flex;
+            }
+
+            #canvas-wrap {
+                padding: 4px;
+                height: 100vh;
+                height: 100dvh;
+            }
+
+            #canvas-frame {
+                padding: 3px;
+                border-width: 1px;
+            }
+
+            #info-bar {
+                flex-direction: column;
+                gap: 2px;
+                padding: 4px 6px;
+                text-align: center;
+            }
+
+            #help-btn {
+                top: auto;
+                bottom: 12px;
+                right: 64px;
+            }
+        }
+
+        /* Scrollbar */
+        #panel::-webkit-scrollbar { width: 4px; }
+        #panel::-webkit-scrollbar-track { background: transparent; }
+        #panel::-webkit-scrollbar-thumb { background: rgba(229, 89, 28, 0.3); border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <div id="canvas-wrap">
+        <div id="info-bar">
+            <span class="preset-info" id="preset-label"><strong>Orbium</strong> -- Classic glider -- drifts across the field</span>
+            <span class="citation">Chan, "Lenia: Biology of Artificial Life" (2019)</span>
+        </div>
+        <div id="canvas-frame">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+    <div id="panel">
+        <div>
+            <h1>Lenia</h1>
+            <div class="subtitle">Continuous Cellular Automata</div>
+        </div>
+
+        <div class="control-group">
+            <label>
+                <span class="tip-wrap">Creature
+                    <span class="tip-btn">?</span>
+                    <span class="tip-text">Each preset defines a different organism via tuned kernel parameters. Orbium is the classic glider. Geminium self-replicates. Primordia seeds random soup -- watch what emerges.</span>
+                </span>
+            </label>
+            <select id="preset"></select>
+        </div>
+
+        <div class="control-group">
+            <label>Palette</label>
+            <select id="palette">
+                <option value="funforrest">FunForrest</option>
+                <option value="bioluminescence">Bioluminescence</option>
+                <option value="ember">Ember</option>
+                <option value="ocean">Ocean</option>
+                <option value="monochrome">Monochrome</option>
+            </select>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="control-group">
+            <label>
+                <span class="tip-wrap">Kernel Radius (R)
+                    <span class="tip-btn">?</span>
+                    <span class="tip-text">How far each cell "sees" into its neighborhood. Larger R means broader awareness but slower computation.</span>
+                </span>
+                <span id="v-radius">13</span>
+            </label>
+            <input type="range" id="radius" min="5" max="25" step="1" value="13">
+        </div>
+
+        <div class="control-group">
+            <label>
+                <span class="tip-wrap">Growth Center (&mu;)
+                    <span class="tip-btn">?</span>
+                    <span class="tip-text">The optimal neighborhood density. Too sparse or too dense and cells die. This is the "sweet spot" the organism needs to survive.</span>
+                </span>
+                <span id="v-mu">0.150</span>
+            </label>
+            <input type="range" id="mu" min="0.01" max="0.50" step="0.001" value="0.15">
+        </div>
+
+        <div class="control-group">
+            <label>
+                <span class="tip-wrap">Growth Width (&sigma;)
+                    <span class="tip-btn">?</span>
+                    <span class="tip-text">How tolerant the growth function is around the center. Narrow sigma means the organism is fragile; wide means it is forgiving.</span>
+                </span>
+                <span id="v-sigma">0.015</span>
+            </label>
+            <input type="range" id="sigma" min="0.002" max="0.100" step="0.001" value="0.015">
+        </div>
+
+        <div class="control-group">
+            <label>
+                <span class="tip-wrap">Time Step (dt)
+                    <span class="tip-btn">?</span>
+                    <span class="tip-text">How much the simulation advances per frame. Smaller values are more stable but slower. Larger values are faster but can cause instability.</span>
+                </span>
+                <span id="v-dt">0.100</span>
+            </label>
+            <input type="range" id="dt" min="0.01" max="0.50" step="0.01" value="0.10">
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="control-group">
+            <label>Speed <span id="v-speed">1</span></label>
+            <input type="range" id="speed" min="1" max="10" step="1" value="1">
+        </div>
+
+        <div class="buttons">
+            <button id="btn-pause">Pause</button>
+            <button id="btn-reset">Reset</button>
+            <button id="btn-random">Random</button>
+            <button id="btn-save">Save</button>
+            <button id="btn-clear">Clear</button>
+        </div>
+
+        <div class="info">
+            Click/touch to feed organisms<br>
+            Shift+drag to paint raw material<br>
+            Scroll to adjust brush
+        </div>
+
+        <div class="info" style="border-top: none; padding-top: 0; margin-top: 0;">
+            <span class="tip-wrap" style="display: inline;">Sources
+                <span class="tip-btn">?</span>
+                <span class="tip-text">Chan, B.W.-C. "Lenia: Biology of Artificial Life" (2019). arXiv:1812.05433<br><br>Chan, B.W.-C. "Lenia and Expanded Universe" ALIFE 2020 Conference Proceedings.<br><br>Lenia is a continuous-state, continuous-time cellular automata system. Unlike Conway's Game of Life, states are continuous (0-1) and kernels are smooth functions.</span>
+            </span>
+        </div>
+    </div>
+
+    <button id="panel-toggle" title="Toggle controls">&#9881;</button>
+    <button id="help-btn" title="Help">?</button>
+
+    <div id="help-overlay">
+        <div id="help-content">
+            <h2>LENIA</h2>
+            <p>Lenia is a continuous cellular automaton — a mathematical framework where smooth kernels and growth functions replace the binary rules of Conway's Game of Life. The result: lifelike organisms that move, pulsate, rotate, and self-replicate across a continuous field.</p>
+            <p>Discovered by Bert Wang-Chak Chan in 2018, Lenia has been published in multiple academic journals and reveals that complex, lifelike behavior emerges from remarkably simple continuous math.</p>
+
+            <h3>How It Works</h3>
+            <p>Each cell holds a continuous value (0–1) representing "aliveness." A ring-shaped kernel sums the neighborhood, and a Gaussian growth function determines whether the cell grows or shrinks. The kernel radius (R), growth center (&mu;), and growth width (&sigma;) together define the creature's "DNA."</p>
+
+            <h3>Controls</h3>
+            <ul>
+                <li><kbd>Space</kbd> -- Pause / resume</li>
+                <li><kbd>R</kbd> -- Reset to current creature</li>
+                <li><kbd>N</kbd> -- Random soup</li>
+                <li><kbd>S</kbd> -- Save as PNG</li>
+                <li><kbd>1</kbd>--<kbd>5</kbd> -- Switch palette</li>
+                <li><kbd>H</kbd> / <kbd>?</kbd> -- Toggle this help</li>
+                <li>Click/touch -- Feed organisms (nutrient pulse)</li>
+                <li>Shift+drag -- Paint raw material</li>
+                <li>Scroll -- Adjust brush size</li>
+            </ul>
+
+            <h3>Interaction</h3>
+            <p>Clicking injects a <strong>nutrient pulse</strong> -- a temporary region of favorable growth conditions that nearby organisms are drawn toward. The stimulus decays over time. This lets you guide and sustain existing life rather than conjuring new organisms from nothing.</p>
+
+            <h3>Creatures</h3>
+            <p>Each preset loads a different organism with tuned parameters. <strong>Orbium</strong> is the classic glider. <strong>Geminium</strong> self-replicates. <strong>Primordia</strong> seeds random soup and lets you watch what emerges -- the most surprising mode.</p>
+
+            <h3>Parameters</h3>
+            <p><strong>R</strong> (kernel radius) controls how far each cell "sees." <strong>mu</strong> (growth center) sets the optimal neighborhood density -- too sparse or too dense and cells die. <strong>sigma</strong> (growth width) controls how tolerant the growth function is. <strong>dt</strong> is the time step -- smaller values are more stable but slower.</p>
+
+            <h3>Sources</h3>
+            <p>Chan, B.W.-C. "Lenia: Biology of Artificial Life" (2019). arXiv:1812.05433</p>
+            <p>Chan, B.W.-C. "Lenia and Expanded Universe" ALIFE 2020 Conference Proceedings.</p>
+
+            <div class="close-hint">Press <kbd>H</kbd>, <kbd>?</kbd>, <kbd>Esc</kbd> or click anywhere to close</div>
+        </div>
+    </div>
+
+    <div id="fps">-- fps</div>
+
+<script>
+// ============================================================
+// Lenia — Continuous Cellular Automata
+// WebGL2 GPU-accelerated implementation
+// ============================================================
+
+// ---- Presets ------------------------------------------------
+
+const PRESETS = {
+    orbium: {
+        name: 'Orbium',
+        desc: 'Classic glider — drifts across the field',
+        R: 13, T: 10, m: 0.15, s: 0.045, b: [1],
+        init(x, y) {
+            // Asymmetric ring — the hallmark Orbium shape
+            const d = Math.sqrt((x + 0.5) * (x + 0.5) + y * y);
+            if (d > 11) return 0;
+            const ring = Math.exp(-(d - 4) * (d - 4) / 3);
+            const angle = Math.atan2(y, x + 0.5);
+            const asym = 0.6 + 0.4 * Math.cos(angle + 0.5);
+            return Math.min(1, ring * asym);
+        },
+        seedRadius: 13
+    },
+    geminium: {
+        name: 'Geminium',
+        desc: 'Self-replicating twin blobs',
+        R: 10, T: 10, m: 0.14, s: 0.040, b: [1],
+        init(x, y) {
+            const d1 = Math.sqrt((x - 4) * (x - 4) + y * y);
+            const d2 = Math.sqrt((x + 4) * (x + 4) + y * y);
+            return Math.min(1, Math.exp(-d1 * d1 / 6) * 0.9 + Math.exp(-d2 * d2 / 6) * 0.9);
+        },
+        seedRadius: 12
+    },
+    scutium: {
+        name: 'Scutium',
+        desc: 'Stable pulsating disc',
+        R: 13, T: 10, m: 0.21, s: 0.055, b: [1],
+        init(x, y) {
+            const d = Math.sqrt(x * x + y * y);
+            if (d > 9) return 0;
+            return Math.exp(-d * d / 12) * 0.9;
+        },
+        seedRadius: 11
+    },
+    gyroscutium: {
+        name: 'Gyroscutium',
+        desc: 'Rotating three-armed spinner',
+        R: 13, T: 10, m: 0.19, s: 0.050, b: [1, 0.68],
+        init(x, y) {
+            const d = Math.sqrt(x * x + y * y);
+            if (d > 11) return 0;
+            const ring = Math.exp(-(d - 5) * (d - 5) / 4);
+            const angle = Math.atan2(y, x);
+            const arms = 0.5 + 0.5 * Math.cos(3 * angle);
+            return ring * arms * 0.85;
+        },
+        seedRadius: 13
+    },
+    smoothlife: {
+        name: 'SmoothLife',
+        desc: 'Smooth Game of Life — expanding regions',
+        R: 15, T: 5, m: 0.30, s: 0.070, b: [1],
+        init(x, y) {
+            // Dense disk that expands like GoL still lifes
+            const d = Math.sqrt(x * x + y * y);
+            if (d > 10) return 0;
+            return d < 6 ? 0.8 + Math.random() * 0.15 : Math.exp(-(d - 6) * (d - 6) / 3) * 0.7;
+        },
+        seedRadius: 12
+    },
+    pentascutium: {
+        name: 'Pentascutium',
+        desc: 'Five-fold symmetric rosette',
+        R: 15, T: 10, m: 0.18, s: 0.048, b: [1, 0.5, 0.25],
+        init(x, y) {
+            const d = Math.sqrt(x * x + y * y);
+            if (d > 12) return 0;
+            const ring = Math.exp(-(d - 6) * (d - 6) / 5);
+            const angle = Math.atan2(y, x);
+            const arms = 0.5 + 0.5 * Math.cos(5 * angle);
+            return ring * arms * 0.85;
+        },
+        seedRadius: 14
+    },
+    quadrium: {
+        name: 'Quadrium',
+        desc: 'Four-lobed rotator',
+        R: 14, T: 10, m: 0.17, s: 0.048, b: [1, 0.6],
+        init(x, y) {
+            const d = Math.sqrt(x * x + y * y);
+            if (d > 11) return 0;
+            const ring = Math.exp(-(d - 5.5) * (d - 5.5) / 4);
+            const angle = Math.atan2(y, x);
+            const arms = 0.5 + 0.5 * Math.cos(4 * angle + 0.3);
+            return ring * arms * 0.85;
+        },
+        seedRadius: 13
+    },
+    wanderer: {
+        name: 'Wanderer',
+        desc: 'Drifts and morphs unpredictably',
+        R: 10, T: 10, m: 0.12, s: 0.040, b: [1],
+        init(x, y) {
+            const d = Math.sqrt((x - 1) * (x - 1) + (y + 0.5) * (y + 0.5));
+            if (d > 8) return 0;
+            const v = Math.exp(-d * d / 7) * 0.9;
+            const ripple = 0.5 + 0.5 * Math.cos(d * 1.0);
+            return v * ripple;
+        },
+        seedRadius: 10
+    },
+    primordia: {
+        name: 'Primordia',
+        desc: 'Random soup — watch what emerges',
+        R: 13, T: 10, m: 0.15, s: 0.045, b: [1],
+        init: null,
+        seedRadius: 10
+    }
+};
+
+// ---- Palette definitions ----
+
+const PALETTES = {
+    funforrest: {
+        name: 'FunForrest',
+        colors: [
+            [0.102, 0.051, 0.0],      // #1A0D00 bg
+            [0.60, 0.15, 0.02],       // deep ember
+            [0.898, 0.349, 0.110],    // #E5591C burnt orange
+            [0.867, 0.757, 0.396],    // #DDC165 gold
+            [1.0, 0.914, 0.639],      // #FFE9A3 bright gold
+        ],
+        glow: [1.0, 0.85, 0.5]
+    },
+    bioluminescence: {
+        name: 'Bioluminescence',
+        colors: [
+            [0.0, 0.02, 0.06],
+            [0.0, 0.12, 0.25],
+            [0.0, 0.35, 0.55],
+            [0.1, 0.7, 0.8],
+            [0.5, 1.0, 0.9],
+        ],
+        glow: [0.3, 1.0, 0.85]
+    },
+    ember: {
+        name: 'Ember',
+        colors: [
+            [0.05, 0.0, 0.0],
+            [0.35, 0.02, 0.0],
+            [0.8, 0.15, 0.0],
+            [1.0, 0.5, 0.1],
+            [1.0, 0.9, 0.5],
+        ],
+        glow: [1.0, 0.6, 0.2]
+    },
+    ocean: {
+        name: 'Ocean',
+        colors: [
+            [0.0, 0.02, 0.05],
+            [0.0, 0.08, 0.2],
+            [0.05, 0.25, 0.5],
+            [0.2, 0.55, 0.75],
+            [0.6, 0.85, 1.0],
+        ],
+        glow: [0.4, 0.75, 1.0]
+    },
+    monochrome: {
+        name: 'Monochrome',
+        colors: [
+            [0.02, 0.02, 0.02],
+            [0.12, 0.12, 0.12],
+            [0.35, 0.35, 0.35],
+            [0.7, 0.7, 0.7],
+            [1.0, 1.0, 1.0],
+        ],
+        glow: [0.9, 0.9, 0.9]
+    }
+};
+
+// ---- Shader sources -----------------------------------------
+
+const QUAD_VS = `#version 300 es
+in vec2 a_pos;
+void main() {
+    gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+
+const SIM_FS = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_state;
+uniform sampler2D u_kernel;
+uniform vec2 u_res;
+uniform int u_R;
+uniform int u_kernelSize;
+uniform float u_mu;
+uniform float u_sigma;
+uniform float u_dt;
+
+out vec4 fragColor;
+
+void main() {
+    ivec2 pos = ivec2(gl_FragCoord.xy);
+    ivec2 gridSize = ivec2(u_res);
+
+    float potential = 0.0;
+
+    const int MAX_R = 25;
+    for (int dy = -MAX_R; dy <= MAX_R; dy++) {
+        if (dy < -u_R || dy > u_R) continue;
+        for (int dx = -MAX_R; dx <= MAX_R; dx++) {
+            if (dx < -u_R || dx > u_R) continue;
+
+            ivec2 kCoord = ivec2(dx + u_R, dy + u_R);
+            float kw = texelFetch(u_kernel, kCoord, 0).r;
+            if (kw < 1e-6) continue;
+
+            ivec2 sCoord = (pos + ivec2(dx, dy) + gridSize) % gridSize;
+            float s = texelFetch(u_state, sCoord, 0).r;
+
+            potential += kw * s;
+        }
+    }
+
+    // Growth function: Gaussian bump centered at mu, width sigma
+    float g = 2.0 * exp(-0.5 * pow((potential - u_mu) / u_sigma, 2.0)) - 1.0;
+
+    float current = texelFetch(u_state, pos, 0).r;
+    float next = clamp(current + u_dt * g, 0.0, 1.0);
+
+    fragColor = vec4(next, 0.0, 0.0, 1.0);
+}`;
+
+// Visualization shader with palette support
+const VIS_FS = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_state;
+uniform vec2 u_stateRes;
+uniform vec2 u_canvasRes;
+uniform vec3 u_c0, u_c1, u_c2, u_c3, u_c4;
+uniform vec3 u_glow;
+
+out vec4 fragColor;
+
+vec3 palette(float t) {
+    // Boost low values so faint organisms are visible
+    float v = smoothstep(0.0, 0.08, t) * 0.15 + smoothstep(0.08, 1.0, t) * 0.85;
+    if (v < 0.15) return mix(u_c0, u_c1, v / 0.15);
+    if (v < 0.35) return mix(u_c1, u_c2, (v - 0.15) / 0.20);
+    if (v < 0.60) return mix(u_c2, u_c3, (v - 0.35) / 0.25);
+    return mix(u_c3, u_c4, clamp((v - 0.60) / 0.40, 0.0, 1.0));
+}
+
+void main() {
+    vec2 uv = gl_FragCoord.xy / u_canvasRes;
+    uv.y = 1.0 - uv.y;
+
+    float state = texture(u_state, uv).r;
+
+    // Glow: sample neighborhood for bloom
+    float glowVal = 0.0;
+    float totalW = 0.0;
+    for (int dy = -3; dy <= 3; dy++) {
+        for (int dx = -3; dx <= 3; dx++) {
+            vec2 off = vec2(float(dx), float(dy)) * 2.5 / u_canvasRes;
+            float s = texture(u_state, uv + off).r;
+            float w = exp(-float(dx * dx + dy * dy) / 4.0);
+            glowVal += max(s - 0.15, 0.0) * w;
+            totalW += w;
+        }
+    }
+    glowVal /= totalW;
+
+    vec3 color = palette(state);
+    color += u_glow * glowVal * 1.2;
+
+    // Vignette
+    vec2 vc = uv - 0.5;
+    float vignette = 1.0 - dot(vc, vc) * 0.3;
+    color *= vignette;
+
+    fragColor = vec4(color, 1.0);
+}`;
+
+const SEED_FS = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_state;
+uniform vec2 u_res;
+uniform vec2 u_seedPos;
+uniform float u_seedRadius;
+uniform float u_seedStrength;
+
+out vec4 fragColor;
+
+void main() {
+    ivec2 pos = ivec2(gl_FragCoord.xy);
+    float current = texelFetch(u_state, pos, 0).r;
+
+    vec2 diff = gl_FragCoord.xy - u_seedPos;
+    float d = length(diff);
+    float r = d / u_seedRadius;
+
+    float seed = 0.0;
+    if (r < 1.0) {
+        seed = u_seedStrength * exp(-r * r * 3.0);
+    }
+
+    fragColor = vec4(max(current, seed), 0.0, 0.0, 1.0);
+}`;
+
+// Stimulus shader — adds a nutrient pulse to the food texture
+const STIM_FS = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_food;
+uniform vec2 u_res;
+uniform vec2 u_stimPos;
+uniform float u_stimRadius;
+uniform float u_stimStrength;
+
+out vec4 fragColor;
+
+void main() {
+    ivec2 pos = ivec2(gl_FragCoord.xy);
+    float current = texelFetch(u_food, pos, 0).r;
+
+    vec2 diff = gl_FragCoord.xy - u_stimPos;
+    float d = length(diff);
+    float r = d / u_stimRadius;
+
+    float pulse = 0.0;
+    if (r < 1.0) {
+        pulse = u_stimStrength * exp(-r * r * 2.5);
+    }
+
+    fragColor = vec4(min(current + pulse, 1.0), 0.0, 0.0, 1.0);
+}`;
+
+// Food application shader — applies food influence to cell state
+// Food creates favorable growth conditions: it adds a small boost
+// to cells near food, encouraging growth toward food sources
+const FOOD_APPLY_FS = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_state;
+uniform sampler2D u_food;
+uniform vec2 u_res;
+uniform float u_foodEffect;
+
+out vec4 fragColor;
+
+void main() {
+    ivec2 pos = ivec2(gl_FragCoord.xy);
+    float state = texelFetch(u_state, pos, 0).r;
+    float food = texelFetch(u_food, pos, 0).r;
+
+    // Food acts as a gentle growth attractor:
+    // - Where there is already some life (state > 0.01), food boosts growth
+    // - Where there is no life, food creates a faint seed to attract nearby organisms
+    float boost = 0.0;
+    if (state > 0.01) {
+        // Existing life feeds: boost proportional to food
+        boost = food * u_foodEffect * (1.0 - state);
+    } else if (food > 0.1) {
+        // High food creates faint attractant trace
+        boost = food * u_foodEffect * 0.15;
+    }
+
+    fragColor = vec4(clamp(state + boost, 0.0, 1.0), 0.0, 0.0, 1.0);
+}`;
+
+// Food decay shader — food decays each frame
+const FOOD_DECAY_FS = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_food;
+uniform vec2 u_res;
+uniform float u_decayRate;
+
+out vec4 fragColor;
+
+void main() {
+    ivec2 pos = ivec2(gl_FragCoord.xy);
+    float food = texelFetch(u_food, pos, 0).r;
+
+    // Smooth decay + slight diffusion from neighbors
+    float sum = 0.0;
+    float count = 0.0;
+    ivec2 gridSize = ivec2(u_res);
+    for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            ivec2 c = (pos + ivec2(dx, dy) + gridSize) % gridSize;
+            sum += texelFetch(u_food, c, 0).r;
+            count += 1.0;
+        }
+    }
+    float diffused = mix(food, sum / count, 0.08);
+    float decayed = diffused * u_decayRate;
+
+    fragColor = vec4(max(decayed, 0.0), 0.0, 0.0, 1.0);
+}`;
+
+// ---- Lenia engine -------------------------------------------
+
+class Lenia {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.gridSize = 256;
+        this.playing = true;
+        this.speed = 1;
+        this.brushRadius = 8;
+        this.painting = false;
+        this.currentPreset = 'orbium';
+        this.currentPalette = 'funforrest';
+        this.frameCount = 0;
+        this.lastFpsTime = performance.now();
+        this.fps = 0;
+        this.currentFBO = 0;
+
+        this.R = 13;
+        this.T = 10;
+        this.mu = 0.15;
+        this.sigma = 0.015;
+        this.beta = [1];
+        this.dt = 0.1;
+
+        this.foodEffect = 0.04;
+        this.foodDecay = 0.97;
+        this.stimRadius = 14;
+        this.stimStrength = 0.8;
+
+        this.initGL();
+        this.initShaders();
+        this.initBuffers();
+        this.initFBOs();
+        this.buildKernel();
+        this.loadPreset('orbium');
+        this.setupInput();
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+    }
+
+    initGL() {
+        const gl = this.canvas.getContext('webgl2', {
+            preserveDrawingBuffer: true,
+            alpha: false,
+            antialias: false,
+            premultipliedAlpha: false
+        });
+        if (!gl) throw new Error('WebGL2 not supported');
+        const ext = gl.getExtension('EXT_color_buffer_float');
+        if (!ext) throw new Error('EXT_color_buffer_float not supported');
+        gl.getExtension('OES_texture_float_linear');
+        this.gl = gl;
+    }
+
+    compile(type, src) {
+        const gl = this.gl;
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            console.error(gl.getShaderInfoLog(shader));
+            gl.deleteShader(shader);
+            return null;
+        }
+        return shader;
+    }
+
+    link(vsSrc, fsSrc) {
+        const gl = this.gl;
+        const vs = this.compile(gl.VERTEX_SHADER, vsSrc);
+        const fs = this.compile(gl.FRAGMENT_SHADER, fsSrc);
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+            console.error(gl.getProgramInfoLog(prog));
+            return null;
+        }
+        return prog;
+    }
+
+    initShaders() {
+        this.simProg = this.link(QUAD_VS, SIM_FS);
+        this.visProg = this.link(QUAD_VS, VIS_FS);
+        this.seedProg = this.link(QUAD_VS, SEED_FS);
+        this.stimProg = this.link(QUAD_VS, STIM_FS);
+        this.foodApplyProg = this.link(QUAD_VS, FOOD_APPLY_FS);
+        this.foodDecayProg = this.link(QUAD_VS, FOOD_DECAY_FS);
+
+        const gl = this.gl;
+        this.simLoc = {
+            state: gl.getUniformLocation(this.simProg, 'u_state'),
+            kernel: gl.getUniformLocation(this.simProg, 'u_kernel'),
+            res: gl.getUniformLocation(this.simProg, 'u_res'),
+            R: gl.getUniformLocation(this.simProg, 'u_R'),
+            kernelSize: gl.getUniformLocation(this.simProg, 'u_kernelSize'),
+            mu: gl.getUniformLocation(this.simProg, 'u_mu'),
+            sigma: gl.getUniformLocation(this.simProg, 'u_sigma'),
+            dt: gl.getUniformLocation(this.simProg, 'u_dt'),
+        };
+        this.visLoc = {
+            state: gl.getUniformLocation(this.visProg, 'u_state'),
+            stateRes: gl.getUniformLocation(this.visProg, 'u_stateRes'),
+            canvasRes: gl.getUniformLocation(this.visProg, 'u_canvasRes'),
+            c0: gl.getUniformLocation(this.visProg, 'u_c0'),
+            c1: gl.getUniformLocation(this.visProg, 'u_c1'),
+            c2: gl.getUniformLocation(this.visProg, 'u_c2'),
+            c3: gl.getUniformLocation(this.visProg, 'u_c3'),
+            c4: gl.getUniformLocation(this.visProg, 'u_c4'),
+            glow: gl.getUniformLocation(this.visProg, 'u_glow'),
+        };
+        this.seedLoc = {
+            state: gl.getUniformLocation(this.seedProg, 'u_state'),
+            res: gl.getUniformLocation(this.seedProg, 'u_res'),
+            seedPos: gl.getUniformLocation(this.seedProg, 'u_seedPos'),
+            seedRadius: gl.getUniformLocation(this.seedProg, 'u_seedRadius'),
+            seedStrength: gl.getUniformLocation(this.seedProg, 'u_seedStrength'),
+        };
+        this.stimLoc = {
+            food: gl.getUniformLocation(this.stimProg, 'u_food'),
+            res: gl.getUniformLocation(this.stimProg, 'u_res'),
+            stimPos: gl.getUniformLocation(this.stimProg, 'u_stimPos'),
+            stimRadius: gl.getUniformLocation(this.stimProg, 'u_stimRadius'),
+            stimStrength: gl.getUniformLocation(this.stimProg, 'u_stimStrength'),
+        };
+        this.foodApplyLoc = {
+            state: gl.getUniformLocation(this.foodApplyProg, 'u_state'),
+            food: gl.getUniformLocation(this.foodApplyProg, 'u_food'),
+            res: gl.getUniformLocation(this.foodApplyProg, 'u_res'),
+            foodEffect: gl.getUniformLocation(this.foodApplyProg, 'u_foodEffect'),
+        };
+        this.foodDecayLoc = {
+            food: gl.getUniformLocation(this.foodDecayProg, 'u_food'),
+            res: gl.getUniformLocation(this.foodDecayProg, 'u_res'),
+            decayRate: gl.getUniformLocation(this.foodDecayProg, 'u_decayRate'),
+        };
+    }
+
+    initBuffers() {
+        const gl = this.gl;
+        this.quadBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            -1, -1, 1, -1, -1, 1, 1, 1
+        ]), gl.STATIC_DRAW);
+
+        this.simVAO = this.createVAO(this.simProg);
+        this.visVAO = this.createVAO(this.visProg);
+        this.seedVAO = this.createVAO(this.seedProg);
+        this.stimVAO = this.createVAO(this.stimProg);
+        this.foodApplyVAO = this.createVAO(this.foodApplyProg);
+        this.foodDecayVAO = this.createVAO(this.foodDecayProg);
+    }
+
+    createVAO(prog) {
+        const gl = this.gl;
+        const vao = gl.createVertexArray();
+        gl.bindVertexArray(vao);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuf);
+        const loc = gl.getAttribLocation(prog, 'a_pos');
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        gl.bindVertexArray(null);
+        return vao;
+    }
+
+    createFBO(w, h) {
+        const gl = this.gl;
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+        const fb = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        return { fb, tex, w, h };
+    }
+
+    initFBOs() {
+        const s = this.gridSize;
+        this.stateFBOs = [this.createFBO(s, s), this.createFBO(s, s)];
+        this.foodFBOs = [this.createFBO(s, s), this.createFBO(s, s)];
+        this.currentFBO = 0;
+        this.currentFoodFBO = 0;
+    }
+
+    // ---- Kernel ----
+
+    buildKernel() {
+        const R = this.R;
+        const beta = this.beta;
+        const size = 2 * R + 1;
+        const data = new Float32Array(size * size);
+        let sum = 0;
+
+        for (let dy = -R; dy <= R; dy++) {
+            for (let dx = -R; dx <= R; dx++) {
+                const d = Math.sqrt(dx * dx + dy * dy);
+                const r = d / R;
+                if (r <= 0 || r >= 1) continue;
+
+                const B = beta.length;
+                const br = r * B;
+                const i = Math.min(Math.floor(br), B - 1);
+                const x = br - i;
+
+                let bump = 0;
+                if (x > 0 && x < 1) {
+                    bump = Math.exp(4 - 4 / (4 * x * (1 - x)));
+                }
+                const val = beta[i] * bump;
+                data[(dy + R) * size + (dx + R)] = val;
+                sum += val;
+            }
+        }
+
+        if (sum > 0) {
+            for (let i = 0; i < data.length; i++) data[i] /= sum;
+        }
+
+        const gl = this.gl;
+        if (this.kernelTex) gl.deleteTexture(this.kernelTex);
+        this.kernelTex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, this.kernelTex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, size, size, 0, gl.RED, gl.FLOAT, data);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+
+    // ---- State ----
+
+    clearState() {
+        const gl = this.gl;
+        const s = this.gridSize;
+        const zeros = new Float32Array(s * s * 4);
+        for (let i = 0; i < 2; i++) {
+            gl.bindTexture(gl.TEXTURE_2D, this.stateFBOs[i].tex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, s, s, 0, gl.RGBA, gl.FLOAT, zeros);
+            gl.bindTexture(gl.TEXTURE_2D, this.foodFBOs[i].tex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, s, s, 0, gl.RGBA, gl.FLOAT, zeros);
+        }
+        this.currentFBO = 0;
+        this.currentFoodFBO = 0;
+    }
+
+    uploadState(values) {
+        const gl = this.gl;
+        const s = this.gridSize;
+        const data = new Float32Array(s * s * 4);
+        for (let i = 0; i < s * s; i++) {
+            data[i * 4] = values[i];
+            data[i * 4 + 3] = 1;
+        }
+        gl.bindTexture(gl.TEXTURE_2D, this.stateFBOs[this.currentFBO].tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, s, s, 0, gl.RGBA, gl.FLOAT, data);
+    }
+
+    loadPreset(name) {
+        const p = PRESETS[name];
+        if (!p) return;
+        this.currentPreset = name;
+        this.R = p.R;
+        this.T = p.T;
+        this.mu = p.m;
+        this.sigma = p.s;
+        this.beta = [...p.b];
+        this.dt = 1 / p.T;
+        this.buildKernel();
+
+        const s = this.gridSize;
+        const values = new Float32Array(s * s);
+
+        if (p.init) {
+            // Seed 3-5 creatures spread across the field
+            const count = 3 + Math.floor(Math.random() * 3);
+            for (let n = 0; n < count; n++) {
+                const margin = 40;
+                const cx = margin + Math.floor(Math.random() * (s - 2 * margin));
+                const cy = margin + Math.floor(Math.random() * (s - 2 * margin));
+                const r = p.seedRadius || 15;
+                for (let dy = -r - 5; dy <= r + 5; dy++) {
+                    for (let dx = -r - 5; dx <= r + 5; dx++) {
+                        let v = p.init(dx, dy);
+                        v += (Math.random() - 0.5) * 0.08;
+                        v = Math.max(0, Math.min(1, v));
+                        const x = ((cx + dx) % s + s) % s;
+                        const y = ((cy + dy) % s + s) % s;
+                        values[y * s + x] = Math.max(values[y * s + x], v);
+                    }
+                }
+            }
+        } else {
+            this.seedRandomBlobs(values, 15);
+        }
+
+        this.uploadState(values);
+        this.updateUI();
+    }
+
+    seedRandomBlobs(values, count) {
+        const s = this.gridSize;
+        for (let n = 0; n < count; n++) {
+            const cx = Math.floor(Math.random() * s);
+            const cy = Math.floor(Math.random() * s);
+            const r = 5 + Math.random() * 12;
+            const strength = 0.5 + Math.random() * 0.5;
+            for (let dy = -Math.ceil(r) - 3; dy <= Math.ceil(r) + 3; dy++) {
+                for (let dx = -Math.ceil(r) - 3; dx <= Math.ceil(r) + 3; dx++) {
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    if (d > r + 3) continue;
+                    // Ring-like structure more likely to survive Lenia dynamics
+                    const ring = Math.exp(-(d - r * 0.4) * (d - r * 0.4) / (r * r * 0.15));
+                    const v = strength * ring;
+                    const x = ((cx + dx) % s + s) % s;
+                    const y = ((cy + dy) % s + s) % s;
+                    values[y * s + x] = Math.max(values[y * s + x], Math.min(1, v));
+                }
+            }
+        }
+    }
+
+    randomize() {
+        const s = this.gridSize;
+        const values = new Float32Array(s * s);
+        this.seedRandomBlobs(values, 25 + Math.floor(Math.random() * 20));
+        this.uploadState(values);
+    }
+
+    // ---- Seed at position ----
+
+    seedAt(canvasX, canvasY) {
+        const gl = this.gl;
+        const s = this.gridSize;
+        const rect = this.canvas.getBoundingClientRect();
+        const gx = (canvasX / rect.width) * s;
+        const gy = (canvasY / rect.height) * s;
+
+        const src = this.currentFBO;
+        const dst = 1 - src;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.stateFBOs[dst].fb);
+        gl.viewport(0, 0, s, s);
+
+        gl.useProgram(this.seedProg);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.stateFBOs[src].tex);
+        gl.uniform1i(this.seedLoc.state, 0);
+        gl.uniform2f(this.seedLoc.res, s, s);
+        gl.uniform2f(this.seedLoc.seedPos, gx, gy);
+        gl.uniform1f(this.seedLoc.seedRadius, this.brushRadius);
+        gl.uniform1f(this.seedLoc.seedStrength, 0.85);
+
+        gl.bindVertexArray(this.seedVAO);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        this.currentFBO = dst;
+    }
+
+    seedCreatureAt(canvasX, canvasY) {
+        const s = this.gridSize;
+        const rect = this.canvas.getBoundingClientRect();
+        const cx = Math.floor((canvasX / rect.width) * s);
+        const cy = Math.floor((canvasY / rect.height) * s);
+
+        const p = PRESETS[this.currentPreset];
+        if (!p || !p.init) {
+            this.seedAt(canvasX, canvasY);
+            return;
+        }
+
+        const gl = this.gl;
+        const pixels = new Float32Array(s * s * 4);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.stateFBOs[this.currentFBO].fb);
+        gl.readPixels(0, 0, s, s, gl.RGBA, gl.FLOAT, pixels);
+
+        const r = p.seedRadius || 15;
+        for (let dy = -r - 5; dy <= r + 5; dy++) {
+            for (let dx = -r - 5; dx <= r + 5; dx++) {
+                let v = p.init(dx, dy);
+                v += (Math.random() - 0.5) * 0.08;
+                v = Math.max(0, Math.min(1, v));
+                if (v <= 0) continue;
+                const x = ((cx + dx) % s + s) % s;
+                const y = ((cy + dy) % s + s) % s;
+                const idx = (y * s + x) * 4;
+                pixels[idx] = Math.max(pixels[idx], v);
+            }
+        }
+
+        gl.bindTexture(gl.TEXTURE_2D, this.stateFBOs[this.currentFBO].tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, s, s, 0, gl.RGBA, gl.FLOAT, pixels);
+    }
+
+    // ---- Stimulus (food) injection ----
+
+    stimAt(canvasX, canvasY) {
+        const gl = this.gl;
+        const s = this.gridSize;
+        const rect = this.canvas.getBoundingClientRect();
+        const gx = (canvasX / rect.width) * s;
+        const gy = (canvasY / rect.height) * s;
+
+        const src = this.currentFoodFBO;
+        const dst = 1 - src;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.foodFBOs[dst].fb);
+        gl.viewport(0, 0, s, s);
+
+        gl.useProgram(this.stimProg);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.foodFBOs[src].tex);
+        gl.uniform1i(this.stimLoc.food, 0);
+        gl.uniform2f(this.stimLoc.res, s, s);
+        gl.uniform2f(this.stimLoc.stimPos, gx, gy);
+        gl.uniform1f(this.stimLoc.stimRadius, this.stimRadius);
+        gl.uniform1f(this.stimLoc.stimStrength, this.stimStrength);
+
+        gl.bindVertexArray(this.stimVAO);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        this.currentFoodFBO = dst;
+    }
+
+    // ---- Food decay step ----
+
+    decayFood() {
+        const gl = this.gl;
+        const s = this.gridSize;
+        const src = this.currentFoodFBO;
+        const dst = 1 - src;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.foodFBOs[dst].fb);
+        gl.viewport(0, 0, s, s);
+
+        gl.useProgram(this.foodDecayProg);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.foodFBOs[src].tex);
+        gl.uniform1i(this.foodDecayLoc.food, 0);
+        gl.uniform2f(this.foodDecayLoc.res, s, s);
+        gl.uniform1f(this.foodDecayLoc.decayRate, this.foodDecay);
+
+        gl.bindVertexArray(this.foodDecayVAO);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        this.currentFoodFBO = dst;
+    }
+
+    // ---- Apply food to state ----
+
+    applyFood() {
+        const gl = this.gl;
+        const s = this.gridSize;
+        const stateSrc = this.currentFBO;
+        const stateDst = 1 - stateSrc;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.stateFBOs[stateDst].fb);
+        gl.viewport(0, 0, s, s);
+
+        gl.useProgram(this.foodApplyProg);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.stateFBOs[stateSrc].tex);
+        gl.uniform1i(this.foodApplyLoc.state, 0);
+
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, this.foodFBOs[this.currentFoodFBO].tex);
+        gl.uniform1i(this.foodApplyLoc.food, 1);
+
+        gl.uniform2f(this.foodApplyLoc.res, s, s);
+        gl.uniform1f(this.foodApplyLoc.foodEffect, this.foodEffect);
+
+        gl.bindVertexArray(this.foodApplyVAO);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        this.currentFBO = stateDst;
+    }
+
+    // ---- Simulation ----
+
+    step() {
+        const gl = this.gl;
+        const s = this.gridSize;
+        const src = this.currentFBO;
+        const dst = 1 - src;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.stateFBOs[dst].fb);
+        gl.viewport(0, 0, s, s);
+
+        gl.useProgram(this.simProg);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.stateFBOs[src].tex);
+        gl.uniform1i(this.simLoc.state, 0);
+
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, this.kernelTex);
+        gl.uniform1i(this.simLoc.kernel, 1);
+
+        gl.uniform2f(this.simLoc.res, s, s);
+        gl.uniform1i(this.simLoc.R, this.R);
+        gl.uniform1i(this.simLoc.kernelSize, 2 * this.R + 1);
+        gl.uniform1f(this.simLoc.mu, this.mu);
+        gl.uniform1f(this.simLoc.sigma, this.sigma);
+        gl.uniform1f(this.simLoc.dt, this.dt);
+
+        gl.bindVertexArray(this.simVAO);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        this.currentFBO = dst;
+    }
+
+    // ---- Render ----
+
+    render() {
+        const gl = this.gl;
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, cw, ch);
+
+        gl.useProgram(this.visProg);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.stateFBOs[this.currentFBO].tex);
+        gl.uniform1i(this.visLoc.state, 0);
+
+        gl.uniform2f(this.visLoc.stateRes, this.gridSize, this.gridSize);
+        gl.uniform2f(this.visLoc.canvasRes, cw, ch);
+
+        // Set palette colors
+        const pal = PALETTES[this.currentPalette];
+        gl.uniform3fv(this.visLoc.c0, pal.colors[0]);
+        gl.uniform3fv(this.visLoc.c1, pal.colors[1]);
+        gl.uniform3fv(this.visLoc.c2, pal.colors[2]);
+        gl.uniform3fv(this.visLoc.c3, pal.colors[3]);
+        gl.uniform3fv(this.visLoc.c4, pal.colors[4]);
+        gl.uniform3fv(this.visLoc.glow, pal.glow);
+
+        gl.bindVertexArray(this.visVAO);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    // ---- Animation loop ----
+
+    animate() {
+        if (this.playing) {
+            for (let i = 0; i < this.speed; i++) {
+                this.step();
+                this.decayFood();
+                this.applyFood();
+            }
+        }
+        this.render();
+
+        this.frameCount++;
+        const now = performance.now();
+        if (now - this.lastFpsTime >= 500) {
+            this.fps = Math.round(this.frameCount / ((now - this.lastFpsTime) / 1000));
+            this.frameCount = 0;
+            this.lastFpsTime = now;
+            document.getElementById('fps').textContent = this.fps + ' fps';
+        }
+
+        this._raf = requestAnimationFrame(() => this.animate());
+    }
+
+    start() {
+        if (!this._raf) this._raf = requestAnimationFrame(() => this.animate());
+    }
+
+    // ---- Resize ----
+
+    resize() {
+        const wrap = document.getElementById('canvas-wrap');
+        const infoBar = document.getElementById('info-bar');
+        const infoH = infoBar ? infoBar.offsetHeight : 0;
+        const maxW = wrap.clientWidth - 44;
+        const maxH = wrap.clientHeight - 44 - infoH;
+        const size = Math.min(maxW, maxH, 1024);
+        this.canvas.width = size;
+        this.canvas.height = size;
+        this.canvas.style.width = size + 'px';
+        this.canvas.style.height = size + 'px';
+    }
+
+    // ---- Export ----
+
+    exportPNG() {
+        this.render();
+        const link = document.createElement('a');
+        link.download = `lenia-${this.currentPreset}-${Date.now()}.png`;
+        link.href = this.canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    // ---- Input ----
+
+    setupInput() {
+        const c = this.canvas;
+
+        const getPos = (e) => {
+            const rect = c.getBoundingClientRect();
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        };
+
+        c.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            this.painting = true;
+            const { x, y } = getPos(e);
+            if (e.shiftKey) {
+                this.seedAt(x, y);
+            } else {
+                this.stimAt(x, y);
+            }
+        });
+
+        c.addEventListener('mousemove', (e) => {
+            if (!this.painting) return;
+            const { x, y } = getPos(e);
+            if (e.shiftKey) {
+                this.seedAt(x, y);
+            } else {
+                this.stimAt(x, y);
+            }
+        });
+
+        c.addEventListener('mouseup', () => { this.painting = false; });
+        c.addEventListener('mouseleave', () => { this.painting = false; });
+
+        // Touch
+        c.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.painting = true;
+            const t = e.touches[0];
+            const rect = c.getBoundingClientRect();
+            this.stimAt(t.clientX - rect.left, t.clientY - rect.top);
+        }, { passive: false });
+
+        c.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!this.painting) return;
+            const t = e.touches[0];
+            const rect = c.getBoundingClientRect();
+            this.stimAt(t.clientX - rect.left, t.clientY - rect.top);
+        }, { passive: false });
+
+        c.addEventListener('touchend', () => { this.painting = false; });
+
+        c.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            this.brushRadius = Math.max(3, Math.min(30, this.brushRadius - Math.sign(e.deltaY)));
+        }, { passive: false });
+    }
+
+    // ---- UI sync ----
+
+    updateUI() {
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        const setV = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+        set('radius', this.R); setV('v-radius', this.R);
+        set('mu', this.mu); setV('v-mu', this.mu.toFixed(3));
+        set('sigma', this.sigma); setV('v-sigma', this.sigma.toFixed(3));
+        set('dt', this.dt); setV('v-dt', this.dt.toFixed(3));
+        set('preset', this.currentPreset);
+    }
+}
+
+// ---- UI setup -----------------------------------------------
+
+function setupUI(lenia) {
+    // Populate preset selector
+    const sel = document.getElementById('preset');
+    for (const [key, p] of Object.entries(PRESETS)) {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = p.name + ' \u2014 ' + p.desc;
+        sel.appendChild(opt);
+    }
+    sel.value = 'orbium';
+
+    sel.addEventListener('change', () => {
+        lenia.clearState();
+        lenia.loadPreset(sel.value);
+        updatePresetLabel(sel.value);
+    });
+
+    function updatePresetLabel(key) {
+        const p = PRESETS[key];
+        if (!p) return;
+        const label = document.getElementById('preset-label');
+        if (label) label.innerHTML = '<strong>' + p.name + '</strong> -- ' + p.desc;
+    }
+
+    // Palette selector
+    const palSel = document.getElementById('palette');
+    palSel.addEventListener('change', () => {
+        lenia.currentPalette = palSel.value;
+    });
+
+    // Sliders
+    const bindSlider = (id, valueId, setter, fmt) => {
+        const slider = document.getElementById(id);
+        const display = document.getElementById(valueId);
+        slider.addEventListener('input', () => {
+            const val = parseFloat(slider.value);
+            display.textContent = fmt ? fmt(val) : val;
+            setter(val);
+        });
+    };
+
+    bindSlider('radius', 'v-radius', (v) => {
+        lenia.R = Math.round(v);
+        lenia.buildKernel();
+    }, (v) => Math.round(v));
+
+    bindSlider('mu', 'v-mu', (v) => { lenia.mu = v; }, (v) => v.toFixed(3));
+    bindSlider('sigma', 'v-sigma', (v) => { lenia.sigma = v; }, (v) => v.toFixed(3));
+    bindSlider('dt', 'v-dt', (v) => { lenia.dt = v; }, (v) => v.toFixed(3));
+    bindSlider('speed', 'v-speed', (v) => { lenia.speed = Math.round(v); }, (v) => Math.round(v));
+
+    // Buttons
+    const pauseBtn = document.getElementById('btn-pause');
+    pauseBtn.addEventListener('click', () => {
+        lenia.playing = !lenia.playing;
+        pauseBtn.textContent = lenia.playing ? 'Pause' : 'Play';
+        pauseBtn.classList.toggle('active', !lenia.playing);
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+        lenia.clearState();
+        lenia.loadPreset(lenia.currentPreset);
+    });
+
+    document.getElementById('btn-random').addEventListener('click', () => {
+        lenia.randomize();
+    });
+
+    document.getElementById('btn-save').addEventListener('click', () => {
+        lenia.exportPNG();
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+        lenia.clearState();
+    });
+
+    // Panel toggle (mobile)
+    const panel = document.getElementById('panel');
+    const toggle = document.getElementById('panel-toggle');
+    toggle.addEventListener('click', () => {
+        panel.classList.toggle('open');
+        toggle.textContent = panel.classList.contains('open') ? '\u2715' : '\u2699';
+    });
+
+    // Help overlay
+    const helpOverlay = document.getElementById('help-overlay');
+    const helpBtn = document.getElementById('help-btn');
+
+    const toggleHelp = () => {
+        helpOverlay.classList.toggle('visible');
+    };
+
+    helpBtn.addEventListener('click', toggleHelp);
+    helpOverlay.addEventListener('click', (e) => {
+        if (e.target === helpOverlay) toggleHelp();
+    });
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+        // Don't capture when typing in inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+        switch (e.key) {
+            case ' ':
+                e.preventDefault();
+                lenia.playing = !lenia.playing;
+                pauseBtn.textContent = lenia.playing ? 'Pause' : 'Play';
+                pauseBtn.classList.toggle('active', !lenia.playing);
+                break;
+            case 'r':
+                lenia.clearState();
+                lenia.loadPreset(lenia.currentPreset);
+                break;
+            case 'n':
+                lenia.randomize();
+                break;
+            case 's':
+                lenia.exportPNG();
+                break;
+            case 'h':
+            case '?':
+                toggleHelp();
+                break;
+            case 'Escape':
+                if (helpOverlay.classList.contains('visible')) toggleHelp();
+                break;
+            case '1': palSel.value = 'funforrest'; lenia.currentPalette = 'funforrest'; break;
+            case '2': palSel.value = 'bioluminescence'; lenia.currentPalette = 'bioluminescence'; break;
+            case '3': palSel.value = 'ember'; lenia.currentPalette = 'ember'; break;
+            case '4': palSel.value = 'ocean'; lenia.currentPalette = 'ocean'; break;
+            case '5': palSel.value = 'monochrome'; lenia.currentPalette = 'monochrome'; break;
+        }
+    });
+}
+
+// ---- Init ---------------------------------------------------
+
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('canvas');
+
+    try {
+        const lenia = new Lenia(canvas);
+        setupUI(lenia);
+        lenia.start();
+    } catch (e) {
+        document.body.innerHTML = `
+            <div style="color:#E5591C;padding:40px;font-family:monospace;">
+                <h2>Lenia requires WebGL2</h2>
+                <p>${e.message}</p>
+                <p>Please use a modern browser with GPU acceleration enabled.</p>
+            </div>
+        `;
+    }
+});
+</script>
+</body>
+</html>
