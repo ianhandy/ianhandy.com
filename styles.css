@@ -1,5 +1,5 @@
 /*
-  styles.css — ianhandy.com shared stylesheet
+  styles.css / ianhandy.com shared stylesheet
   index.html, evo/index.html
 */
 
@@ -196,7 +196,7 @@ input[type="range"] { padding: .25rem 0; accent-color: var(--ember); }
 }
 
 /* =====================================================
-   INDEX.HTML — portfolio-specific styles
+   INDEX.HTML / portfolio-specific styles
    ===================================================== */
 
 /* Hero */
@@ -306,7 +306,7 @@ input[type="range"] { padding: .25rem 0; accent-color: var(--ember); }
 
 /* About */
 #about { background: var(--bark); }
-.about-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 5rem; align-items: start; }
+.about-layout { display: grid; grid-template-columns: 1fr; gap: 5rem; align-items: start; max-width: 720px; }
 .about-text p { font-size: 1.05rem; line-height: 1.8; color: var(--fog); margin-bottom: 1.5rem; font-weight: 300; }
 .about-text p strong { color: var(--parchment); font-weight: 400; }
 .about-text p em { color: var(--gold); }
@@ -317,17 +317,11 @@ input[type="range"] { padding: .25rem 0; accent-color: var(--ember); }
 .social-icon { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; letter-spacing: .1em; color: var(--fog); width: 2rem; transition: color .2s; }
 .social-name { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; }
 .social-handle { margin-left: auto; font-size: .75rem; color: var(--fog); opacity: .5; font-style: italic; }
-.about-sidebar { position: sticky; top: 8rem; }
-.stat-block { border-top: 1px solid var(--umber); padding: 1.5rem 0; }
-.stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--gold); line-height: 1; }
-.stat-label { font-family: 'IBM Plex Mono', monospace; font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--fog); margin-top: .25rem; }
-
 @media (max-width: 768px) {
   #hero { grid-template-columns: 1fr; }
   .hero-right { display: none; }
   .hero-left { padding: 7rem 1.5rem 4rem; }
   .demo-layout, .about-layout { grid-template-columns: 1fr; }
-  .about-sidebar { position: static; }
   .photo-masonry { grid-template-columns: repeat(6,1fr); }
   .projects-grid { grid-template-columns: 1fr; }
 }
@@ -364,7 +358,7 @@ input[type="range"] { padding: .25rem 0; accent-color: var(--ember); }
 }
 
 /* =====================================================
-   EVO/INDEX.HTML — evolution simulation styles
+   EVO/INDEX.HTML / evolution simulation styles
    ===================================================== */
 
 /* EVO Hero */
