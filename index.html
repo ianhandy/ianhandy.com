@@ -1,227 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ian Handy / Developer & Creative Coder</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Ian Handy, developer and amateur photographer. Building visual systems, games, and tools for clearer communication.">
+  <title>Ian Handy, Developer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="portfolio">
+  <nav class="site-nav" aria-label="Primary navigation">
+    <a href="#" class="nav-logo" aria-label="Ian Handy home">Ian Handy</a>
+  </nav>
 
-<!-- NAV -->
-<nav>
-  <a href="#" class="nav-logo">IH</a>
-  <ul class="nav-links">
-    <li><a href="#coding">Projects</a></li>
-    <li><a href="#about">About</a></li>
-  </ul>
-</nav>
-
-<!-- HERO -->
-<section id="hero">
-  <div class="hero-left">
-    <p class="hero-eyebrow">// Portfolio / 2026</p>
-    <h1 class="hero-name">
-      Ian<br>
-      <span>Handy</span>
-    </h1>
-    <p class="hero-tagline">Developer and creative coder, building things worth looking at.</p>
-    <div class="hero-cta">
-      <a href="#coding" class="btn btn-primary">View Projects</a>
-      <a href="#about" class="btn btn-ghost">About Me</a>
-    </div>
-  </div>
-  <div class="hero-right">
-    <div class="hero-photo-grid">
-      <div class="photo-cell" style="background: url('images/fox.jpg') 42% 30%/cover no-repeat;"><span class="photo-label">// FOX_03</span></div>
-      <div class="photo-cell" style="background: url('images/tamarins.jpg') 45% 32%/cover no-repeat;"><span class="photo-label">// TAMARIN_PAIR</span></div>
-      <div class="photo-cell" style="background: url('images/hornbill.jpg') 35% 35%/cover no-repeat;"><span class="photo-label">// HORNBILL_PROFILE</span></div>
-    </div>
-  </div>
-  <div class="scroll-hint">
-    <div class="scroll-line"></div>
-    SCROLL
-  </div>
-</section>
-
-<!-- VISUAL BREAK: starry desert peaks -->
-<div class="visual-break" style="height: 520px; background: linear-gradient(to bottom, var(--bark), transparent 12%, transparent 88%, var(--bark)), url('images/desert-stars.jpg') center 65%/cover no-repeat;"></div>
-
-<!-- ============================================================
-     PHOTOGRAPHY: commented out, easy to restore
-     ============================================================ -->
-<!--
-<section id="photography">
-  <div class="section-header fade-up">
-    <span class="section-num">01 /</span>
-    <h2 class="section-title">Photography</h2>
-    <div class="section-rule"></div>
-  </div>
-  <div class="photo-masonry fade-up">
-    <div class="photo-item">
-      <div class="photo-overlay"><span>FOREST_001</span></div>
-    </div>
-    <div class="photo-item">
-      <div class="photo-overlay"><span>LIGHT_003</span></div>
-    </div>
-    <div class="photo-item">
-      <div class="photo-overlay"><span>MACRO_017</span></div>
-    </div>
-    <div class="photo-item">
-      <div class="photo-overlay"><span>URBAN_004</span></div>
-    </div>
-    <div class="photo-item">
-      <div class="photo-overlay"><span>DUSK_009</span></div>
-    </div>
-    <div class="photo-item">
-      <div class="photo-overlay"><span>TRAIL_002</span></div>
-    </div>
-    <div class="photo-item">
-      <div class="photo-overlay"><span>STILL_011</span></div>
-    </div>
-  </div>
-  <div class="photo-cta fade-up">
-    <a href="#" class="btn btn-ghost">Full Gallery →</a>
-  </div>
-</section>
--->
-
-<!-- CODING -->
-<section id="coding">
-  <div class="section-header fade-up">
-    <span class="section-num">01 /</span>
-    <h2 class="section-title">Projects</h2>
-    <div class="section-rule"></div>
-  </div>
-  <div class="projects-grid fade-up">
-    <a href="https://nbody.ianhandy.com" class="project-card" target="_blank" rel="noopener">
-      <div class="project-tag">Canvas · N-Body Physics</div>
-      <div class="project-name">Celestial Mechanics</div>
-      <p class="project-desc">Interactive n-body gravitational simulator using velocity-Verlet integration. Five presets (binary stars, figure-8 orbit, solar system, Lagrange triangle, pinwheel) with live parameter tuning.</p>
-      <div class="project-footer">
-        <div class="project-stack">
-          <span class="stack-tag">JavaScript</span>
-          <span class="stack-tag">Canvas</span>
-          <span class="stack-tag">Verlet</span>
-        </div>
-        <span class="project-arrow">↗</span>
+  <main id="top">
+    <section class="portfolio-hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">Developer and amateur photographer</p>
+        <h1 id="hero-title">Code, color,<br>systems in <span>motion.</span></h1>
+        <p class="hero-intro">Ian Handy develops applications, creates playful and experimental software, and provides visual interfaces for making difficult-to-understand concepts easier to understand.</p>
       </div>
-    </a>
-    <a href="https://ray.ianhandy.com" class="project-card" target="_blank" rel="noopener">
-      <div class="project-tag">WebGL · 3D Rendering</div>
-      <div class="project-name">Ray Marching</div>
-      <p class="project-desc">Eight interactive SDF scenes rendered per-pixel via sphere tracing. Navigate mathematically-defined 3D worlds: infinite detail, zero polygons.</p>
-      <div class="project-footer">
-        <div class="project-stack">
-          <span class="stack-tag">WebGL</span>
-          <span class="stack-tag">GLSL</span>
-          <span class="stack-tag">SDF</span>
+      <div class="hero-art" aria-label="Kromatika color grid study">
+        <div class="hero-art-card">
+          <img src="images/kromatika-crossword.png" alt="A pastel color grid study for Kromatika" loading="eager">
+          <span class="art-note">kromatika</span>
         </div>
-        <span class="project-arrow">↗</span>
+        <div class="hero-orbit orbit-one"></div>
+        <div class="hero-orbit orbit-two"></div>
       </div>
-    </a>
-    <a href="https://wind.ianhandy.com" class="project-card" target="_blank" rel="noopener">
-      <div class="project-tag">WebGL · Fluid Dynamics</div>
-      <div class="project-name">Wind Tunnel</div>
-      <p class="project-desc">Lattice Boltzmann fluid simulation. Place obstacles and watch vortex streets form in real time. Adjustable Reynolds number with context-aware education panel.</p>
-      <div class="project-footer">
-        <div class="project-stack">
-          <span class="stack-tag">LBM</span>
-          <span class="stack-tag">WebGL</span>
-          <span class="stack-tag">Fluid Dynamics</span>
-        </div>
-        <span class="project-arrow">↗</span>
-      </div>
-    </a>
-    <a href="https://river.ianhandy.com" class="project-card" target="_blank" rel="noopener">
-      <div class="project-tag">Canvas · Simulation</div>
-      <div class="project-name">River Meander</div>
-      <p class="project-desc">Terrain sandbox with tectonics, hydraulic erosion, and meandering river channels. Sculpt landscapes and watch water carve them over geological time.</p>
-      <div class="project-footer">
-        <div class="project-stack">
-          <span class="stack-tag">JavaScript</span>
-          <span class="stack-tag">Canvas</span>
-          <span class="stack-tag">Erosion</span>
-        </div>
-        <span class="project-arrow">↗</span>
-      </div>
-    </a>
-    <a href="https://kroma.ianhandy.com" class="project-card" target="_blank" rel="noopener">
-      <div class="project-tag">React · Daily Puzzle</div>
-      <div class="project-name">Kroma</div>
-      <p class="project-desc">Chromatic-order puzzle game: sort scrambled color gradients against the clock. Daily puzzles, shareable results, and a companion iOS app.</p>
-      <div class="project-footer">
-        <div class="project-stack">
-          <span class="stack-tag">React</span>
-          <span class="stack-tag">Vite</span>
-          <span class="stack-tag">Vercel</span>
-        </div>
-        <span class="project-arrow">↗</span>
-      </div>
-    </a>
-  </div>
-</section>
+    </section>
 
-<!-- VISUAL BREAK: jellyfish drift -->
-<div class="visual-break" style="height: 480px; background: linear-gradient(to bottom, var(--bark), transparent 12%, transparent 88%, var(--bark)), url('images/jellyfish.jpg') 30% 40%/cover no-repeat;"></div>
+    <section class="release-strip" aria-label="Upcoming release">
+      <p><span class="status-dot"></span> Q4 2026 Kromatika release</p>
+      <a href="https://kroma.ianhandy.com" target="_blank" rel="noopener">Follow the project <span aria-hidden="true">↗</span></a>
+    </section>
 
-<!-- ABOUT -->
-<section id="about">
-  <div class="section-header fade-up">
-    <span class="section-num">02 /</span>
-    <h2 class="section-title">About</h2>
-    <div class="section-rule"></div>
-  </div>
-  <div class="about-layout fade-up">
-    <div class="about-text">
-      <p>
-        I'm <strong>Ian Handy</strong>, a developer and creative coder drawn to
-        the intersection of math, simulation, and visual craft. Whether I'm building
-        evolution engines, rendering fractal flames, or solving linear algebra problems,
-        I care about things that reward close attention.
-      </p>
-      <p>
-        Currently studying <em>mathematics</em>, building tools that are functional and
-        beautiful, and pushing pixels into patterns. This site is a living
-        document of that work.
-      </p>
-      <div class="about-links">
-        <a href="https://github.com/ianhandy" class="social-link" target="_blank">
-          <span class="social-icon">GH</span>
-          <span class="social-name">GitHub</span>
-          <span class="social-handle">@ianhandy</span>
+    <section id="work" class="portfolio-section work-section" aria-labelledby="work-title">
+      <div class="section-heading">
+        <h2 id="work-title">Selected work</h2>
+        <p>Projects where code becomes a material for play, understanding, and a little surprise.</p>
+      </div>
+
+      <div class="feature-project">
+        <div class="feature-copy">
+          <p class="project-overline">Kromatika, Q4 2026</p>
+          <h3>A color puzzle with a pulse.</h3>
+          <p>Kromatika is a color ordering puzzle game for iPhone. Form gradients featuring procedural levels and a procedural soundtrack that plays in harmony with your moves.</p>
+          <div class="tag-row" aria-label="Kromatika technologies">
+            <span>SwiftUI</span><span>iOS</span>
+          </div>
+          <a href="https://kroma.ianhandy.com" class="text-link" target="_blank" rel="noopener">Visit Kromatika <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+
+      <div class="project-grid">
+        <a href="https://nbody.ianhandy.com" class="project-card" target="_blank" rel="noopener">
+          <p class="project-overline">Canvas physics</p>
+          <h3>Celestial Mechanics</h3>
+          <p>Interactive n body gravitational simulator with live parameters and orbital presets.</p>
+          <span class="text-link">Open project <span aria-hidden="true">↗</span></span>
         </a>
-        <a href="https://linkedin.com/in/ian-handy" class="social-link" target="_blank">
-          <span class="social-icon">LI</span>
-          <span class="social-name">LinkedIn</span>
-          <span class="social-handle">ian-handy</span>
+        <a href="https://ray.ianhandy.com" class="project-card" target="_blank" rel="noopener">
+          <p class="project-overline">Webgl rendering</p>
+          <h3>Ray Marching</h3>
+          <p>Mathematically defined 3D scenes, rendered per pixel through sphere tracing.</p>
+          <span class="text-link">Open project <span aria-hidden="true">↗</span></span>
+        </a>
+        <a href="https://wind.ianhandy.com" class="project-card" target="_blank" rel="noopener">
+          <p class="project-overline">Webgl simulation</p>
+          <h3>Wind tunnel</h3>
+          <p>Fluid dynamics sandbox for making vortex streets visible and explorable.</p>
+          <span class="text-link">Open project <span aria-hidden="true">↗</span></span>
         </a>
       </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- VISUAL BREAK: snowy forest -->
-<div class="visual-break" style="height: 480px; background: linear-gradient(to bottom, var(--bark), transparent 12%, transparent 88%, var(--bark)), url('images/snowy-forest.jpg') center 55%/cover no-repeat;"></div>
+    <section id="thinking" class="portfolio-section thinking-section" aria-labelledby="thinking-title">
+      <div class="thinking-layout">
+        <div>
+          <h2 id="thinking-title">Translation, not automation.</h2>
+          <p class="thinking-title-detail">People can meet each other in the middle using AI.</p>
+          <p class="thinking-lead">AI isn't just one level above high level programming languages. It's a translation tool across cultures, generations, and everything in between.</p>
+        </div>
+        <div class="thinking-copy">
+          <p>Think of a world where your personal AI measures how far apart your viewpoint is from someone you're talking to... Identifies cultural differences between both of you... Asks forgiveness of the other because you were tired and came across as disinterested... Prevents what could have been a serious misunderstanding.</p>
+          <p>You might say, ‘Ian, good communication already solves this problem without adding extra overhead.’ I say that modern problems require modern solutions. Communication isn't only vocal (nor has it been for quite some time).</p>
+        </div>
+      </div>
+    </section>
 
-<!-- FOOTER -->
-<footer>
-  <p>&copy; 2026 Ian Handy. Built by hand, hosted on GitHub Pages</p>
-  <p><a href="#">ianhandy.com</a></p>
-</footer>
+    <section id="about" class="portfolio-section about-section" aria-labelledby="about-title">
+      <div class="about-layout-kroma">
+        <div>
+          <h2 id="about-title">Hi, I'm Ian.</h2>
+          <p>I'm a developer studying Data Science. I actively seek projects that connect mathematical and procedurally generated systems to create dynamic results.</p>
+          <p>That may mean a simulation, a visual tool, a game, or a better interface for an idea that deserves to be understood.</p>
+          <div class="about-actions">
+            <a href="https://github.com/ianhandy" class="pill pill-secondary" target="_blank" rel="noopener">github</a>
+            <a href="https://linkedin.com/in/ian-handy" class="pill pill-secondary" target="_blank" rel="noopener">linkedin</a>
+          </div>
+        </div>
 
-<script>
-  // ── Scroll animations (progressive enhancement only) ──
-  if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(
-      entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add("visible"); }),
-      { threshold: 0.08, rootMargin: "0px 0px -40px 0px" }
-    );
-    document.querySelectorAll(".fade-up").forEach(el => {
-      el.classList.add("will-animate");
-      observer.observe(el);
+        <aside class="activity-card" aria-labelledby="activity-title">
+          <div class="activity-heading">
+            <div>
+              <p class="project-overline">github activity</p>
+              <h3 id="activity-title">737 contributions</h3>
+            </div>
+            <a href="https://github.com/ianhandy" target="_blank" rel="noopener" aria-label="Open Ian Handy’s GitHub profile">↗</a>
+          </div>
+          <div class="activity-grid" aria-label="GitHub activity over the last twelve months" data-activity="00100000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000010000100000001034220310444344444101000031231014100200022141220034210014000104000000000000000000000000000010000010000000000000000000000000000000000000000020000000000001000000003100342000"></div>
+          <p class="activity-note">Public activity from the last 12 months.</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="portfolio-footer">
+    <p>© 2026 Ian Handy</p>
+  </footer>
+
+  <script>
+    document.querySelectorAll(".activity-grid").forEach((grid) => {
+      [...grid.dataset.activity].forEach((level) => {
+        const day = document.createElement("span");
+        day.className = `activity-day level-${level}`;
+        day.setAttribute("aria-hidden", "true");
+        grid.append(day);
+      });
     });
-  }
-</script>
+  </script>
 </body>
 </html>
